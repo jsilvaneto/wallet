@@ -16,7 +16,7 @@ exports.CostCentersController = void 0;
 const common_1 = require("@nestjs/common");
 const cost_centers_service_1 = require("../../application/cost-centers/cost-centers.service");
 const create_cost_center_dto_1 = require("../../application/cost-centers/dto/create-cost-center.dto");
-const jwt_auth_guard_1 = require("../../presentation/guards/jwt-auth.guard");
+const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 let CostCentersController = class CostCentersController {
     costCentersService;
     constructor(costCentersService) {

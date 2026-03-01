@@ -16,7 +16,7 @@ exports.AccountsController = void 0;
 const common_1 = require("@nestjs/common");
 const accounts_service_1 = require("../../application/accounts/accounts.service");
 const create_account_dto_1 = require("../../application/accounts/dto/create-account.dto");
-const jwt_auth_guard_1 = require("../../presentation/guards/jwt-auth.guard");
+const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 let AccountsController = class AccountsController {
     accountsService;
     constructor(accountsService) {

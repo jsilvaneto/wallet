@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Get, Param, Delete, UseGuards, Request } from '@nestjs/common';
 import { CostCentersService } from '../../application/cost-centers/cost-centers.service';
 import { CreateCostCenterDto } from '../../application/cost-centers/dto/create-cost-center.dto';
-import { JwtAuthGuard } from '../../presentation/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
 @Controller('cost-centers')
@@ -9,17 +9,17 @@ export class CostCentersController {
     constructor(private readonly costCentersService: CostCentersService) { }
 
     @Post()
-    create(@Request() req, @Body() createDto: CreateCostCenterDto) {
+    create(@Request() req: any, @Body() createDto: CreateCostCenterDto) {
         return this.costCentersService.create(req.user.id, createDto);
     }
 
     @Get()
-    findAll(@Request() req) {
+    findAll(@Request() req: any) {
         return this.costCentersService.findAll(req.user.id);
     }
 
     @Delete(':id')
-    remove(@Request() req, @Param('id') id: string) {
+    remove(@Request() req: any, @Param('id') id: string) {
         return this.costCentersService.softDelete(req.user.id, id);
     }
 }

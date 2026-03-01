@@ -16,7 +16,7 @@ exports.CategoriesController = void 0;
 const common_1 = require("@nestjs/common");
 const categories_service_1 = require("../../application/categories/categories.service");
 const create_category_dto_1 = require("../../application/categories/dto/create-category.dto");
-const jwt_auth_guard_1 = require("../../presentation/guards/jwt-auth.guard");
+const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 let CategoriesController = class CategoriesController {
     categoriesService;
     constructor(categoriesService) {

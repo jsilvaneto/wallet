@@ -16,7 +16,7 @@ exports.FinancialAccountsController = void 0;
 const common_1 = require("@nestjs/common");
 const financial_accounts_service_1 = require("../../application/financial-accounts/financial-accounts.service");
 const create_financial_account_dto_1 = require("../../application/financial-accounts/dto/create-financial-account.dto");
-const jwt_auth_guard_1 = require("../../presentation/guards/jwt-auth.guard");
+const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 let FinancialAccountsController = class FinancialAccountsController {
     financialAccountsService;
     constructor(financialAccountsService) {
