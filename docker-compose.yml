@@ -7,12 +7,14 @@ services:
       dockerfile: Dockerfile
     container_name: wallet_api
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - ./api:/usr/src/app
       - /usr/src/app/node_modules
-    env_file:
-      - ./api/.env
+    environment:
+      - DATABASE_URL=postgresql://wallet_user:wallet_password@postgres:5432/wallet_db?schema=public
+      - JWT_SECRET=super-secret-wallet-key
+      - PORT=3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -22,7 +24,7 @@ services:
     image: postgres:15-alpine
     container_name: wallet_postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: wallet_user
       POSTGRES_PASSWORD: wallet_password
