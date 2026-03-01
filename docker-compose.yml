@@ -11,10 +11,8 @@ services:
     volumes:
       - ./api:/usr/src/app
       - /usr/src/app/node_modules
-    environment:
-      - DATABASE_URL=postgresql://wallet_user:wallet_password@postgres:5432/wallet_db?schema=public
-      - JWT_SECRET=super-secret-wallet-key
-      - PORT=3000
+    env_file:
+      - ./api/.env
     depends_on:
       postgres:
         condition: service_healthy
