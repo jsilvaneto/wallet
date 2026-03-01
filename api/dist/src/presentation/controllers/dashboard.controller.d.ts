@@ -3,16 +3,20 @@ export declare class DashboardController {
     private readonly dashboardService;
     constructor(dashboardService: DashboardService);
     getDashboardData(req: any): Promise<{
-        consolidatedBalance: any;
-        accountsBalance: any;
+        consolidatedBalance: number;
+        accountsBalance: {
+            id: string;
+            name: string;
+            balance: number;
+        }[];
         currentMonth: {
-            totalToPay: any;
-            totalToReceive: any;
+            totalToPay: number;
+            totalToReceive: number;
         };
         projections: {
-            months3: any;
-            months6: any;
-            months12: any;
+            months3: number;
+            months6: number;
+            months12: number;
         };
     }>;
 }

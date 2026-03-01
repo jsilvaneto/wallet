@@ -3,7 +3,21 @@ import { CreateCostCenterDto } from '../../application/cost-centers/dto/create-c
 export declare class CostCentersController {
     private readonly costCentersService;
     constructor(costCentersService: CostCentersService);
-    create(req: any, createDto: CreateCostCenterDto): Promise<any>;
-    findAll(req: any): Promise<any>;
-    remove(req: any, id: string): Promise<any>;
+    create(req: any, createDto: CreateCostCenterDto): Promise<{
+        id: string;
+        created_at: Date;
+        name: string;
+        updated_at: Date;
+        deleted_at: Date | null;
+        created_by: string;
+    }>;
+    findAll(req: any): Promise<{
+        id: string;
+        created_at: Date;
+        name: string;
+        updated_at: Date;
+        deleted_at: Date | null;
+        created_by: string;
+    }[]>;
+    remove(req: any, id: string): Promise<import(".prisma/client").Prisma.BatchPayload>;
 }

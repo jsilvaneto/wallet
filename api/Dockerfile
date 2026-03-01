@@ -1,6 +1,9 @@
 # Base image
 FROM node:20-alpine
 
+# Install OpenSSL for Prisma engine compatibility
+RUN apk add --no-cache openssl
+
 # Create app directory
 WORKDIR /usr/src/app
 
