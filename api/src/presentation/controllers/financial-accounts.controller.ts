@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, Param, Delete, UseGuards, Request } from '@nestjs/common';
-import { FinancialAccountsService } from './financial-accounts.service';
-import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
+import { FinancialAccountsService } from '../../application/financial-accounts/financial-accounts.service';
+import { CreateFinancialAccountDto } from '../../application/financial-accounts/dto/create-financial-account.dto';
 import { JwtAuthGuard } from '../../presentation/guards/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
