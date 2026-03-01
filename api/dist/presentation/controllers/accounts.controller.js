@@ -11,12 +11,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AccountsController = void 0;
 const common_1 = require("@nestjs/common");
-const accounts_service_1 = require("./accounts.service");
-const create_account_dto_1 = require("./dto/create-account.dto");
+const accounts_service_1 = require("../../application/accounts/accounts.service");
+const create_account_dto_1 = require("../../application/accounts/dto/create-account.dto");
 const jwt_auth_guard_1 = require("../../presentation/guards/jwt-auth.guard");
 let AccountsController = class AccountsController {
     accountsService;
@@ -42,7 +41,7 @@ __decorate([
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, typeof (_b = typeof create_account_dto_1.CreateAccountDto !== "undefined" && create_account_dto_1.CreateAccountDto) === "function" ? _b : Object]),
+    __metadata("design:paramtypes", [Object, create_account_dto_1.CreateAccountDto]),
     __metadata("design:returntype", void 0)
 ], AccountsController.prototype, "create", null);
 __decorate([
@@ -72,6 +71,6 @@ __decorate([
 exports.AccountsController = AccountsController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('accounts'),
-    __metadata("design:paramtypes", [typeof (_a = typeof accounts_service_1.AccountsService !== "undefined" && accounts_service_1.AccountsService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [accounts_service_1.AccountsService])
 ], AccountsController);
 //# sourceMappingURL=accounts.controller.js.map

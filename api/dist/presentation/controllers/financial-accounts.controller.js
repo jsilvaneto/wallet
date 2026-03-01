@@ -11,12 +11,11 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FinancialAccountsController = void 0;
 const common_1 = require("@nestjs/common");
-const financial_accounts_service_1 = require("./financial-accounts.service");
-const create_financial_account_dto_1 = require("./dto/create-financial-account.dto");
+const financial_accounts_service_1 = require("../../application/financial-accounts/financial-accounts.service");
+const create_financial_account_dto_1 = require("../../application/financial-accounts/dto/create-financial-account.dto");
 const jwt_auth_guard_1 = require("../../presentation/guards/jwt-auth.guard");
 let FinancialAccountsController = class FinancialAccountsController {
     financialAccountsService;
@@ -42,7 +41,7 @@ __decorate([
     __param(0, (0, common_1.Request)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, typeof (_b = typeof create_financial_account_dto_1.CreateFinancialAccountDto !== "undefined" && create_financial_account_dto_1.CreateFinancialAccountDto) === "function" ? _b : Object]),
+    __metadata("design:paramtypes", [Object, create_financial_account_dto_1.CreateFinancialAccountDto]),
     __metadata("design:returntype", void 0)
 ], FinancialAccountsController.prototype, "create", null);
 __decorate([
@@ -71,6 +70,6 @@ __decorate([
 exports.FinancialAccountsController = FinancialAccountsController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('financial-accounts'),
-    __metadata("design:paramtypes", [typeof (_a = typeof financial_accounts_service_1.FinancialAccountsService !== "undefined" && financial_accounts_service_1.FinancialAccountsService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [financial_accounts_service_1.FinancialAccountsService])
 ], FinancialAccountsController);
 //# sourceMappingURL=financial-accounts.controller.js.map
