@@ -47,6 +47,17 @@ let FinancialAccountsService = class FinancialAccountsService {
             data: { deleted_at: new Date() },
         });
     }
+    async update(userId, id, updateDto) {
+        const account = await this.findOne(userId, id);
+        return this.prisma.financialAccount.update({
+            where: { id: account.id },
+            data: {
+                name: updateDto.name !== undefined ? updateDto.name : undefined,
+                type: updateDto.type !== undefined ? updateDto.type : undefined,
+                initial_balance: updateDto.initial_balance !== undefined ? updateDto.initial_balance : undefined,
+            },
+        });
+    }
 };
 exports.FinancialAccountsService = FinancialAccountsService;
 exports.FinancialAccountsService = FinancialAccountsService = __decorate([

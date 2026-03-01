@@ -8,6 +8,7 @@ const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.enableCors();
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true, transform: true }));
     app.useGlobalFilters(new global_exception_filter_1.GlobalExceptionFilter());
     app.useGlobalInterceptors(new logging_interceptor_1.LoggingInterceptor());

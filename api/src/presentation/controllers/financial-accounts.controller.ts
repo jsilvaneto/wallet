@@ -1,6 +1,7 @@
-import { Controller, Post, Body, Get, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Patch, UseGuards, Request } from '@nestjs/common';
 import { FinancialAccountsService } from '../../application/financial-accounts/financial-accounts.service';
 import { CreateFinancialAccountDto } from '../../application/financial-accounts/dto/create-financial-account.dto';
+import { UpdateFinancialAccountDto } from '../../application/financial-accounts/dto/update-financial-account.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
@@ -26,5 +27,10 @@ export class FinancialAccountsController {
     @Delete(':id')
     remove(@Request() req: any, @Param('id') id: string) {
         return this.financialAccountsService.softDelete(req.user.id, id);
+    }
+
+    @Patch(':id')
+    update(@Request() req: any, @Param('id') id: string, @Body() updateDto: UpdateFinancialAccountDto) {
+        return this.financialAccountsService.update(req.user.id, id, updateDto);
     }
 }

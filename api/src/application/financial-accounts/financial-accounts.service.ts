@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service';
 import { CreateFinancialAccountDto } from './dto/create-financial-account.dto';
+import { UpdateFinancialAccountDto } from './dto/update-financial-account.dto';
 
 @Injectable()
 export class FinancialAccountsService {
@@ -36,6 +37,18 @@ export class FinancialAccountsService {
         return this.prisma.financialAccount.update({
             where: { id: account.id },
             data: { deleted_at: new Date() },
+        });
+    }
+
+    async update(userId: string, id: string, updateDto: UpdateFinancialAccountDto) {
+        const account = await this.findOne(userId, id);
+        return this.prisma.financialAccount.update({
+            where: { id: account.id },
+            data: {
+                name: updateDto.name !== undefined ? updateDto.name : undefined,
+                type: updateDto.type !== undefined ? updateDto.type : undefined,
+                initial_balance: updateDto.initial_balance !== undefined ? updateDto.initial_balance : undefined,
+            },
         });
     }
 }

@@ -1,5 +1,6 @@
 import { FinancialAccountsService } from '../../application/financial-accounts/financial-accounts.service';
 import { CreateFinancialAccountDto } from '../../application/financial-accounts/dto/create-financial-account.dto';
+import { UpdateFinancialAccountDto } from '../../application/financial-accounts/dto/update-financial-account.dto';
 export declare class FinancialAccountsController {
     private readonly financialAccountsService;
     constructor(financialAccountsService: FinancialAccountsService);
@@ -34,6 +35,16 @@ export declare class FinancialAccountsController {
         created_by: string;
     }>;
     remove(req: any, id: string): Promise<{
+        id: string;
+        created_at: Date;
+        name: string;
+        updated_at: Date;
+        deleted_at: Date | null;
+        type: import(".prisma/client").$Enums.FinancialAccountType;
+        initial_balance: import("@prisma/client/runtime/library").Decimal;
+        created_by: string;
+    }>;
+    update(req: any, id: string, updateDto: UpdateFinancialAccountDto): Promise<{
         id: string;
         created_at: Date;
         name: string;

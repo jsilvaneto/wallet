@@ -16,6 +16,7 @@ exports.FinancialAccountsController = void 0;
 const common_1 = require("@nestjs/common");
 const financial_accounts_service_1 = require("../../application/financial-accounts/financial-accounts.service");
 const create_financial_account_dto_1 = require("../../application/financial-accounts/dto/create-financial-account.dto");
+const update_financial_account_dto_1 = require("../../application/financial-accounts/dto/update-financial-account.dto");
 const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 let FinancialAccountsController = class FinancialAccountsController {
     financialAccountsService;
@@ -33,6 +34,9 @@ let FinancialAccountsController = class FinancialAccountsController {
     }
     remove(req, id) {
         return this.financialAccountsService.softDelete(req.user.id, id);
+    }
+    update(req, id, updateDto) {
+        return this.financialAccountsService.update(req.user.id, id, updateDto);
     }
 };
 exports.FinancialAccountsController = FinancialAccountsController;
@@ -67,6 +71,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], FinancialAccountsController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, update_financial_account_dto_1.UpdateFinancialAccountDto]),
+    __metadata("design:returntype", void 0)
+], FinancialAccountsController.prototype, "update", null);
 exports.FinancialAccountsController = FinancialAccountsController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('financial-accounts'),
