@@ -16,6 +16,7 @@ exports.CategoriesController = void 0;
 const common_1 = require("@nestjs/common");
 const categories_service_1 = require("../../application/categories/categories.service");
 const create_category_dto_1 = require("../../application/categories/dto/create-category.dto");
+const update_category_dto_1 = require("../../application/categories/dto/update-category.dto");
 const jwt_auth_guard_1 = require("../guards/jwt-auth.guard");
 let CategoriesController = class CategoriesController {
     categoriesService;
@@ -30,6 +31,9 @@ let CategoriesController = class CategoriesController {
     }
     remove(req, id) {
         return this.categoriesService.softDelete(req.user.id, id);
+    }
+    update(req, id, updateDto) {
+        return this.categoriesService.update(req.user.id, id, updateDto);
     }
 };
 exports.CategoriesController = CategoriesController;
@@ -56,6 +60,15 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
 ], CategoriesController.prototype, "remove", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Param)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, update_category_dto_1.UpdateCategoryDto]),
+    __metadata("design:returntype", void 0)
+], CategoriesController.prototype, "update", null);
 exports.CategoriesController = CategoriesController = __decorate([
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, common_1.Controller)('categories'),

@@ -77,16 +77,20 @@ model Category {
   id         String          @id @default(uuid()) @db.Uuid
   name       String
   type       TransactionType
+  parent_id  String?         @db.Uuid
   created_by String          @db.Uuid
   created_at DateTime        @default(now())
   updated_at DateTime        @updatedAt
   deleted_at DateTime?
 
-  user       User            @relation(fields: [created_by], references: [id])
-  accounts   Account[]
+  user           User       @relation(fields: [created_by], references: [id])
+  parent         Category?  @relation("SubCategories", fields: [parent_id], references: [id])
+  sub_categories Category[] @relation("SubCategories")
+  accounts       Account[]
 
   @@index([type])
   @@index([created_by])
+  @@index([parent_id])
   @@map("categories")
 }
 

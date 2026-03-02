@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Receipt, ArrowRightLeft, Tags, Settings, LogOut, Wallet } from 'lucide-react';
+import { LayoutDashboard, Receipt, ArrowRightLeft, Settings, LogOut, Wallet } from 'lucide-react';
 
 const DashboardLayout: React.FC = () => {
     const location = useLocation();
@@ -20,7 +20,6 @@ const DashboardLayout: React.FC = () => {
         { name: 'Dashboard', href: '/d', icon: LayoutDashboard },
         { name: 'Accounts', href: '/d/accounts', icon: Wallet },
         { name: 'Transactions', href: '/d/transactions', icon: ArrowRightLeft },
-        { name: 'Categories', href: '/d/categories', icon: Tags },
         { name: 'Cost Centers', href: '/d/cost-centers', icon: Receipt },
     ];
 

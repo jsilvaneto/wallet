@@ -7,6 +7,7 @@ import DashboardLayout from './components/layout/DashboardLayout';
 const Login = React.lazy(() => import('./pages/auth/Login'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
 const AccountsList = React.lazy(() => import('./pages/financial-accounts/AccountsList'));
+const Settings = React.lazy(() => import('./pages/settings/Settings'));
 
 // Simple loading fallback
 const PageLoader = () => (
@@ -30,6 +31,7 @@ export const AppRoutes = () => {
                 <Route path="/d" element={<DashboardLayout />}>
                     <Route index element={<Dashboard />} />
                     <Route path="accounts" element={<AccountsList />} />
+                    <Route path="settings" element={<Settings />} />
                     <Route path="*" element={<Navigate to="/d" replace />} />
                 </Route>
 

@@ -9,28 +9,28 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CreateCategoryDto = void 0;
+exports.UpdateCategoryDto = void 0;
 const class_validator_1 = require("class-validator");
 const client_1 = require("@prisma/client");
-class CreateCategoryDto {
+class UpdateCategoryDto {
     name;
     type;
     parent_id;
 }
-exports.CreateCategoryDto = CreateCategoryDto;
-__decorate([
-    (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], CreateCategoryDto.prototype, "name", void 0);
-__decorate([
-    (0, class_validator_1.IsEnum)(client_1.TransactionType),
-    (0, class_validator_1.IsNotEmpty)(),
-    __metadata("design:type", String)
-], CreateCategoryDto.prototype, "type", void 0);
+exports.UpdateCategoryDto = UpdateCategoryDto;
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
-], CreateCategoryDto.prototype, "parent_id", void 0);
-//# sourceMappingURL=create-category.dto.js.map
+], UpdateCategoryDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsEnum)(client_1.TransactionType),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "type", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateCategoryDto.prototype, "parent_id", void 0);
+//# sourceMappingURL=update-category.dto.js.map

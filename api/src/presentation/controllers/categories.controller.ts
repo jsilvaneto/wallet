@@ -1,6 +1,7 @@
-import { Controller, Post, Body, Get, Param, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Delete, Patch, UseGuards, Request } from '@nestjs/common';
 import { CategoriesService } from '../../application/categories/categories.service';
 import { CreateCategoryDto } from '../../application/categories/dto/create-category.dto';
+import { UpdateCategoryDto } from '../../application/categories/dto/update-category.dto';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
@@ -21,5 +22,10 @@ export class CategoriesController {
     @Delete(':id')
     remove(@Request() req: any, @Param('id') id: string) {
         return this.categoriesService.softDelete(req.user.id, id);
+    }
+
+    @Patch(':id')
+    update(@Request() req: any, @Param('id') id: string, @Body() updateDto: UpdateCategoryDto) {
+        return this.categoriesService.update(req.user.id, id, updateDto);
     }
 }
