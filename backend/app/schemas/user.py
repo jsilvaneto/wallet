@@ -17,9 +17,13 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+class UserPasswordUpdate(BaseModel):
+    password: str = Field(..., min_length=6, description="Nova senha com no mínimo 6 caracteres")
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+

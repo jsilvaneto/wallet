@@ -8,6 +8,8 @@ interface AppContextType {
   toggleTheme: () => void;
   hideValues: boolean;
   toggleHideValues: () => void;
+  loginTheme: "dark" | "light";
+  setLoginTheme: (theme: "dark" | "light") => void;
   token: string | null;
   setToken: (t: string | null) => void;
 }
@@ -26,6 +28,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   const [isDark, setIsDark] = useState<boolean>(
     localStorage.getItem("wallet_theme") === "dark"
+  );
+  const [loginTheme, setLoginThemeState] = useState<"dark" | "light">(
+    (localStorage.getItem("wallet_login_theme") as "dark" | "light") || "dark"
   );
   const [hideValues, setHideValues] = useState<boolean>(
     localStorage.getItem("wallet_hide_values") === "true"
@@ -54,8 +59,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [isDark]);
 
   useEffect(() => {
+    localStorage.setItem("wallet_login_theme", loginTheme);
+  }, [loginTheme]);
+
+  useEffect(() => {
     localStorage.setItem("wallet_hide_values", hideValues ? "true" : "false");
   }, [hideValues]);
+
+  const setLoginTheme = (theme: "dark" | "light") => {
+    setLoginThemeState(theme);
+    localStorage.setItem("wallet_login_theme", theme);
+  };
 
   const setToken = (t: string | null) => {
     if (t && t !== "undefined" && t !== "null" && t !== "") {
@@ -79,6 +93,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toggleTheme,
         hideValues,
         toggleHideValues,
+        loginTheme,
+        setLoginTheme,
         token,
         setToken,
       }}

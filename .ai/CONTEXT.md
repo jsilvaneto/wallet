@@ -35,14 +35,17 @@ Ambos os perfis compartilham a mesma infraestrutura de banco de dados com isolam
   - Histórico e logs de auditoria persistentes com detalhes de status, itens processados e mensagens de erro.
 - [x] **Frontend Web React 19 + TypeScript + Vite + Tailwind CSS**:
   - Interface moderna, responsiva, com suporte completo a Modo Claro / Escuro (*Dark Mode*).
-  - Tela de autenticação com abas para Login e Criação de Contas.
+  - Tela de autenticação direta com suporte a tema **Escuro ou Claro** configurável pelo usuário.
   - Alternador instantâneo de perfis Pessoal e Empresa.
   - Botão de ocultar/exibir valores sensíveis em tela.
   - Painel Geral (Dashboard) com KPIs (Realizado, A Vencer, Projeção Final do Mês), alertas de atraso e maiores despesas por categoria.
   - Gestão de Lançamentos & Contas com filtros por Status, Tipo, Período mensal e liquidação/exclusão.
   - Modal dinâmico para Lançamentos Únicos, Parcelados (em N vezes) e Recorrentes mensais.
-  - Módulo de Cadastros & Metas com 4 abas: Categorias, Contatos, Dívidas (com barra de amortização) e Orçamentos (com acompanhamento de teto de gastos e alertas).
-  - Módulo de **Sincronização Nuvem** com status em tempo real, guia passo a passo, testes de conexão e tabela de logs.
+  - Módulo de **Cadastros & Metas** com 4 abas financeiras: Categorias, Contatos, Dívidas (com barra de amortização) e Orçamentos (com acompanhamento de teto de gastos e alertas).
+  - Módulo de **Configurações do Sistema** com 3 seções completas:
+    - **Aparência & Login**: Escolha de tema da tela de login (Clara ou Escura), tema global do sistema e modo privacidade.
+    - **Gestão de Usuários**: Cadastro seguro de novos usuários e listagem/exclusão de usuários existentes com proteção do último administrador.
+    - **Sincronização Nuvem**: Configuração de credenciais Google Sheets, ações direcionais e auditoria de logs.
 - [x] **Ambiente de Execução WSL**:
   - Script automatizado [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) para validação de dependências (`venv`, `node_modules`), inicialização paralela e encerramento limpo via `Ctrl + C`.
 

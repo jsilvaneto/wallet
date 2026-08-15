@@ -20,11 +20,10 @@ O **Wallet** é uma plataforma moderna e local-first de controle financeiro pess
 - 🔒 **Modo Privacidade**: Botão para ocultar/exibir valores na tela em ambientes compartilhados.
 - 🎯 **Metas & Orçamentos**: Configuração de tetos de gastos mensais por categoria com barras de consumo percentual e alertas de estouro.
 - 📑 **Controle de Dívidas & Passivos**: Acompanhamento de amortização de empréstimos e financiamentos com saldo restante.
-- ☁️ **Gestão de Sincronização Google Sheets (Web UI)**:
-  - Configuração dinâmica de ID de planilha e upload de `credentials.json` diretamente pelo navegador.
-  - Teste automatizado de conexão e permissões.
-  - Ações direcionais de **Envio (Exportação)**, **Recebimento (Importação de Fila)** e **Sincronização Completa**.
-  - Painel de auditoria com histórico e logs detalhados de cada operação.
+- ⚙️ **Menu de Configurações Centralizado**:
+  - **Aparência & Tela de Login**: Escolha se a tela de login inicial deve ser renderizada em **Modo Escuro (Dark)** ou **Modo Claro (Light)**, além do tema global do sistema.
+  - **Gestão Segura de Usuários**: Cadastro de novos usuários movido com segurança para dentro do sistema autenticado, com listagem e remoção de contas.
+  - **Sincronização Google Sheets**: Configuração de credenciais JSON, teste de conexão, ações direcionais de envio/recebimento e logs de auditoria.
 
 ---
 

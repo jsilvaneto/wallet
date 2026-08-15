@@ -79,13 +79,13 @@ frontend/
 │   ├── pages/
 │   │   ├── Dashboard.tsx        # KPIs, alertas e maiores despesas por categoria
 │   │   ├── Transactions.tsx     # Tabela de lançamentos, filtros e ações
-│   │   ├── Management.tsx       # Cadastros (Categorias, Contatos, Dívidas, Orçamentos)
-│   │   └── SyncManagement.tsx   # Gestão de Sincronização Google Sheets (Config, Ações, Logs)
+│   │   ├── Management.tsx       # Cadastros Financeiros (Categorias, Contatos, Dívidas, Orçamentos)
+│   │   └── Settings.tsx         # Configurações (Aparência/Login, Gestão de Usuários, Sincronização)
 │   ├── types/
-│   │   └── index.ts             # Definições de tipos TypeScript compartilhadas (incluindo Sync)
+│   │   └── index.ts             # Definições de tipos TypeScript compartilhadas
 │   ├── utils/
 │   │   └── format.ts            # Formatação monetária (BRL) e máscara de valores
-│   ├── App.tsx                  # Layout principal com 4 abas e tela de autenticação
+│   ├── App.tsx                  # Layout principal com 4 abas e tela de autenticação dinâmica
 │   ├── index.css                # Configuração do Tailwind e temas
 │   └── main.tsx                 # Entrada React 19
 ├── index.html                   # Estrutura HTML5 com Google Fonts
