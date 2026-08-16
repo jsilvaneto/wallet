@@ -30,33 +30,27 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Cadastro e gerenciamento seguro de usuários movido para a aba **Configurações &gt; Gestão de Usuários**.
   - [x] Proteção contra auto-exclusão e contra exclusão do último administrador do sistema.
 
-- [x] **Categorias & Natureza de Gastos**:
-  - [x] Modelo direto de **Categorias Planas** por perfil (`PESSOAL` e `EMPRESA`) e tipo (`RECEITA` e `DESPESA`).
-  - [x] Classificação por essencialidade nos 4 tipos: `OBRIGATORIO`, `NECESSARIO`, `DESEJO` e `NENHUM`.
-  - [x] Cards estilizados com badges coloridos de alto contraste para o tema escuro.
-  - [x] Edição completa via Modal dedicado (`EditCategoryModal`) para renomeação e troca de natureza e tipo.
+- [x] **Navegação & Painel de Configurações Unificado**:
+  - [x] Barra superior com 3 seções principais: **Dashboard**, **Lançamentos** e **Configurações**.
+  - [x] Painel de **Configurações & Cadastros** com 9 abas integradas:
+    - `Categorias` (Gestão de categorias planas com classificação de essencialidade/natureza)
+    - `Itens` (Cadastro de itens rápidos com valores sugeridos para lançamentos)
+    - `Contas & Carteiras` (Contas correntes, poupanças, investimentos e caixas)
+    - `Contatos` (Clientes, fornecedores, colaboradores e favorecidos com CPF/CNPJ e anotações)
+    - `Dívidas & Passivos` (Controle de passivos com barra de amortização progressiva)
+    - `Orçamentos & Metas` (Tetos mensais por categoria com alertas de consumo normal, atenção e estourado)
+    - `Sincronização Nuvem` (Configuração e espelhamento em 8 abas no Google Sheets)
+    - `Gestão de Usuários` (Cadastro seguro de novos usuários e controle de acesso)
+    - `Aparência & Temas` (Alternância de tema claro/escuro global e tema da tela de login)
+  - [x] **Ordenação Alfabética Obrigatória (A a Z)** aplicada a todas as listagens e menus suspensos (Categorias, Itens, Contas, Contatos, Dívidas, Orçamentos e Usuários).
 
-- [x] **Itens Vinculados a Categorias**:
-  - [x] Cadastro e edição de itens específicos vinculados a categorias na aba **Cadastros & Metas > Itens**.
-  - [x] Modal de edição rápida (`EditItemModal`) para atualização de nome, categoria e valor padrão sugerido.
-  - [x] Definição de valor padrão sugerido (R$) por item.
-  - [x] Bloco de seleção rápida no modal de lançamentos ([TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx)) com auto-preenchimento de categoria, descrição e valor sugerido.
-
-- [x] **Contas Bancárias e Carteiras**:
-  - [x] Gestão completa na aba **Cadastros & Metas > Contas** com filtros por tipo (`CORRENTE`, `POUPANCA`, `INVESTIMENTO`, `CAIXA`, `OUTRO`) e busca por texto.
-  - [x] Modal de edição rápida (`EditAccountModal`) para renomeação e troca de modalidade/tipo.
-  - [x] Cards estilizados com KPIs de totais e ícones de cada modalidade financeira.
-  - [x] Associação de conta bancária / carteira nos lançamentos únicos, parcelados e recorrentes ([TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx)).
-
-- [x] **Gestão Financeira, Dívidas & Orçamentos**:
+- [x] **Gestão Financeira & Lançamentos**:
   - [x] Dashboard com KPIs de Realizado, A Vencer, Projeção Final do Mês e maiores despesas por categoria.
   - [x] Tela de Lançamentos com **Sistema Dinâmico de Períodos** (Presets: Mês, Hoje, Esta Semana, Próx. 7/30 Dias, Ano Todo, Todas as Datas, Personalizado) e navegador de meses (`<` e `>`).
   - [x] **Atalhos Inteligentes & Alerta de Contas Atrasadas**: Banner dinâmico com valor pendente e filtro em 1 clique para todas as contas vencidas na história.
   - [x] **Busca Textual Global Instantânea**: Filtragem live por descrição, categoria, conta bancária, contato, valor e anotações.
-  - [x] **Filtros Multi-Critério**: Status (`Todos`, `Abertas`, `Liquidadas`, `Atrasadas`), Tipo (`Despesas`, `Receitas`), Conta/Carteira e Categoria com botão para limpar filtros.
+  - [x] **Filtros Multi-Critério**: Status (`Todos`, `Abertas`, `Liquidadas`, `Atrasadas`), Tipo (`Despesas`, `Receitas`), Conta/Carteira e Categoria com ordenação A-Z e botão para limpar filtros.
   - [x] Lançamentos Únicos, Parcelados (em N vezes com badges `1/12`) e Recorrentes mensais.
-  - [x] Módulo de Dívidas com acompanhamento de amortização e saldo devedor.
-  - [x] Módulo de Orçamentos com tetos de gastos mensais e alertas de consumo percentual.
 
 - [x] **Sincronização Nuvem com Google Sheets (Espelho Integral & Base do App Mobile)**:
   - [x] Gerenciamento web das configurações na aba **Configurações > Sincronização Nuvem**.

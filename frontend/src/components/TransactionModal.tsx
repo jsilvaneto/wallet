@@ -246,20 +246,24 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 className="w-full px-3 py-2 text-xs bg-white dark:bg-zinc-800 border border-emerald-200 dark:border-emerald-800/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-zinc-900 dark:text-zinc-100"
               >
                 <option value="">[Selecione um Item ou preencha manualmente]</option>
-                {categories.map((cat) => {
-                  const catItems = items.filter((it) => it.category_id === cat.id);
-                  if (catItems.length === 0) return null;
+                {[...categories]
+                  .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                  .map((cat) => {
+                    const catItems = items
+                      .filter((it) => it.category_id === cat.id)
+                      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
+                    if (catItems.length === 0) return null;
 
-                  return (
-                    <optgroup key={cat.id} label={`${cat.name} (${cat.type})`}>
-                      {catItems.map((it) => (
-                        <option key={it.id} value={it.id}>
-                          {it.name} {it.default_amount_cents && it.default_amount_cents > 0 ? `— R$ ${(it.default_amount_cents / 100).toFixed(2).replace(".", ",")}` : ""}
-                        </option>
-                      ))}
-                    </optgroup>
-                  );
-                })}
+                    return (
+                      <optgroup key={cat.id} label={`${cat.name} (${cat.type})`}>
+                        {catItems.map((it) => (
+                          <option key={it.id} value={it.id}>
+                            {it.name} {it.default_amount_cents && it.default_amount_cents > 0 ? `— R$ ${(it.default_amount_cents / 100).toFixed(2).replace(".", ",")}` : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
               </select>
             </div>
           )}
@@ -375,14 +379,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
               >
                 {categories.length === 0 && <option value="">Nenhuma categoria encontrada</option>}
-                {categories.map((cat) => {
-                  const natLabel = cat.nature && cat.nature !== "NENHUM" ? ` • ${cat.nature.charAt(0) + cat.nature.slice(1).toLowerCase()}` : "";
-                  return (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name} ({cat.type}){natLabel}
-                    </option>
-                  );
-                })}
+                {[...categories]
+                  .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                  .map((cat) => {
+                    const natLabel = cat.nature && cat.nature !== "NENHUM" ? ` • ${cat.nature.charAt(0) + cat.nature.slice(1).toLowerCase()}` : "";
+                    return (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name} ({cat.type}){natLabel}
+                      </option>
+                    );
+                  })}
               </select>
             </div>
 
@@ -398,11 +404,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                   className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
                 >
                   <option value="">Nenhuma (Opcional)</option>
-                  {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
-                      {acc.name} ({acc.type === "CORRENTE" ? "Corrente" : acc.type === "POUPANCA" ? "Poupança" : acc.type === "INVESTIMENTO" ? "Investimento" : acc.type === "CAIXA" ? "Caixa" : "Outro"})
-                    </option>
-                  ))}
+                  {[...accounts]
+                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                    .map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} ({acc.type === "CORRENTE" ? "Corrente" : acc.type === "POUPANCA" ? "Poupança" : acc.type === "INVESTIMENTO" ? "Investimento" : acc.type === "CAIXA" ? "Caixa" : "Outro"})
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -417,11 +425,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                   className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
                 >
                   <option value="">Nenhum (Opcional)</option>
-                  {contacts.map((ct) => (
-                    <option key={ct.id} value={ct.id}>
-                      {ct.name} ({ct.type})
-                    </option>
-                  ))}
+                  {[...contacts]
+                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                    .map((ct) => (
+                      <option key={ct.id} value={ct.id}>
+                        {ct.name} ({ct.type})
+                      </option>
+                    ))}
                 </select>
               </div>
             </div>

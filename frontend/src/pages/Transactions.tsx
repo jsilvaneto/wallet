@@ -320,7 +320,7 @@ export const Transactions: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
-            Lançamentos & Contas
+            Lançamentos
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             Controle integrado de receitas, despesas, vencimentos e liquidações ({profile})
@@ -629,14 +629,16 @@ export const Transactions: React.FC = () => {
             <select
               value={accountFilter}
               onChange={(e) => setAccountFilter(e.target.value)}
-              className="px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-800 dark:text-zinc-200 text-xs font-semibold focus:outline-none focus:border-emerald-500"
+              className="px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-800 dark:text-zinc-200 text-xs font-semibold focus:outline-none focus:border-emerald-500 font-medium"
             >
               <option value="TODAS">Todas as Contas</option>
-              {accountsList.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name} ({acc.type})
-                </option>
-              ))}
+              {[...accountsList]
+                .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                .map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({acc.type})
+                  </option>
+                ))}
             </select>
           )}
 
@@ -645,14 +647,16 @@ export const Transactions: React.FC = () => {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-800 dark:text-zinc-200 text-xs font-semibold focus:outline-none focus:border-emerald-500"
+              className="px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-800 dark:text-zinc-200 text-xs font-semibold focus:outline-none focus:border-emerald-500 font-medium"
             >
               <option value="TODAS">Todas as Categorias</option>
-              {categoriesList.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name} ({cat.type})
-                </option>
-              ))}
+              {[...categoriesList]
+                .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                .map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name} ({cat.type})
+                  </option>
+                ))}
             </select>
           )}
 

@@ -3,11 +3,10 @@ import { AppProvider, useApp } from "./context/AppContext";
 import { Header } from "./components/Header";
 import { Dashboard } from "./pages/Dashboard";
 import { Transactions } from "./pages/Transactions";
-import { Management } from "./pages/Management";
 import { Settings } from "./pages/Settings";
 import { api } from "./api/client";
 import { 
-  LayoutDashboard, ListFilter, FolderTree, Settings as SettingsIcon, 
+  LayoutDashboard, ListFilter, Settings as SettingsIcon, 
   Wallet as WalletIcon, Lock, User as UserIcon, LogIn, AlertCircle
 } from "lucide-react";
 
@@ -141,7 +140,7 @@ const AuthScreen: React.FC = () => {
 
 const MainLayout: React.FC = () => {
   const { token } = useApp();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "transactions" | "management" | "settings">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "transactions" | "settings">("dashboard");
 
   if (!token) {
     return <AuthScreen />;
@@ -175,19 +174,7 @@ const MainLayout: React.FC = () => {
             }`}
           >
             <ListFilter className="w-4 h-4" />
-            <span>Lançamentos & Contas</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab("management")}
-            className={`flex items-center gap-2 py-3.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
-              activeTab === "management"
-                ? "border-emerald-500 text-emerald-600 dark:text-emerald-400"
-                : "border-transparent text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
-            }`}
-          >
-            <FolderTree className="w-4 h-4" />
-            <span>Cadastros & Metas</span>
+            <span>Lançamentos</span>
           </button>
 
           <button
@@ -208,7 +195,6 @@ const MainLayout: React.FC = () => {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === "dashboard" && <Dashboard />}
         {activeTab === "transactions" && <Transactions />}
-        {activeTab === "management" && <Management />}
         {activeTab === "settings" && <Settings />}
       </main>
     </div>
