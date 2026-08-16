@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Category, Contact } from "../types";
-import { X, Calendar, DollarSign, Tag, User as ContactIcon, FileText } from "lucide-react";
+import { Category, Contact, Item } from "../types";
+import { X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, Package, Sparkles } from "lucide-react";
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -16,6 +16,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const { profile } = useApp();
   const [mode, setMode] = useState<Mode>("UNICO");
   const [type, setType] = useState<"DESPESA" | "RECEITA">("DESPESA");
+  const [itemId, setItemId] = useState("");
   const [description, setDescription] = useState("");
   const [amountStr, setAmountStr] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -26,6 +27,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const [notes, setNotes] = useState("");
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,25 +36,43 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
     if (!isOpen) return;
     const loadDependencies = async () => {
       try {
-        const [catRes, conRes] = await Promise.all([
+        const [catRes, conRes, itemRes] = await Promise.all([
           api.get("/categories", { params: { profile, type } }),
           api.get("/contacts", { params: { profile } }),
+          api.get("/items", { params: { profile, type } }),
         ]);
         setCategories(catRes.data);
         setContacts(conRes.data);
+        setItems(itemRes.data);
         if (catRes.data.length > 0) {
           setCategoryId(catRes.data[0].id);
         } else {
           setCategoryId("");
         }
       } catch (err) {
-        console.error("Erro ao carregar categorias/contatos:", err);
+        console.error("Erro ao carregar dependências:", err);
       }
     };
     loadDependencies();
   }, [isOpen, profile, type]);
 
   if (!isOpen) return null;
+
+  const handleItemSelect = (selectedItemId: string) => {
+    setItemId(selectedItemId);
+    if (!selectedItemId) return;
+
+    const found = items.find((it) => it.id === selectedItemId);
+    if (found) {
+      setCategoryId(found.category_id);
+      if (!description.trim()) {
+        setDescription(found.name);
+      }
+      if (found.default_amount_cents && found.default_amount_cents > 0 && !amountStr.trim()) {
+        setAmountStr((found.default_amount_cents / 100).toFixed(2).replace(".", ","));
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +108,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           description,
           amount_cents: amountCents,
           category_id: categoryId,
+          item_id: itemId || null,
           contact_id: contactId || null,
           due_date: dueDate,
           notes: notes || null,
@@ -100,6 +121,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           description,
           amount_cents: amountCents,
           category_id: categoryId,
+          item_id: itemId || null,
           contact_id: contactId || null,
           schedule_type: mode === "PARCELADO" ? "PARCELADA" : "RECORRENTE_CONTINUA",
           frequency: "MENSAL",
@@ -110,6 +132,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
       }
 
       // Reset form
+      setItemId("");
       setDescription("");
       setAmountStr("");
       setNotes("");
@@ -191,6 +214,51 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
               </button>
             ))}
           </div>
+
+          {/* Item Selector (Preenchimento Rápido) */}
+          {items.length > 0 && (
+            <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/70 dark:border-emerald-900/50 rounded-xl space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Item do Lançamento</span>
+                </label>
+                {itemId && (
+                  <button
+                    type="button"
+                    onClick={() => setItemId("")}
+                    className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 underline"
+                  >
+                    Limpar item
+                  </button>
+                )}
+              </div>
+              <select
+                value={itemId}
+                onChange={(e) => handleItemSelect(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-white dark:bg-zinc-800 border border-emerald-200 dark:border-emerald-800/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-zinc-900 dark:text-zinc-100"
+              >
+                <option value="">[Selecione um Item ou preencha manualmente]</option>
+                {categories
+                  .filter((c) => !c.parent_id)
+                  .map((parentCat) => {
+                    const subIds = [parentCat.id, ...categories.filter((s) => s.parent_id === parentCat.id).map((s) => s.id)];
+                    const catItems = items.filter((it) => subIds.includes(it.category_id));
+                    if (catItems.length === 0) return null;
+
+                    return (
+                      <optgroup key={parentCat.id} label={`${parentCat.name} (${parentCat.type})`}>
+                        {catItems.map((it) => (
+                          <option key={it.id} value={it.id}>
+                            {it.name} {it.parent_category_name ? `(${it.category_name})` : ""} {it.default_amount_cents && it.default_amount_cents > 0 ? `— R$ ${(it.default_amount_cents / 100).toFixed(2).replace(".", ",")}` : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
+              </select>
+            </div>
+          )}
 
           {/* Description */}
           <div>

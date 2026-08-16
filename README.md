@@ -19,11 +19,8 @@ O **Wallet** é uma plataforma moderna e local-first de controle financeiro pess
 - 💳 **Lançamentos Flexíveis**: Suporte a lançamentos únicos, parcelamentos automáticos em N parcelas e despesas fixas recorrentes.
 - 🔒 **Modo Privacidade**: Botão para ocultar/exibir valores na tela em ambientes compartilhados.
 - 📂 **Categorias & Subcategorias Hierárquicas**: Criação de categorias principais e subcategorias aninhadas para detalhamento refinado de receitas e despesas.
-- 🏷️ **Natureza das Categorias**: Classificação financeira por essencialidade nos 4 tipos:
-  - **Obrigatório**: Gastos fixos essenciais, moradia, impostos, salários.
-  - **Necessário**: Alimentação, transporte, saúde e educação.
-  - **Desejo**: Lazer, entretenimento, viagens e supérfluos.
-  - **Nenhum**: Neutro / sem classificação (padrão de receitas).
+- 🏷️ **Natureza das Categorias**: Classificação financeira por essencialidade nos 4 tipos: *Obrigatório*, *Necessário*, *Desejo* e *Nenhum*.
+- 📦 **Itens Vinculados a Subcategorias**: Cadastro de itens específicos com valor padrão sugerido (R$) e preenchimento instantâneo nos lançamentos únicos, parcelados e recorrentes.
 - ⚙️ **Menu de Configurações Centralizado**:
   - **Aparência & Tela de Login**: Escolha se a tela de login inicial deve ser renderizada em **Modo Escuro (Dark)** ou **Modo Claro (Light)**, além do tema global do sistema.
   - **Gestão Segura de Usuários**: Cadastro de novos usuários movido com segurança para dentro do sistema autenticado, com listagem e remoção de contas.

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Category, Contact, Debt, Budget } from "../types";
+import { Category, Item, Contact, Debt, Budget } from "../types";
 import { formatCurrency } from "../utils/format";
 import { 
-  FolderTree, Users, CreditCard, PiggyBank, 
+  FolderTree, Package, Users, CreditCard, PiggyBank, 
   Plus, Trash2, ArrowUpRight, ArrowDownRight, 
-  AlertCircle, CheckCircle2, ShieldAlert
+  AlertCircle, CheckCircle2, ShieldAlert, Tag, Search, DollarSign
 } from "lucide-react";
 
-type ManagementTab = "CATEGORIAS" | "CONTATOS" | "DIVIDAS" | "ORCAMENTOS";
+type ManagementTab = "CATEGORIAS" | "ITENS" | "CONTATOS" | "DIVIDAS" | "ORCAMENTOS";
 
 export const Management: React.FC = () => {
   const { profile, hideValues } = useApp();
@@ -18,6 +18,7 @@ export const Management: React.FC = () => {
 
   // Estados de dados
   const [categories, setCategories] = useState<Category[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
@@ -31,18 +32,25 @@ export const Management: React.FC = () => {
   const [catFilterType, setCatFilterType] = useState<"TODOS" | "RECEITA" | "DESPESA">("TODOS");
   const [catFilterNature, setCatFilterNature] = useState<string>("TODOS");
 
-  // 2. Contato Form
+  // 2. Item Form
+  const [itemName, setItemName] = useState("");
+  const [itemCatId, setItemCatId] = useState("");
+  const [itemAmountStr, setItemAmountStr] = useState("");
+  const [itemSearch, setItemSearch] = useState("");
+  const [itemFilterCatId, setItemFilterCatId] = useState("TODAS");
+
+  // 3. Contato Form
   const [conName, setConName] = useState("");
   const [conType, setConType] = useState<"FORNECEDOR" | "CLIENTE" | "FUNCIONARIO" | "OUTRO">("FORNECEDOR");
   const [conDoc, setConDoc] = useState("");
 
-  // 3. Dívida Form
+  // 4. Dívida Form
   const [debtTitle, setDebtTitle] = useState("");
   const [debtTotalStr, setDebtTotalStr] = useState("");
   const [debtDueDate, setDebtDueDate] = useState("");
   const [debtContactId, setDebtContactId] = useState("");
 
-  // 4. Orçamento Form
+  // 5. Orçamento Form
   const [budgetCatId, setBudgetCatId] = useState("");
   const [budgetLimitStr, setBudgetLimitStr] = useState("");
   const currentDate = new Date();
@@ -55,6 +63,18 @@ export const Management: React.FC = () => {
       if (activeTab === "CATEGORIAS") {
         const res = await api.get("/categories", { params: { profile } });
         setCategories(res.data);
+      } else if (activeTab === "ITENS") {
+        const [itemsRes, catRes] = await Promise.all([
+          api.get("/items", { params: { profile } }),
+          api.get("/categories", { params: { profile } }),
+        ]);
+        setItems(itemsRes.data);
+        setCategories(catRes.data);
+        if (catRes.data.length > 0 && !itemCatId) {
+          // Prefere selecionar a primeira subcategoria disponível
+          const firstSub = catRes.data.find((c: Category) => c.parent_id);
+          setItemCatId(firstSub ? firstSub.id : catRes.data[0].id);
+        }
       } else if (activeTab === "CONTATOS") {
         const res = await api.get("/contacts", { params: { profile } });
         setContacts(res.data);
@@ -106,6 +126,29 @@ export const Management: React.FC = () => {
     } catch (err: any) {
       console.error("Erro ao criar categoria:", err);
       alert(err.response?.data?.detail || "Erro ao criar categoria.");
+    }
+  };
+
+  const handleCreateItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!itemName.trim() || !itemCatId) return;
+    try {
+      const defaultAmount = itemAmountStr.trim()
+        ? Math.round(parseFloat(itemAmountStr.replace(",", ".")) * 100)
+        : null;
+
+      await api.post("/items", {
+        profile,
+        category_id: itemCatId,
+        name: itemName.trim(),
+        default_amount_cents: defaultAmount && defaultAmount > 0 ? defaultAmount : null,
+      });
+      setItemName("");
+      setItemAmountStr("");
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao criar item:", err);
+      alert(err.response?.data?.detail || "Erro ao criar item.");
     }
   };
 
@@ -204,6 +247,18 @@ export const Management: React.FC = () => {
           >
             <FolderTree className="w-3.5 h-3.5" />
             <span>Categorias</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("ITENS")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === "ITENS"
+                ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            }`}
+          >
+            <Package className="w-3.5 h-3.5" />
+            <span>Itens</span>
           </button>
 
           <button
@@ -551,13 +606,28 @@ export const Management: React.FC = () => {
                                   </span>
                                 </div>
 
-                                <button
-                                  onClick={() => handleDeleteItem("categories", sub.id)}
-                                  className="p-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-all"
-                                  title="Excluir Subcategoria"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveTab("ITENS");
+                                      setItemCatId(sub.id);
+                                    }}
+                                    className="px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 rounded transition-all flex items-center gap-0.5"
+                                    title="Criar Item nesta Subcategoria"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    <span>Item</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => handleDeleteItem("categories", sub.id)}
+                                    className="p-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-all"
+                                    title="Excluir Subcategoria"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -571,7 +641,239 @@ export const Management: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: CONTATOS */}
+      {/* TAB 2: ITENS VINCULADOS A SUBCATEGORIAS */}
+      {activeTab === "ITENS" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+          {/* Form */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Plus className="w-4 h-4 text-emerald-500" />
+                <span>Novo Item</span>
+              </h3>
+            </div>
+
+            <form onSubmit={handleCreateItem} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Nome do Item
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Aluguel Residencial, Netflix, Conta de Luz..."
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Subcategoria Vinculada
+                </label>
+                <select
+                  required
+                  value={itemCatId}
+                  onChange={(e) => setItemCatId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                >
+                  {categories.length === 0 && <option value="">Nenhuma subcategoria cadastrada</option>}
+                  {categories
+                    .filter((c) => !c.parent_id)
+                    .map((parentCat) => {
+                      const subs = categories.filter((s) => s.parent_id === parentCat.id);
+                      const getNat = (n?: string) => (n && n !== "NENHUM" ? ` [${n.charAt(0) + n.slice(1).toLowerCase()}]` : "");
+
+                      if (subs.length === 0) {
+                        return (
+                          <option key={parentCat.id} value={parentCat.id}>
+                            {parentCat.name}{getNat(parentCat.nature)} ({parentCat.type})
+                          </option>
+                        );
+                      }
+
+                      return (
+                        <optgroup key={parentCat.id} label={`${parentCat.name} (${parentCat.type})`}>
+                          <option value={parentCat.id}>
+                            {parentCat.name} (Principal){getNat(parentCat.nature)}
+                          </option>
+                          {subs.map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              ↳ {sub.name}{getNat(sub.nature)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
+                </select>
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  Selecione a subcategoria à qual este item pertence.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Valor Padrão Sugerido (R$ - Opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="0,00"
+                  value={itemAmountStr}
+                  onChange={(e) => setItemAmountStr(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 font-mono text-zinc-900 dark:text-zinc-100"
+                />
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  Se preenchido, esse valor será preenchido automaticamente ao selecionar o item nos lançamentos.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all mt-2"
+              >
+                Cadastrar Item
+              </button>
+            </form>
+          </div>
+
+          {/* List */}
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Itens Cadastrados
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  {items.length} itens cadastrados ({profile})
+                </p>
+              </div>
+
+              {/* Filtros e Busca */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2" />
+                  <input
+                    type="text"
+                    placeholder="Buscar item..."
+                    value={itemSearch}
+                    onChange={(e) => setItemSearch(e.target.value)}
+                    className="pl-8 pr-2.5 py-1 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 w-36 sm:w-44 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <select
+                  value={itemFilterCatId}
+                  onChange={(e) => setItemFilterCatId(e.target.value)}
+                  className="px-2.5 py-1 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 max-w-[160px] truncate"
+                >
+                  <option value="TODAS">Todas Subcategorias</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.parent_id ? `↳ ${c.name}` : c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {items.length === 0 ? (
+              <div className="p-8 text-center text-xs text-zinc-500">
+                Nenhum item cadastrado ainda. Cadastre itens vinculados às subcategorias para agilizar seus lançamentos.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[560px] overflow-y-auto pr-1">
+                {items
+                  .filter((item) => {
+                    if (itemFilterCatId !== "TODAS" && item.category_id !== itemFilterCatId) return false;
+                    if (itemSearch.trim()) {
+                      const q = itemSearch.toLowerCase();
+                      const matchName = item.name.toLowerCase().includes(q);
+                      const matchCat = item.category_name?.toLowerCase().includes(q) || false;
+                      const matchParent = item.parent_category_name?.toLowerCase().includes(q) || false;
+                      return matchName || matchCat || matchParent;
+                    }
+                    return true;
+                  })
+                  .map((item) => {
+                    const getNatureStyle = (nat?: string | null) => {
+                      switch (nat) {
+                        case "OBRIGATORIO":
+                          return "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/70";
+                        case "NECESSARIO":
+                          return "bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-700/70";
+                        case "DESEJO":
+                          return "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700/70";
+                        default:
+                          return "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700";
+                      }
+                    };
+
+                    const getNatureLabel = (nat?: string | null) => {
+                      switch (nat) {
+                        case "OBRIGATORIO": return "Obrigatório";
+                        case "NECESSARIO": return "Necessário";
+                        case "DESEJO": return "Desejo";
+                        default: return "Nenhum";
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="p-3 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/90 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all shadow-sm flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`p-1 rounded-md text-[10px] font-bold ${
+                              item.category_type === "RECEITA"
+                                ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300"
+                                : "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300"
+                            }`}>
+                              {item.category_type === "RECEITA" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                            </span>
+
+                            <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate" title={item.name}>
+                              {item.name}
+                            </h4>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-400">
+                            <span>
+                              {item.parent_category_name ? `${item.parent_category_name} > ` : ""}
+                              {item.category_name || "Subcategoria"}
+                            </span>
+                            {item.category_nature && (
+                              <span className={`text-[9px] font-semibold px-1.5 py-0.2 rounded-full border ${getNatureStyle(item.category_nature)}`}>
+                                {getNatureLabel(item.category_nature)}
+                              </span>
+                            )}
+                          </div>
+
+                          {item.default_amount_cents && item.default_amount_cents > 0 ? (
+                            <p className="text-[11px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                              Padrão: {hideValues ? "••••••" : formatCurrency(item.default_amount_cents)}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteItem("items", item.id)}
+                          className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all shrink-0"
+                          title="Excluir Item"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: CONTATOS */}
       {activeTab === "CONTATOS" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Form */}

@@ -28,6 +28,19 @@ export interface Category {
   created_at: string;
 }
 
+export interface Item {
+  id: string;
+  profile: ProfileType;
+  category_id: string;
+  name: string;
+  default_amount_cents?: number | null;
+  category_name?: string | null;
+  category_type?: TransactionType | null;
+  category_nature?: CategoryNature | null;
+  parent_category_name?: string | null;
+  created_at: string;
+}
+
 export interface Contact {
   id: string;
   profile: ProfileType;

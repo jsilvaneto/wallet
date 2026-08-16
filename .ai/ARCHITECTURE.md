@@ -46,6 +46,7 @@ backend/
 - **Users**: Usuários com credenciais criptografadas.
 - **Accounts**: Carteiras e contas bancárias (Corrente, Poupança, Caixa, etc.).
 - **Categories**: Categorias e subcategorias hierárquicas (`parent_id`) separadas por perfil (`PESSOAL`/`EMPRESA`), tipo (`RECEITA`/`DESPESA`) e classificação por **Natureza** (`NENHUM`, `OBRIGATORIO`, `NECESSARIO`, `DESEJO`).
+- **Items**: Itens específicos vinculados a subcategorias com valor padrão sugerido opcional para agilidade e precisão nos lançamentos.
 - **Contacts**: Clientes, fornecedores e prestadores com CPF/CNPJ.
 - **Debts**: Passivos financeiros com controle de amortização e saldo devedor restante.
 - **Schedules**: Regras de recorrência e parcelamentos em N vezes com criação de agendamentos.
