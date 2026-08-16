@@ -40,9 +40,11 @@ Ambos os perfis compartilham a mesma infraestrutura de banco de dados com isolam
   - Botão de ocultar/exibir valores sensíveis em tela.
   - Painel Geral (Dashboard) com KPIs (Realizado, A Vencer, Projeção Final do Mês), alertas de atraso e maiores despesas por categoria.
   - Gestão de Lançamentos & Contas com filtros por Status, Tipo, Período mensal e liquidação/exclusão.
-  - Modal dinâmico para Lançamentos Únicos, Parcelados (em N vezes) e Recorrentes mensais.
-  - Módulo de **Cadastros & Metas** com 4 abas financeiras: Categorias, Contatos, Dívidas (com barra de amortização) e Orçamentos (com acompanhamento de teto de gastos e alertas).
-  - Módulo de **Configurações do Sistema** com 3 seções completas:
+  - Módulo de **Cadastros & Metas** com 4 abas financeiras:
+    - **Categorias & Subcategorias**: Gestão hierárquica em árvore de categorias e subcategorias, com classificação por **Natureza da Categoria** (`Nenhum`, `Obrigatório`, `Necessário`, `Desejo`), badges coloridos e filtros por tipo e essencialidade.
+    - **Contatos**: Gestão de clientes, fornecedores e funcionários com CPF/CNPJ.
+    - **Dívidas**: Acompanhamento de passivos financeiros com barra de progresso de amortização e saldo restante.
+    - **Orçamentos**: Tetos de gastos mensais por categoria com alertas visuais de consumo percentual.
     - **Aparência & Login**: Escolha de tema da tela de login (Clara ou Escura), tema global do sistema e modo privacidade.
     - **Gestão de Usuários**: Cadastro seguro de novos usuários e listagem/exclusão de usuários existentes com proteção do último administrador.
     - **Sincronização Nuvem**: Configuração de credenciais Google Sheets, ações direcionais e auditoria de logs.

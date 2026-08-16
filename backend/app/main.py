@@ -1,14 +1,24 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine, Base
-import app.models
-from app.api.v1 import api_router
-
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 from app.database import engine, Base, AsyncSessionLocal
+import app.models
 from app.models import User, Category, Account
 from app.core.security import get_password_hash
+from app.api.v1 import api_router
+
+async def migrate_database_schema():
+    """Garante que colunas novas como 'nature' existam na tabela categories."""
+    async with engine.begin() as conn:
+        try:
+            # Verifica colunas da tabela categories
+            res = await conn.execute(text("PRAGMA table_info(categories)"))
+            columns = [row[1] for row in res.fetchall()]
+            if "nature" not in columns:
+                await conn.execute(text("ALTER TABLE categories ADD COLUMN nature VARCHAR(20) DEFAULT 'NENHUM' NOT NULL"))
+        except Exception as e:
+            print("Aviso na migração SQLite:", e)
 
 async def seed_initial_data():
     async with AsyncSessionLocal() as session:
@@ -26,29 +36,29 @@ async def seed_initial_data():
         if cat_count == 0:
             default_categories = [
                 # Pessoal - Receitas
-                Category(profile="PESSOAL", type="RECEITA", name="Salário / Rendimentos"),
-                Category(profile="PESSOAL", type="RECEITA", name="Investimentos & Dividendos"),
-                Category(profile="PESSOAL", type="RECEITA", name="Outras Receitas"),
-                # Pessoal - Despesas
-                Category(profile="PESSOAL", type="DESPESA", name="Moradia & Contas"),
-                Category(profile="PESSOAL", type="DESPESA", name="Alimentação & Supermercado"),
-                Category(profile="PESSOAL", type="DESPESA", name="Transporte & Combustível"),
-                Category(profile="PESSOAL", type="DESPESA", name="Saúde & Farmácia"),
-                Category(profile="PESSOAL", type="DESPESA", name="Educação"),
-                Category(profile="PESSOAL", type="DESPESA", name="Lazer & Entretenimento"),
-                Category(profile="PESSOAL", type="DESPESA", name="Outras Despesas"),
+                Category(profile="PESSOAL", type="RECEITA", nature="NENHUM", name="Salário / Rendimentos"),
+                Category(profile="PESSOAL", type="RECEITA", nature="NENHUM", name="Investimentos & Dividendos"),
+                Category(profile="PESSOAL", type="RECEITA", nature="NENHUM", name="Outras Receitas"),
+                # Pessoal - Despesas (com naturezas padrão)
+                Category(profile="PESSOAL", type="DESPESA", nature="OBRIGATORIO", name="Moradia & Contas"),
+                Category(profile="PESSOAL", type="DESPESA", nature="NECESSARIO", name="Alimentação & Supermercado"),
+                Category(profile="PESSOAL", type="DESPESA", nature="NECESSARIO", name="Transporte & Combustível"),
+                Category(profile="PESSOAL", type="DESPESA", nature="OBRIGATORIO", name="Saúde & Farmácia"),
+                Category(profile="PESSOAL", type="DESPESA", nature="NECESSARIO", name="Educação"),
+                Category(profile="PESSOAL", type="DESPESA", nature="DESEJO", name="Lazer & Entretenimento"),
+                Category(profile="PESSOAL", type="DESPESA", nature="NENHUM", name="Outras Despesas"),
                 # Empresa - Receitas
-                Category(profile="EMPRESA", type="RECEITA", name="Prestação de Serviços"),
-                Category(profile="EMPRESA", type="RECEITA", name="Venda de Produtos"),
-                Category(profile="EMPRESA", type="RECEITA", name="Rendimentos PJ"),
-                Category(profile="EMPRESA", type="RECEITA", name="Outras Receitas PJ"),
-                # Empresa - Despesas
-                Category(profile="EMPRESA", type="DESPESA", name="Fornecedores & Insumos"),
-                Category(profile="EMPRESA", type="DESPESA", name="Salários & Pró-Labore"),
-                Category(profile="EMPRESA", type="DESPESA", name="Impostos & Tributos (DAS/GPS)"),
-                Category(profile="EMPRESA", type="DESPESA", name="Software & Infraestrutura"),
-                Category(profile="EMPRESA", type="DESPESA", name="Marketing & Comercial"),
-                Category(profile="EMPRESA", type="DESPESA", name="Outras Despesas PJ"),
+                Category(profile="EMPRESA", type="RECEITA", nature="NENHUM", name="Prestação de Serviços"),
+                Category(profile="EMPRESA", type="RECEITA", nature="NENHUM", name="Venda de Produtos"),
+                Category(profile="EMPRESA", type="RECEITA", nature="NENHUM", name="Rendimentos PJ"),
+                Category(profile="EMPRESA", type="RECEITA", nature="NENHUM", name="Outras Receitas PJ"),
+                # Empresa - Despesas (com naturezas padrão)
+                Category(profile="EMPRESA", type="DESPESA", nature="NECESSARIO", name="Fornecedores & Insumos"),
+                Category(profile="EMPRESA", type="DESPESA", nature="OBRIGATORIO", name="Salários & Pró-Labore"),
+                Category(profile="EMPRESA", type="DESPESA", nature="OBRIGATORIO", name="Impostos & Tributos (DAS/GPS)"),
+                Category(profile="EMPRESA", type="DESPESA", nature="NECESSARIO", name="Software & Infraestrutura"),
+                Category(profile="EMPRESA", type="DESPESA", nature="NECESSARIO", name="Marketing & Comercial"),
+                Category(profile="EMPRESA", type="DESPESA", nature="NENHUM", name="Outras Despesas PJ"),
             ]
             session.add_all(default_categories)
 
@@ -68,6 +78,7 @@ async def seed_initial_data():
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await migrate_database_schema()
     await seed_initial_data()
     yield
     await engine.dispose()

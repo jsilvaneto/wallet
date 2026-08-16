@@ -26,6 +26,10 @@ export const Management: React.FC = () => {
   // 1. Categoria Form
   const [catName, setCatName] = useState("");
   const [catType, setCatType] = useState<"RECEITA" | "DESPESA">("DESPESA");
+  const [catNature, setCatNature] = useState<"NENHUM" | "OBRIGATORIO" | "NECESSARIO" | "DESEJO">("NENHUM");
+  const [catParentId, setCatParentId] = useState<string>("");
+  const [catFilterType, setCatFilterType] = useState<"TODOS" | "RECEITA" | "DESPESA">("TODOS");
+  const [catFilterNature, setCatFilterNature] = useState<string>("TODOS");
 
   // 2. Contato Form
   const [conName, setConName] = useState("");
@@ -90,13 +94,18 @@ export const Management: React.FC = () => {
     try {
       await api.post("/categories", {
         profile,
-        name: catName,
+        name: catName.trim(),
         type: catType,
+        nature: catNature,
+        parent_id: catParentId ? catParentId : null,
       });
       setCatName("");
+      setCatParentId("");
+      setCatNature("NENHUM");
       loadData();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao criar categoria:", err);
+      alert(err.response?.data?.detail || "Erro ao criar categoria.");
     }
   };
 
@@ -235,24 +244,36 @@ export const Management: React.FC = () => {
         </div>
       </div>
 
-      {/* TAB 1: CATEGORIAS */}
+      {/* TAB 1: CATEGORIAS E SUBCATEGORIAS */}
       {activeTab === "CATEGORIAS" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Form */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-              <Plus className="w-4 h-4 text-emerald-500" />
-              <span>Nova Categoria</span>
-            </h3>
-            <form onSubmit={handleCreateCategory} className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Plus className="w-4 h-4 text-emerald-500" />
+                <span>{catParentId ? "Nova Subcategoria" : "Nova Categoria"}</span>
+              </h3>
+              {catParentId && (
+                <button
+                  type="button"
+                  onClick={() => setCatParentId("")}
+                  className="text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 underline"
+                >
+                  Criar Categoria Raiz
+                </button>
+              )}
+            </div>
+
+            <form onSubmit={handleCreateCategory} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Nome da Categoria
+                  Nome da {catParentId ? "Subcategoria" : "Categoria"}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Alimentação, Salário, Marketing..."
+                  placeholder={catParentId ? "Ex: Restaurante, Supermercado..." : "Ex: Alimentação, Moradia, Salário..."}
                   value={catName}
                   onChange={(e) => setCatName(e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
@@ -266,7 +287,7 @@ export const Management: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setCatType("DESPESA")}
+                    onClick={() => { setCatType("DESPESA"); setCatParentId(""); }}
                     className={`py-2 text-xs font-bold rounded-lg border transition-all ${
                       catType === "DESPESA"
                         ? "border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-600 shadow-sm"
@@ -277,7 +298,7 @@ export const Management: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCatType("RECEITA")}
+                    onClick={() => { setCatType("RECEITA"); setCatParentId(""); }}
                     className={`py-2 text-xs font-bold rounded-lg border transition-all ${
                       catType === "RECEITA"
                         ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 shadow-sm"
@@ -289,22 +310,136 @@ export const Management: React.FC = () => {
                 </div>
               </div>
 
+              {/* Categoria Pai (Vínculo de Subcategoria) */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Categoria Pai (Opcional)
+                </label>
+                <select
+                  value={catParentId}
+                  onChange={(e) => setCatParentId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="">[Nenhuma - Categoria Principal]</option>
+                  {categories
+                    .filter((c) => !c.parent_id && c.type === catType)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  {catParentId
+                    ? "Esta categoria será cadastrada como subcategoria da categoria selecionada."
+                    : "Deixe vazio para criar uma categoria principal."}
+                </p>
+              </div>
+
+              {/* Natureza da Categoria */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Natureza da Categoria
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setCatNature("NENHUM")}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border text-left transition-all ${
+                      catNature === "NENHUM"
+                        ? "border-zinc-800 bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm"
+                        : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/30"
+                    }`}
+                  >
+                    Nenhum
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCatNature("OBRIGATORIO")}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border text-left transition-all ${
+                      catNature === "OBRIGATORIO"
+                        ? "border-amber-500 bg-amber-500 text-white shadow-sm"
+                        : "border-amber-200 dark:border-amber-900/60 text-amber-700 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-950/20"
+                    }`}
+                  >
+                    Obrigatório
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCatNature("NECESSARIO")}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border text-left transition-all ${
+                      catNature === "NECESSARIO"
+                        ? "border-blue-500 bg-blue-500 text-white shadow-sm"
+                        : "border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 bg-blue-50/50 dark:bg-blue-950/20"
+                    }`}
+                  >
+                    Necessário
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCatNature("DESEJO")}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border text-left transition-all ${
+                      catNature === "DESEJO"
+                        ? "border-purple-500 bg-purple-500 text-white shadow-sm"
+                        : "border-purple-200 dark:border-purple-900/60 text-purple-700 dark:text-purple-300 bg-purple-50/50 dark:bg-purple-950/20"
+                    }`}
+                  >
+                    Desejo
+                  </button>
+                </div>
+                <p className="text-[10px] text-zinc-400 mt-1">
+                  Classificação para controle de gastos essenciais (Obrigatório / Necessário) e supérfluos (Desejo).
+                </p>
+              </div>
+
               <button
                 type="submit"
-                className="w-full py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all mt-2"
+                className="w-full py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all mt-2"
               >
-                Cadastrar Categoria
+                {catParentId ? "Cadastrar Subcategoria" : "Cadastrar Categoria"}
               </button>
             </form>
           </div>
 
-          {/* List */}
+          {/* List & Tree */}
           <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                Categorias Cadastradas
-              </h3>
-              <span className="text-xs text-zinc-400">{categories.length} registros</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Categorias & Subcategorias
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  {categories.length} categorias cadastradas ({categories.filter(c => !c.parent_id).length} principais, {categories.filter(c => c.parent_id).length} subcategorias)
+                </p>
+              </div>
+
+              {/* Filtros */}
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={catFilterType}
+                  onChange={(e: any) => setCatFilterType(e.target.value)}
+                  className="px-2.5 py-1 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300"
+                >
+                  <option value="TODOS">Todos os Fluxos</option>
+                  <option value="DESPESA">Apenas Despesas</option>
+                  <option value="RECEITA">Apenas Receitas</option>
+                </select>
+
+                <select
+                  value={catFilterNature}
+                  onChange={(e) => setCatFilterNature(e.target.value)}
+                  className="px-2.5 py-1 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300"
+                >
+                  <option value="TODOS">Todas as Naturezas</option>
+                  <option value="OBRIGATORIO">Obrigatório</option>
+                  <option value="NECESSARIO">Necessário</option>
+                  <option value="DESEJO">Desejo</option>
+                  <option value="NENHUM">Nenhum</option>
+                </select>
+              </div>
             </div>
 
             {categories.length === 0 ? (
@@ -312,34 +447,124 @@ export const Management: React.FC = () => {
                 Nenhuma categoria cadastrada.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[500px] overflow-y-auto pr-1">
-                {categories.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center justify-between p-3 rounded-xl border border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={`p-1 rounded-md text-[10px] font-bold ${
-                        c.type === "RECEITA"
-                          ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
-                          : "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
-                      }`}>
-                        {c.type === "RECEITA" ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                      </span>
-                      <span className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                        {c.name}
-                      </span>
-                    </div>
+              <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
+                {categories
+                  .filter((c) => !c.parent_id) // Categorias Principais
+                  .filter((c) => catFilterType === "TODOS" || c.type === catFilterType)
+                  .filter((c) => catFilterNature === "TODOS" || c.nature === catFilterNature || categories.some(sub => sub.parent_id === c.id && sub.nature === catFilterNature))
+                  .map((parentCat) => {
+                    const subcategories = categories.filter((sub) => sub.parent_id === parentCat.id);
+                    
+                    const getNatureStyle = (nat: string) => {
+                      switch (nat) {
+                        case "OBRIGATORIO":
+                          return "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/70 shadow-sm shadow-amber-500/5";
+                        case "NECESSARIO":
+                          return "bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-700/70 shadow-sm shadow-sky-500/5";
+                        case "DESEJO":
+                          return "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700/70 shadow-sm shadow-purple-500/5";
+                        default:
+                          return "bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/80";
+                      }
+                    };
 
-                    <button
-                      onClick={() => handleDeleteItem("categories", c.id)}
-                      className="p-1 text-zinc-400 hover:text-rose-600 rounded-md transition-all"
-                      title="Excluir Categoria"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+                    const getNatureLabel = (nat: string) => {
+                      switch (nat) {
+                        case "OBRIGATORIO": return "Obrigatório";
+                        case "NECESSARIO": return "Necessário";
+                        case "DESEJO": return "Desejo";
+                        default: return "Nenhum";
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={parentCat.id}
+                        className="rounded-2xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden transition-all hover:border-zinc-300 dark:hover:border-zinc-700/80"
+                      >
+                        {/* Parent Row */}
+                        <div className="flex items-center justify-between p-3.5 bg-gradient-to-r from-zinc-100/80 via-zinc-50/50 to-white dark:from-zinc-800/80 dark:via-zinc-800/40 dark:to-zinc-900/60 border-b border-zinc-100 dark:border-zinc-800/80">
+                          <div className="flex items-center gap-3">
+                            <span className={`p-1.5 rounded-xl text-xs font-bold shadow-sm ${
+                              parentCat.type === "RECEITA"
+                                ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60"
+                                : "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60"
+                            }`}>
+                              {parentCat.type === "RECEITA" ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                            </span>
+
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+                                  {parentCat.name}
+                                </span>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getNatureStyle(parentCat.nature)}`}>
+                                  {getNatureLabel(parentCat.nature)}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-zinc-400 dark:text-zinc-500">
+                                {subcategories.length > 0 ? `${subcategories.length} subcategoria(s)` : "Categoria principal"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCatParentId(parentCat.id);
+                                setCatType(parentCat.type);
+                                setCatNature(parentCat.nature || "NENHUM");
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/80 border border-emerald-200/80 dark:border-emerald-800/60 rounded-lg transition-all"
+                              title="Adicionar Subcategoria nesta Categoria"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Subcategoria</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteItem("categories", parentCat.id)}
+                              className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all"
+                              title="Excluir Categoria"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Subcategories List */}
+                        {subcategories.length > 0 && (
+                          <div className="bg-zinc-50/40 dark:bg-zinc-950/60 p-3 space-y-1.5 border-t border-zinc-100/80 dark:border-zinc-800/60">
+                            {subcategories.map((sub) => (
+                              <div
+                                key={sub.id}
+                                className="flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200/70 dark:border-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all shadow-sm"
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <span className="text-emerald-500 dark:text-emerald-400 font-mono text-xs font-bold">↳</span>
+                                  <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200">
+                                    {sub.name}
+                                  </span>
+                                  <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full border ${getNatureStyle(sub.nature)}`}>
+                                    {getNatureLabel(sub.nature)}
+                                  </span>
+                                </div>
+
+                                <button
+                                  onClick={() => handleDeleteItem("categories", sub.id)}
+                                  className="p-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-all"
+                                  title="Excluir Subcategoria"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>

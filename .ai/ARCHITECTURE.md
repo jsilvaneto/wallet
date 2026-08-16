@@ -45,7 +45,7 @@ backend/
 ### 2.3 Modelo de Dados
 - **Users**: Usuários com credenciais criptografadas.
 - **Accounts**: Carteiras e contas bancárias (Corrente, Poupança, Caixa, etc.).
-- **Categories**: Categorias hierárquicas separadas por perfil (`PESSOAL`/`EMPRESA`) e tipo (`RECEITA`/`DESPESA`).
+- **Categories**: Categorias e subcategorias hierárquicas (`parent_id`) separadas por perfil (`PESSOAL`/`EMPRESA`), tipo (`RECEITA`/`DESPESA`) e classificação por **Natureza** (`NENHUM`, `OBRIGATORIO`, `NECESSARIO`, `DESEJO`).
 - **Contacts**: Clientes, fornecedores e prestadores com CPF/CNPJ.
 - **Debts**: Passivos financeiros com controle de amortização e saldo devedor restante.
 - **Schedules**: Regras de recorrência e parcelamentos em N vezes com criação de agendamentos.

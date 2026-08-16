@@ -303,11 +303,33 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
               >
                 {categories.length === 0 && <option value="">Nenhuma categoria encontrada</option>}
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
+                {categories
+                  .filter((c) => !c.parent_id)
+                  .map((parentCat) => {
+                    const subs = categories.filter((s) => s.parent_id === parentCat.id);
+                    const getNat = (n?: string) => (n && n !== "NENHUM" ? ` • ${n.charAt(0) + n.slice(1).toLowerCase()}` : "");
+
+                    if (subs.length === 0) {
+                      return (
+                        <option key={parentCat.id} value={parentCat.id}>
+                          {parentCat.name}{getNat(parentCat.nature)}
+                        </option>
+                      );
+                    }
+
+                    return (
+                      <optgroup key={parentCat.id} label={`${parentCat.name}${getNat(parentCat.nature)}`}>
+                        <option value={parentCat.id}>
+                          {parentCat.name} (Principal)
+                        </option>
+                        {subs.map((sub) => (
+                          <option key={sub.id} value={sub.id}>
+                            ↳ {sub.name}{getNat(sub.nature)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  })}
               </select>
             </div>
 

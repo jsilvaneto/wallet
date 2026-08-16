@@ -1,6 +1,7 @@
 export type ProfileType = "PESSOAL" | "EMPRESA";
 export type TransactionType = "RECEITA" | "DESPESA";
 export type TransactionStatus = "PENDENTE" | "CONCLUIDO" | "CANCELADO";
+export type CategoryNature = "NENHUM" | "OBRIGATORIO" | "NECESSARIO" | "DESEJO";
 
 export interface User {
   id: string;
@@ -21,7 +22,9 @@ export interface Category {
   profile: ProfileType;
   type: TransactionType;
   name: string;
+  nature: CategoryNature;
   parent_id?: string | null;
+  subcategories?: Category[];
   created_at: string;
 }
 

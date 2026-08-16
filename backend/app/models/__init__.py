@@ -42,6 +42,7 @@ class Category(Base):
     profile: Mapped[str] = mapped_column(String(10), nullable=False)
     type: Mapped[str] = mapped_column(String(10), nullable=False) # 'RECEITA' ou 'DESPESA'
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+    nature: Mapped[str] = mapped_column(String(20), default="NENHUM", nullable=False) # 'NENHUM', 'OBRIGATORIO', 'NECESSARIO', 'DESEJO'
     parent_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("categories.id", ondelete="CASCADE"), nullable=True)
     created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
 
@@ -50,6 +51,7 @@ class Category(Base):
     __table_args__ = (
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_category_profile"),
         CheckConstraint("type IN ('RECEITA', 'DESPESA')", name="chk_category_type"),
+        CheckConstraint("nature IN ('NENHUM', 'OBRIGATORIO', 'NECESSARIO', 'DESEJO')", name="chk_category_nature"),
     )
 
 # 4. Itens Vinculados a Categoria
