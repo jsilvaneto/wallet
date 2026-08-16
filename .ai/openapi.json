@@ -1905,8 +1905,28 @@
                   "type": "null"
                 }
               ],
+              "description": "Filtrar por Categoria",
               "title": "Category Id"
-            }
+            },
+            "description": "Filtrar por Categoria"
+          },
+          {
+            "name": "account_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar por Conta Bancária / Carteira",
+              "title": "Account Id"
+            },
+            "description": "Filtrar por Conta Bancária / Carteira"
           },
           {
             "name": "contact_id",
@@ -1921,8 +1941,10 @@
                   "type": "null"
                 }
               ],
+              "description": "Filtrar por Contato / Favorecido",
               "title": "Contact Id"
-            }
+            },
+            "description": "Filtrar por Contato / Favorecido"
           },
           {
             "name": "debt_id",
@@ -1937,8 +1959,46 @@
                   "type": "null"
                 }
               ],
+              "description": "Filtrar por Dívida vinculada",
               "title": "Debt Id"
-            }
+            },
+            "description": "Filtrar por Dívida vinculada"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Busca textual na descrição ou observações",
+              "title": "Search"
+            },
+            "description": "Busca textual na descrição ou observações"
+          },
+          {
+            "name": "is_overdue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar apenas contas em atraso (vencidas e não pagas)",
+              "title": "Is Overdue"
+            },
+            "description": "Filtrar apenas contas em atraso (vencidas e não pagas)"
           }
         ],
         "responses": {

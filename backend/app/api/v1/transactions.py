@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from typing import List, Optional
 
 from app.database import get_db
@@ -18,9 +18,12 @@ async def list_transactions(
     status_filter: Optional[str] = Query(None, alias="status", description="PENDENTE, CONCLUIDO, CANCELADO"),
     start_due_date: Optional[str] = Query(None, description="Vencimento inicial (YYYY-MM-DD)"),
     end_due_date: Optional[str] = Query(None, description="Vencimento final (YYYY-MM-DD)"),
-    category_id: Optional[str] = None,
-    contact_id: Optional[str] = None,
-    debt_id: Optional[str] = None,
+    category_id: Optional[str] = Query(None, description="Filtrar por Categoria"),
+    account_id: Optional[str] = Query(None, description="Filtrar por Conta Bancária / Carteira"),
+    contact_id: Optional[str] = Query(None, description="Filtrar por Contato / Favorecido"),
+    debt_id: Optional[str] = Query(None, description="Filtrar por Dívida vinculada"),
+    search: Optional[str] = Query(None, description="Busca textual na descrição ou observações"),
+    is_overdue: Optional[bool] = Query(None, description="Filtrar apenas contas em atraso (vencidas e não pagas)"),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user)
 ):
@@ -31,16 +34,24 @@ async def list_transactions(
         query = query.where(Transaction.type == type)
     if status_filter:
         query = query.where(Transaction.status == status_filter)
+    if is_overdue:
+        today_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        query = query.where(Transaction.status == "PENDENTE", Transaction.due_date < today_iso)
     if start_due_date:
         query = query.where(Transaction.due_date >= start_due_date)
     if end_due_date:
         query = query.where(Transaction.due_date <= end_due_date)
     if category_id:
         query = query.where(Transaction.category_id == category_id)
+    if account_id:
+        query = query.where(Transaction.account_id == account_id)
     if contact_id:
         query = query.where(Transaction.contact_id == contact_id)
     if debt_id:
         query = query.where(Transaction.debt_id == debt_id)
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.where(or_(Transaction.description.ilike(term), Transaction.notes.ilike(term)))
         
     query = query.order_by(Transaction.due_date.asc(), Transaction.created_at.asc())
     result = await db.execute(query)

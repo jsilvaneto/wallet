@@ -54,8 +54,11 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
 
 - [x] **Gestão Financeira, Dívidas & Orçamentos**:
   - [x] Dashboard com KPIs de Realizado, A Vencer, Projeção Final do Mês e maiores despesas por categoria.
-  - [x] Gestão de Contas e Lançamentos com filtros por Status, Tipo, Período mensal e liquidação/exclusão.
-  - [x] Lançamentos Únicos, Parcelados (em N vezes) e Recorrentes mensais.
+  - [x] Tela de Lançamentos com **Sistema Dinâmico de Períodos** (Presets: Mês, Hoje, Esta Semana, Próx. 7/30 Dias, Ano Todo, Todas as Datas, Personalizado) e navegador de meses (`<` e `>`).
+  - [x] **Atalhos Inteligentes & Alerta de Contas Atrasadas**: Banner dinâmico com valor pendente e filtro em 1 clique para todas as contas vencidas na história.
+  - [x] **Busca Textual Global Instantânea**: Filtragem live por descrição, categoria, conta bancária, contato, valor e anotações.
+  - [x] **Filtros Multi-Critério**: Status (`Todos`, `Abertas`, `Liquidadas`, `Atrasadas`), Tipo (`Despesas`, `Receitas`), Conta/Carteira e Categoria com botão para limpar filtros.
+  - [x] Lançamentos Únicos, Parcelados (em N vezes com badges `1/12`) e Recorrentes mensais.
   - [x] Módulo de Dívidas com acompanhamento de amortização e saldo devedor.
   - [x] Módulo de Orçamentos com tetos de gastos mensais e alertas de consumo percentual.
 
