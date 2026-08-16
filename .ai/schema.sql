@@ -22,13 +22,11 @@ CREATE TABLE categories (
 	type VARCHAR(10) NOT NULL, 
 	name VARCHAR(100) NOT NULL, 
 	nature VARCHAR(20) NOT NULL, 
-	parent_id VARCHAR(36), 
 	created_at VARCHAR(30) NOT NULL, 
 	PRIMARY KEY (id), 
 	CONSTRAINT chk_category_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
 	CONSTRAINT chk_category_type CHECK (type IN ('RECEITA', 'DESPESA')), 
-	CONSTRAINT chk_category_nature CHECK (nature IN ('NENHUM', 'OBRIGATORIO', 'NECESSARIO', 'DESEJO')), 
-	FOREIGN KEY(parent_id) REFERENCES categories (id) ON DELETE CASCADE
+	CONSTRAINT chk_category_nature CHECK (nature IN ('NENHUM', 'OBRIGATORIO', 'NECESSARIO', 'DESEJO'))
 );
 
 CREATE TABLE contacts (

@@ -18,9 +18,9 @@ O **Wallet** é uma plataforma moderna de controle financeiro pessoal e empresar
 - ⚡ **Alertas de Vencimento**: Identificação e destaque automático de contas vencendo hoje e contas atrasadas.
 - 💳 **Lançamentos Flexíveis**: Suporte a lançamentos únicos, parcelamentos automáticos em N parcelas e despesas fixas recorrentes.
 - 🔒 **Modo Privacidade**: Botão para ocultar/exibir valores na tela em ambientes compartilhados.
-- 📂 **Categorias & Subcategorias Hierárquicas**: Criação de categorias principais e subcategorias aninhadas para detalhamento refinado de receitas e despesas.
+- 📂 **Categorias Planas & Diretas**: Gestão ágil e simplificada de categorias de receitas e despesas por perfil.
 - 🏷️ **Natureza das Categorias**: Classificação financeira por essencialidade nos 4 tipos: *Obrigatório*, *Necessário*, *Desejo* e *Nenhum*.
-- 📦 **Itens Vinculados a Subcategorias**: Cadastro de itens específicos com valor padrão sugerido (R$) e preenchimento instantâneo nos lançamentos únicos, parcelados e recorrentes.
+- 📦 **Itens Vinculados a Categorias**: Cadastro de itens específicos com valor padrão sugerido (R$) e preenchimento instantâneo nos lançamentos únicos, parcelados e recorrentes.
 - ⚙️ **Menu de Configurações Centralizado**:
   - **Aparência & Tela de Login**: Escolha se a tela de login inicial deve ser renderizada em **Modo Escuro (Dark)** ou **Modo Claro (Light)**, além do tema global do sistema.
   - **Gestão Segura de Usuários**: Cadastro de novos usuários movido com segurança para dentro do sistema autenticado, com listagem e remoção de contas.

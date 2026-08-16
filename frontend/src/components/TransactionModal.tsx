@@ -246,23 +246,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 className="w-full px-3 py-2 text-xs bg-white dark:bg-zinc-800 border border-emerald-200 dark:border-emerald-800/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-zinc-900 dark:text-zinc-100"
               >
                 <option value="">[Selecione um Item ou preencha manualmente]</option>
-                {categories
-                  .filter((c) => !c.parent_id)
-                  .map((parentCat) => {
-                    const subIds = [parentCat.id, ...categories.filter((s) => s.parent_id === parentCat.id).map((s) => s.id)];
-                    const catItems = items.filter((it) => subIds.includes(it.category_id));
-                    if (catItems.length === 0) return null;
+                {categories.map((cat) => {
+                  const catItems = items.filter((it) => it.category_id === cat.id);
+                  if (catItems.length === 0) return null;
 
-                    return (
-                      <optgroup key={parentCat.id} label={`${parentCat.name} (${parentCat.type})`}>
-                        {catItems.map((it) => (
-                          <option key={it.id} value={it.id}>
-                            {it.name} {it.parent_category_name ? `(${it.category_name})` : ""} {it.default_amount_cents && it.default_amount_cents > 0 ? `— R$ ${(it.default_amount_cents / 100).toFixed(2).replace(".", ",")}` : ""}
-                          </option>
-                        ))}
-                      </optgroup>
-                    );
-                  })}
+                  return (
+                    <optgroup key={cat.id} label={`${cat.name} (${cat.type})`}>
+                      {catItems.map((it) => (
+                        <option key={it.id} value={it.id}>
+                          {it.name} {it.default_amount_cents && it.default_amount_cents > 0 ? `— R$ ${(it.default_amount_cents / 100).toFixed(2).replace(".", ",")}` : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
           )}
@@ -378,33 +375,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
               >
                 {categories.length === 0 && <option value="">Nenhuma categoria encontrada</option>}
-                {categories
-                  .filter((c) => !c.parent_id)
-                  .map((parentCat) => {
-                    const subs = categories.filter((s) => s.parent_id === parentCat.id);
-                    const getNat = (n?: string) => (n && n !== "NENHUM" ? ` • ${n.charAt(0) + n.slice(1).toLowerCase()}` : "");
-
-                    if (subs.length === 0) {
-                      return (
-                        <option key={parentCat.id} value={parentCat.id}>
-                          {parentCat.name}{getNat(parentCat.nature)}
-                        </option>
-                      );
-                    }
-
-                    return (
-                      <optgroup key={parentCat.id} label={`${parentCat.name}${getNat(parentCat.nature)}`}>
-                        <option value={parentCat.id}>
-                          {parentCat.name} (Principal)
-                        </option>
-                        {subs.map((sub) => (
-                          <option key={sub.id} value={sub.id}>
-                            ↳ {sub.name}{getNat(sub.nature)}
-                          </option>
-                        ))}
-                      </optgroup>
-                    );
-                  })}
+                {categories.map((cat) => {
+                  const natLabel = cat.nature && cat.nature !== "NENHUM" ? ` • ${cat.nature.charAt(0) + cat.nature.slice(1).toLowerCase()}` : "";
+                  return (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name} ({cat.type}){natLabel}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 

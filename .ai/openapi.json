@@ -556,18 +556,6 @@
               "title": "Nature"
             },
             "description": "Filtrar por NENHUM, OBRIGATORIO, NECESSARIO, DESEJO"
-          },
-          {
-            "name": "parent_only",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "Trazer apenas categorias raiz",
-              "default": false,
-              "title": "Parent Only"
-            },
-            "description": "Trazer apenas categorias raiz"
           }
         ],
         "responses": {
@@ -625,84 +613,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CategoryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/categories/tree": {
-      "get": {
-        "tags": [
-          "Categorias"
-        ],
-        "summary": "List Category Tree",
-        "operationId": "list_category_tree_api_v1_categories_tree_get",
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "profile",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filtrar por PESSOAL ou EMPRESA",
-              "title": "Profile"
-            },
-            "description": "Filtrar por PESSOAL ou EMPRESA"
-          },
-          {
-            "name": "type",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filtrar por RECEITA ou DESPESA",
-              "title": "Type"
-            },
-            "description": "Filtrar por RECEITA ou DESPESA"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CategoryTreeResponse"
-                  },
-                  "title": "Response List Category Tree Api V1 Categories Tree Get"
                 }
               }
             }
@@ -3495,18 +3405,6 @@
             "description": "Natureza da despesa/receita: NENHUM, OBRIGATORIO, NECESSARIO, DESEJO",
             "default": "NENHUM"
           },
-          "parent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Id",
-            "description": "ID da categoria pai se for subcategoria"
-          },
           "profile": {
             "type": "string",
             "enum": [
@@ -3555,18 +3453,6 @@
             "description": "Natureza da despesa/receita: NENHUM, OBRIGATORIO, NECESSARIO, DESEJO",
             "default": "NENHUM"
           },
-          "parent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Id",
-            "description": "ID da categoria pai se for subcategoria"
-          },
           "id": {
             "type": "string",
             "title": "Id"
@@ -3593,83 +3479,6 @@
           "created_at"
         ],
         "title": "CategoryResponse"
-      },
-      "CategoryTreeResponse": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "maxLength": 100,
-            "minLength": 1,
-            "title": "Name",
-            "description": "Nome da categoria"
-          },
-          "type": {
-            "type": "string",
-            "enum": [
-              "RECEITA",
-              "DESPESA"
-            ],
-            "title": "Type",
-            "description": "Tipo: RECEITA ou DESPESA"
-          },
-          "nature": {
-            "type": "string",
-            "enum": [
-              "NENHUM",
-              "OBRIGATORIO",
-              "NECESSARIO",
-              "DESEJO"
-            ],
-            "title": "Nature",
-            "description": "Natureza da despesa/receita: NENHUM, OBRIGATORIO, NECESSARIO, DESEJO",
-            "default": "NENHUM"
-          },
-          "parent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Id",
-            "description": "ID da categoria pai se for subcategoria"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "profile": {
-            "type": "string",
-            "enum": [
-              "PESSOAL",
-              "EMPRESA"
-            ],
-            "title": "Profile"
-          },
-          "created_at": {
-            "type": "string",
-            "title": "Created At"
-          },
-          "subcategories": {
-            "items": {
-              "$ref": "#/components/schemas/CategoryResponse"
-            },
-            "type": "array",
-            "title": "Subcategories",
-            "default": []
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "type",
-          "id",
-          "profile",
-          "created_at"
-        ],
-        "title": "CategoryTreeResponse"
       },
       "CategoryUpdate": {
         "properties": {
@@ -3717,17 +3526,6 @@
               }
             ],
             "title": "Nature"
-          },
-          "parent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Id"
           }
         },
         "type": "object",
@@ -4465,7 +4263,7 @@
           "category_id": {
             "type": "string",
             "title": "Category Id",
-            "description": "ID da subcategoria vinculada"
+            "description": "ID da categoria vinculada"
           },
           "name": {
             "type": "string",
@@ -4510,7 +4308,7 @@
           "category_id": {
             "type": "string",
             "title": "Category Id",
-            "description": "ID da subcategoria vinculada"
+            "description": "ID da categoria vinculada"
           },
           "name": {
             "type": "string",
@@ -4576,17 +4374,6 @@
               }
             ],
             "title": "Category Nature"
-          },
-          "parent_category_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent Category Name"
           },
           "created_at": {
             "type": "string",

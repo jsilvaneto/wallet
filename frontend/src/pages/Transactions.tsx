@@ -648,13 +648,11 @@ export const Transactions: React.FC = () => {
               className="px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-800 dark:text-zinc-200 text-xs font-semibold focus:outline-none focus:border-emerald-500"
             >
               <option value="TODAS">Todas as Categorias</option>
-              {categoriesList
-                .filter((c) => !c.parent_id)
-                .map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name} ({cat.type})
-                  </option>
-                ))}
+              {categoriesList.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name} ({cat.type})
+                </option>
+              ))}
             </select>
           )}
 

@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from sqlalchemy.orm import aliased
 from typing import List, Optional
 
 from app.database import get_db
@@ -19,17 +18,14 @@ async def list_items(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user)
 ):
-    ParentCat = aliased(Category)
     query = (
         select(
             Item,
             Category.name.label("cat_name"),
             Category.type.label("cat_type"),
-            Category.nature.label("cat_nature"),
-            ParentCat.name.label("parent_cat_name")
+            Category.nature.label("cat_nature")
         )
         .join(Category, Item.category_id == Category.id)
-        .outerjoin(ParentCat, Category.parent_id == ParentCat.id)
     )
     if profile:
         query = query.where(Item.profile == profile)
@@ -43,7 +39,7 @@ async def list_items(
     records = result.all()
 
     items_out = []
-    for item, cat_name, cat_type, cat_nature, parent_cat_name in records:
+    for item, cat_name, cat_type, cat_nature in records:
         items_out.append(ItemResponse(
             id=item.id,
             profile=item.profile,
@@ -53,7 +49,6 @@ async def list_items(
             category_name=cat_name,
             category_type=cat_type,
             category_nature=cat_nature,
-            parent_category_name=parent_cat_name,
             created_at=item.created_at
         ))
     return items_out
@@ -67,18 +62,12 @@ async def create_item(
     # Valida categoria
     category = await db.get(Category, item_in.category_id)
     if not category:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subcategoria inexistente.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoria inexistente.")
     if category.profile != item_in.profile:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A subcategoria informada pertence a outro perfil financeiro."
+            detail="A categoria informada pertence a outro perfil financeiro."
         )
-
-    parent_cat_name = None
-    if category.parent_id:
-        parent_cat = await db.get(Category, category.parent_id)
-        if parent_cat:
-            parent_cat_name = parent_cat.name
 
     new_item = Item(**item_in.model_dump())
     db.add(new_item)
@@ -94,7 +83,6 @@ async def create_item(
         category_name=category.name,
         category_type=category.type,
         category_nature=category.nature,
-        parent_category_name=parent_cat_name,
         created_at=new_item.created_at
     )
 
@@ -112,9 +100,9 @@ async def update_item(
     if item_in.category_id:
         category = await db.get(Category, item_in.category_id)
         if not category:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subcategoria inexistente.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoria inexistente.")
         if category.profile != item.profile:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Subcategoria pertence a outro perfil.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoria pertence a outro perfil.")
 
     update_data = item_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -125,11 +113,6 @@ async def update_item(
 
     # Busca categoria atualizada para resposta rica
     category = await db.get(Category, item.category_id)
-    parent_cat_name = None
-    if category and category.parent_id:
-        parent = await db.get(Category, category.parent_id)
-        if parent:
-            parent_cat_name = parent.name
 
     return ItemResponse(
         id=item.id,
@@ -140,7 +123,6 @@ async def update_item(
         category_name=category.name if category else None,
         category_type=category.type if category else None,
         category_nature=category.nature if category else None,
-        parent_category_name=parent_cat_name,
         created_at=item.created_at
     )
 
@@ -155,3 +137,4 @@ async def delete_item(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item não encontrado.")
     await db.delete(item)
     await db.commit()
+

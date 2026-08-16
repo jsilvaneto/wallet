@@ -24,11 +24,11 @@ HEADER_TRANSACOES = [
 ]
 
 HEADER_CATEGORIAS = [
-    "ID", "Perfil", "Tipo", "Nome", "Natureza", "Categoria_Pai_ID", "Categoria_Pai_Nome", "Criado_Em"
+    "ID", "Perfil", "Tipo", "Nome", "Natureza", "Criado_Em"
 ]
 
 HEADER_ITENS = [
-    "ID", "Perfil", "Subcategoria_ID", "Subcategoria_Nome", "Categoria_Pai_Nome", "Nome", 
+    "ID", "Perfil", "Categoria_ID", "Categoria_Nome", "Nome", 
     "Valor_Padrao_R$", "Valor_Padrao_Centavos", "Criado_Em"
 ]
 
@@ -384,25 +384,17 @@ async def export_sqlite_to_sheets(db: AsyncSession, service, spreadsheet_id: str
     Exporta todas as entidades mestras e operacionais do SQLite para as abas correspondentes na Planilha Google.
     Utiliza batchUpdate para máxima performance e integridade atômica.
     """
-    ParentCategory = aliased(Category)
-    
     # 1. Categorias
-    cat_query = (
-        select(Category, ParentCategory.name.label("parent_name"))
-        .outerjoin(ParentCategory, Category.parent_id == ParentCategory.id)
-        .order_by(Category.profile.asc(), Category.type.asc(), Category.name.asc())
-    )
-    cat_records = (await db.execute(cat_query)).all()
+    cat_query = select(Category).order_by(Category.profile.asc(), Category.type.asc(), Category.name.asc())
+    cat_records = (await db.execute(cat_query)).scalars().all()
     cat_values = [HEADER_CATEGORIAS]
-    for cat, parent_name in cat_records:
+    for cat in cat_records:
         cat_values.append([
             cat.id,
             cat.profile,
             cat.type,
             cat.name,
             cat.nature,
-            cat.parent_id or "",
-            parent_name or "",
             cat.created_at
         ])
 
@@ -410,22 +402,19 @@ async def export_sqlite_to_sheets(db: AsyncSession, service, spreadsheet_id: str
     item_query = (
         select(
             Item,
-            Category.name.label("sub_name"),
-            ParentCategory.name.label("parent_name")
+            Category.name.label("cat_name")
         )
         .join(Category, Item.category_id == Category.id)
-        .outerjoin(ParentCategory, Category.parent_id == ParentCategory.id)
         .order_by(Item.profile.asc(), Category.name.asc(), Item.name.asc())
     )
     item_records = (await db.execute(item_query)).all()
     item_values = [HEADER_ITENS]
-    for item, sub_name, parent_name in item_records:
+    for item, cat_name in item_records:
         item_values.append([
             item.id,
             item.profile,
             item.category_id,
-            sub_name or "",
-            parent_name or "",
+            cat_name or "",
             item.name,
             round((item.default_amount_cents or 0) / 100.0, 2) if item.default_amount_cents else "",
             item.default_amount_cents or "",

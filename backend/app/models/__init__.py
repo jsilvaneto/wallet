@@ -34,7 +34,7 @@ class Account(Base):
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_account_profile"),
     )
 
-# 3. Categorias e Subcategorias
+# 3. Categorias
 class Category(Base):
     __tablename__ = "categories"
 
@@ -43,10 +43,7 @@ class Category(Base):
     type: Mapped[str] = mapped_column(String(10), nullable=False) # 'RECEITA' ou 'DESPESA'
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     nature: Mapped[str] = mapped_column(String(20), default="NENHUM", nullable=False) # 'NENHUM', 'OBRIGATORIO', 'NECESSARIO', 'DESEJO'
-    parent_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("categories.id", ondelete="CASCADE"), nullable=True)
     created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
-
-    parent: Mapped[Optional["Category"]] = relationship("Category", remote_side=[id], backref="subcategories")
 
     __table_args__ = (
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_category_profile"),

@@ -25,8 +25,6 @@ export interface Category {
   type: TransactionType;
   name: string;
   nature: CategoryNature;
-  parent_id?: string | null;
-  subcategories?: Category[];
   created_at: string;
 }
 
@@ -39,7 +37,6 @@ export interface Item {
   category_name?: string | null;
   category_type?: TransactionType | null;
   category_nature?: CategoryNature | null;
-  parent_category_name?: string | null;
   created_at: string;
 }
 

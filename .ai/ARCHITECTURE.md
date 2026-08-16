@@ -54,9 +54,8 @@ backend/
 | **Usuários** | `POST` | `/api/v1/auth/register` | Cadastro de novos usuários (interno/autenticado). |
 | **Usuários** | `DELETE` | `/api/v1/auth/users/{id}` | Exclusão de usuário com proteção do último admin. |
 | **Contas** | `GET` / `POST` | `/api/v1/accounts` | Gestão de contas bancárias e carteiras por perfil. |
-| **Categorias**| `GET` / `POST` | `/api/v1/categories` | Gestão de categorias e subcategorias com natureza. |
-| **Categorias**| `GET` | `/api/v1/categories/tree` | Consulta hierárquica agrupada em árvore (pais e filhos). |
-| **Itens** | `GET` / `POST` | `/api/v1/items` | Cadastro e listagem de itens vinculados a subcategorias. |
+| **Categorias**| `GET` / `POST` | `/api/v1/categories` | Gestão de categorias planas com classificação por natureza. |
+| **Itens** | `GET` / `POST` | `/api/v1/items` | Cadastro e listagem de itens vinculados a categorias. |
 | **Contatos** | `GET` / `POST` | `/api/v1/contacts` | Gestão de clientes, fornecedores e prestadores. |
 | **Dívidas** | `GET` / `POST` | `/api/v1/debts` | Gestão de passivos e acompanhamento de amortização. |
 | **Orçamentos**| `GET` / `POST` | `/api/v1/budgets` | Tetos de gastos mensais e cálculo de realizados. |

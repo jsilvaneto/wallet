@@ -39,26 +39,18 @@ async def test_full_sync_logic():
 
     async with AsyncSessionLocal() as db:
         # 2. Testar extração de todas as tabelas mestras e operacionais
-        ParentCategory = aliased(Category)
-
         # Categorias
-        cat_query = (
-            select(Category, ParentCategory.name.label("parent_name"))
-            .outerjoin(ParentCategory, Category.parent_id == ParentCategory.id)
-            .order_by(Category.profile.asc(), Category.type.asc(), Category.name.asc())
-        )
-        cat_records = (await db.execute(cat_query)).all()
+        cat_query = select(Category).order_by(Category.profile.asc(), Category.type.asc(), Category.name.asc())
+        cat_records = (await db.execute(cat_query)).scalars().all()
         print(f"✓ Query Categorias OK ({len(cat_records)} registros encontrados)")
 
         # Itens
         item_query = (
             select(
                 Item,
-                Category.name.label("sub_name"),
-                ParentCategory.name.label("parent_name")
+                Category.name.label("cat_name")
             )
             .join(Category, Item.category_id == Category.id)
-            .outerjoin(ParentCategory, Category.parent_id == ParentCategory.id)
             .order_by(Item.profile.asc(), Category.name.asc(), Item.name.asc())
         )
         item_records = (await db.execute(item_query)).all()

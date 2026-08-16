@@ -22,12 +22,11 @@ O sistema opera com isolamento rigoroso entre duas entidades financeiras:
 ## 3. Modelo de Categorias, Subcategorias e Natureza
 A categorização financeira do Wallet possui estrutura hierárquica em dois níveis:
 
-### 3.1 Categorias Principais (Raiz) e Subcategorias
-- **Categorias Principais (`parent_id = NULL`)**: Grupos macro de despesas ou receitas (ex: *Moradia & Habitação*, *Alimentação*, *Transporte*, *Receitas Operacionais*).
-- **Subcategorias (`parent_id = UUID_DA_RAIZ`)**: Especializações de gastos dentro do grupo pai (ex: *Aluguel*, *Condomínio*, *Supermercado*, *Restaurantes*).
+### 3.1 Categorias Planas e Diretas
+- Todas as categorias são entidades diretas de primeiro nível associadas ao perfil (`PESSOAL` ou `EMPRESA`) e ao tipo de fluxo (`RECEITA` ou `DESPESA`).
 
 ### 3.2 Natureza da Categoria (Essencialidade do Gasto)
-Cada categoria ou subcategoria possui uma classificação de essencialidade representada pelo enum `CategoryNature`:
+Cada categoria possui uma classificação de essencialidade representada pelo enum `CategoryNature`:
 - **`NENHUM`**: Neutro / sem classificação (aplicável a receitas ou categorias sem métrica de corte).
 - **`OBRIGATORIO`**: Despesas fixas inegociáveis e compromissos legais (aluguel, condomínio, impostos, empréstimos, salários).
 - **`NECESSARIO`**: Gastos essenciais do dia a dia com flexibilidade de consumo (alimentação básica, farmácia, transporte, combustível).
@@ -35,12 +34,12 @@ Cada categoria ou subcategoria possui uma classificação de essencialidade repr
 
 ---
 
-## 4. Itens Vinculados a Subcategorias
-Os **Itens** representam o menor nível de granularidade do gasto/receita e servem como acelerador de lançamentos:
-- Todo item pertence a um perfil e a uma subcategoria (`category_id`).
+## 4. Itens Vinculados a Categorias
+Os **Itens** representam produtos/serviços específicos e servem como aceleradores de lançamentos:
+- Todo item pertence a um perfil e a uma categoria (`category_id`).
 - Pode possuir um **valor padrão sugerido** (`default_amount_cents`).
 - Ao selecionar um item na criação de um lançamento:
-  1. A subcategoria correspondente é vinculada automaticamente.
+  1. A categoria correspondente é vinculada automaticamente.
   2. A descrição é pré-preenchida com o nome do item.
   3. O valor em R$ é sugerido caso haja valor padrão cadastrado.
 

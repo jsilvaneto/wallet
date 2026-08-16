@@ -30,21 +30,17 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Cadastro e gerenciamento seguro de usuários movido para a aba **Configurações &gt; Gestão de Usuários**.
   - [x] Proteção contra auto-exclusão e contra exclusão do último administrador do sistema.
 
-- [x] **Hierarquia de Categorias, Subcategorias & Natureza**:
-  - [x] Categorias principais e subcategorias aninhadas (`parent_id`) com integridade referencial.
-  - [x] Classificação financeira por **Natureza da Categoria** nos 4 tipos:
-    - `NENHUM`: Neutro / sem classificação específica.
-    - `OBRIGATORIO`: Gastos fixos essenciais, moradia, impostos, salários.
-    - `NECESSARIO`: Alimentação básica, transporte, saúde e educação.
-    - `DESEJO`: Lazer, entretenimento, viagens, restaurantes e supérfluos.
-  - [x] Interface em árvore com badges coloridos de alto contraste para o tema escuro.
-  - [x] Edição completa via Modal dedicado (`EditCategoryModal`) para renomeação, troca de natureza, tipo e hierarquia com propagação em cascata.
+- [x] **Categorias & Natureza de Gastos**:
+  - [x] Modelo direto de **Categorias Planas** por perfil (`PESSOAL` e `EMPRESA`) e tipo (`RECEITA` e `DESPESA`).
+  - [x] Classificação por essencialidade nos 4 tipos: `OBRIGATORIO`, `NECESSARIO`, `DESEJO` e `NENHUM`.
+  - [x] Cards estilizados com badges coloridos de alto contraste para o tema escuro.
+  - [x] Edição completa via Modal dedicado (`EditCategoryModal`) para renomeação e troca de natureza e tipo.
 
-- [x] **Itens Vinculados a Subcategorias**:
-  - [x] Cadastro e edição de itens específicos vinculados a subcategorias na aba **Cadastros & Metas > Itens**.
-  - [x] Modal de edição rápida (`EditItemModal`) para atualização de nome, subcategoria e valor padrão sugerido.
+- [x] **Itens Vinculados a Categorias**:
+  - [x] Cadastro e edição de itens específicos vinculados a categorias na aba **Cadastros & Metas > Itens**.
+  - [x] Modal de edição rápida (`EditItemModal`) para atualização de nome, categoria e valor padrão sugerido.
   - [x] Definição de valor padrão sugerido (R$) por item.
-  - [x] Bloco de seleção rápida no modal de lançamentos ([TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx)) com auto-preenchimento de subcategoria, descrição e valor sugerido.
+  - [x] Bloco de seleção rápida no modal de lançamentos ([TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx)) com auto-preenchimento de categoria, descrição e valor sugerido.
 
 - [x] **Contas Bancárias e Carteiras**:
   - [x] Gestão completa na aba **Cadastros & Metas > Contas** com filtros por tipo (`CORRENTE`, `POUPANCA`, `INVESTIMENTO`, `CAIXA`, `OUTRO`) e busca por texto.
