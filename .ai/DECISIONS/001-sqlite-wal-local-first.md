@@ -1,4 +1,4 @@
-# ADR 001: Persistência Local-First com SQLite WAL e SQLAlchemy 2.0 Async
+# ADR 001: Persistência com SQLite WAL e SQLAlchemy 2.0 Async
 
 ## Status
 **Aceito**

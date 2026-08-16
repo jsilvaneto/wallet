@@ -85,7 +85,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Wallet API",
-    description="Sistema de Gestão Financeira Local-First",
+    description="Sistema de Gestão Financeira",
     version="1.0.0",
     lifespan=lifespan
 )

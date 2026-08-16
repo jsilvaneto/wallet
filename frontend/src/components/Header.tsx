@@ -44,9 +44,6 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateToSync }) => {
               <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-zinc-900 to-zinc-600 dark:from-white dark:to-zinc-300 bg-clip-text text-transparent">
                 Wallet
               </span>
-              <span className="hidden sm:inline-block ml-2 text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-                Local-First
-              </span>
             </div>
           </div>
 

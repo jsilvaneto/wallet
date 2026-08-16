@@ -1,6 +1,6 @@
-# 💼 Wallet - Sistema de Gestão Financeira Local-First
-
-O **Wallet** é uma plataforma moderna e local-first de controle financeiro pessoal e empresarial, desenvolvida para proporcionar total soberania de dados, alta performance e controle granular de receitas, despesas, parcelamentos, dívidas, orçamentos e sincronização em nuvem.
+# 💼 Wallet - Sistema de Gestão Financeira
+ 
+O **Wallet** é uma plataforma moderna de controle financeiro pessoal e empresarial, desenvolvida para proporcionar total soberania de dados, alta performance e controle granular de receitas, despesas, parcelamentos, dívidas, orçamentos e sincronização em nuvem.
 
 ---
 

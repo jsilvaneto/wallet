@@ -57,7 +57,7 @@ const AuthScreen: React.FC = () => {
             Wallet
           </h1>
           <p className={`text-xs ${isDarkLogin ? "text-zinc-400" : "text-zinc-500"}`}>
-            Sistema Financeiro Pessoal & Empresarial Local-First
+            Sistema Financeiro Pessoal & Empresarial
           </p>
         </div>
 

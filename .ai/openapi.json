@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Wallet API",
-    "description": "Sistema de Gestão Financeira Local-First",
+    "description": "Sistema de Gestão Financeira",
     "version": "1.0.0"
   },
   "paths": {

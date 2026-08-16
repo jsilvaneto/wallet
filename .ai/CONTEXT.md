@@ -1,7 +1,7 @@
 # Wallet - Visão Geral do Produto e Contexto de Negócio (.ai/CONTEXT.md)
 
 ## 1. Filosofia e Visão do Produto
-O **Wallet** é uma plataforma de gestão financeira pessoal e empresarial orientada ao paradigma **Local-First**, projetada para proporcionar controle financeiro total, privacidade irrestrita, agilidade operacional e resiliência com baixa dependência de infraestrutura em nuvem de terceiros.
+O **Wallet** é uma plataforma de gestão financeira pessoal e empresarial, projetada para proporcionar controle financeiro total, privacidade irrestrita, agilidade operacional e resiliência com baixa dependência de infraestrutura em nuvem de terceiros.
 
 O sistema foi concebido para rodar perfeitamente em ambientes locais (WSL2 / Linux / Docker), com banco de dados embutido e espelhamento opcional em nuvem via Google Sheets.
 

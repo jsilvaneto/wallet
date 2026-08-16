@@ -4,7 +4,7 @@
 **Aceito**
 
 ## Contexto
-Por ser um sistema **Local-First**, os dados primários residem no SQLite local. No entanto, os usuários necessitam de:
+No modelo de operação com SQLite local, os dados primários residem no banco local. No entanto, os usuários necessitam de:
 1. Uma cópia de backup / espelho em nuvem para visualização de relatórios analíticos em planilhas.
 2. Uma forma de lançar despesas remotamente (ex: em trânsito no celular) sem expor o banco de dados local na internet pública.
 3. Total controle sobre credenciais, com histórico de auditoria e logs de execução.
