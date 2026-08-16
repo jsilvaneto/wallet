@@ -3062,7 +3062,8 @@
               "CORRENTE",
               "POUPANCA",
               "INVESTIMENTO",
-              "CAIXA"
+              "CAIXA",
+              "OUTRO"
             ],
             "title": "Type",
             "description": "Tipo da conta",
@@ -3100,7 +3101,8 @@
               "CORRENTE",
               "POUPANCA",
               "INVESTIMENTO",
-              "CAIXA"
+              "CAIXA",
+              "OUTRO"
             ],
             "title": "Type",
             "description": "Tipo da conta",
@@ -3155,7 +3157,8 @@
                   "CORRENTE",
                   "POUPANCA",
                   "INVESTIMENTO",
-                  "CAIXA"
+                  "CAIXA",
+                  "OUTRO"
                 ]
               },
               {

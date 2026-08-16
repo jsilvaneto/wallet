@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal, Optional
 
 ProfileType = Literal["PESSOAL", "EMPRESA"]
-AccountType = Literal["CORRENTE", "POUPANCA", "INVESTIMENTO", "CAIXA"]
+AccountType = Literal["CORRENTE", "POUPANCA", "INVESTIMENTO", "CAIXA", "OUTRO"]
 
 class AccountBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Nome da conta ou banco")

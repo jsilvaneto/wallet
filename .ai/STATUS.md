@@ -46,6 +46,12 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Definição de valor padrão sugerido (R$) por item.
   - [x] Bloco de seleção rápida no modal de lançamentos ([TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx)) com auto-preenchimento de subcategoria, descrição e valor sugerido.
 
+- [x] **Contas Bancárias e Carteiras**:
+  - [x] Gestão completa na aba **Cadastros & Metas > Contas** com filtros por tipo (`CORRENTE`, `POUPANCA`, `INVESTIMENTO`, `CAIXA`, `OUTRO`) e busca por texto.
+  - [x] Modal de edição rápida (`EditAccountModal`) para renomeação e troca de modalidade/tipo.
+  - [x] Cards estilizados com KPIs de totais e ícones de cada modalidade financeira.
+  - [x] Associação de conta bancária / carteira nos lançamentos únicos, parcelados e recorrentes ([TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx)).
+
 - [x] **Gestão Financeira, Dívidas & Orçamentos**:
   - [x] Dashboard com KPIs de Realizado, A Vencer, Projeção Final do Mês e maiores despesas por categoria.
   - [x] Gestão de Contas e Lançamentos com filtros por Status, Tipo, Período mensal e liquidação/exclusão.

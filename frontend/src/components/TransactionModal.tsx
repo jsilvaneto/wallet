@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Category, Contact, Item } from "../types";
-import { X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, Package, Sparkles } from "lucide-react";
+import { Category, Contact, Item, Account } from "../types";
+import { X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, Package, Sparkles, Landmark } from "lucide-react";
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -20,6 +20,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const [description, setDescription] = useState("");
   const [amountStr, setAmountStr] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [accountId, setAccountId] = useState("");
   const [contactId, setContactId] = useState("");
   const [dueDate, setDueDate] = useState(new Date().toISOString().split("T")[0]);
   const [installments, setInstallments] = useState("2");
@@ -28,6 +29,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,14 +38,16 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
     if (!isOpen) return;
     const loadDependencies = async () => {
       try {
-        const [catRes, conRes, itemRes] = await Promise.all([
+        const [catRes, conRes, itemRes, accRes] = await Promise.all([
           api.get("/categories", { params: { profile, type } }),
           api.get("/contacts", { params: { profile } }),
           api.get("/items", { params: { profile, type } }),
+          api.get("/accounts", { params: { profile } }),
         ]);
         setCategories(catRes.data);
         setContacts(conRes.data);
         setItems(itemRes.data);
+        setAccounts(accRes.data);
         if (catRes.data.length > 0) {
           setCategoryId(catRes.data[0].id);
         } else {
@@ -109,6 +113,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           amount_cents: amountCents,
           category_id: categoryId,
           item_id: itemId || null,
+          account_id: accountId || null,
           contact_id: contactId || null,
           due_date: dueDate,
           notes: notes || null,
@@ -122,6 +127,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           amount_cents: amountCents,
           category_id: categoryId,
           item_id: itemId || null,
+          account_id: accountId || null,
           contact_id: contactId || null,
           schedule_type: mode === "PARCELADO" ? "PARCELADA" : "RECORRENTE_CONTINUA",
           frequency: "MENSAL",
@@ -135,6 +141,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
       setItemId("");
       setDescription("");
       setAmountStr("");
+      setAccountId("");
       setNotes("");
       onSuccess();
       onClose();
@@ -358,8 +365,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             </div>
           )}
 
-          {/* Category & Contact */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Category, Account & Contact */}
+          <div className="space-y-3">
             <div>
               <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                 <Tag className="w-3.5 h-3.5" />
@@ -401,23 +408,44 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <ContactIcon className="w-3.5 h-3.5" />
-                <span>Contato / Favorecido</span>
-              </label>
-              <select
-                value={contactId}
-                onChange={(e) => setContactId(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
-              >
-                <option value="">Nenhum (Opcional)</option>
-                {contacts.map((ct) => (
-                  <option key={ct.id} value={ct.id}>
-                    {ct.name} ({ct.type})
-                  </option>
-                ))}
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <Landmark className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Conta / Carteira</span>
+                </label>
+                <select
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="">Nenhuma (Opcional)</option>
+                  {accounts.map((acc) => (
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} ({acc.type === "CORRENTE" ? "Corrente" : acc.type === "POUPANCA" ? "Poupança" : acc.type === "INVESTIMENTO" ? "Investimento" : acc.type === "CAIXA" ? "Caixa" : "Outro"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <ContactIcon className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Contato / Favorecido</span>
+                </label>
+                <select
+                  value={contactId}
+                  onChange={(e) => setContactId(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="">Nenhum (Opcional)</option>
+                  {contacts.map((ct) => (
+                    <option key={ct.id} value={ct.id}>
+                      {ct.name} ({ct.type})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 

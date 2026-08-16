@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Category, Item, Contact, Debt, Budget } from "../types";
+import { Category, Item, Account, Contact, Debt, Budget, AccountType } from "../types";
 import { formatCurrency } from "../utils/format";
 import { 
   FolderTree, Package, Users, CreditCard, PiggyBank, 
   Plus, Trash2, ArrowUpRight, ArrowDownRight, 
-  AlertCircle, CheckCircle2, ShieldAlert, Tag, Search, DollarSign, Pencil, X, Info, Layers, Loader2
+  AlertCircle, CheckCircle2, ShieldAlert, Tag, Search, DollarSign, Pencil, X, Info, Layers, Loader2,
+  Landmark, Wallet, CircleDollarSign, Banknote
 } from "lucide-react";
 
-type ManagementTab = "CATEGORIAS" | "ITENS" | "CONTATOS" | "DIVIDAS" | "ORCAMENTOS";
+type ManagementTab = "CATEGORIAS" | "ITENS" | "CONTAS" | "CONTATOS" | "DIVIDAS" | "ORCAMENTOS";
 
 export const Management: React.FC = () => {
   const { profile, hideValues } = useApp();
@@ -58,6 +59,21 @@ export const Management: React.FC = () => {
   const [editItemSaving, setEditItemSaving] = useState(false);
   const [editItemError, setEditItemError] = useState<string | null>(null);
 
+  // 2.2 Contas Form (Criação e Edição)
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [accName, setAccName] = useState("");
+  const [accType, setAccType] = useState<AccountType>("CORRENTE");
+  const [accSearch, setAccSearch] = useState("");
+  const [accFilterType, setAccFilterType] = useState<string>("TODOS");
+  const [creatingAcc, setCreatingAcc] = useState(false);
+
+  // 2.3 Modal de Edição de Conta
+  const [editModalAcc, setEditModalAcc] = useState<Account | null>(null);
+  const [editAccName, setEditAccName] = useState("");
+  const [editAccType, setEditAccType] = useState<AccountType>("CORRENTE");
+  const [editAccSaving, setEditAccSaving] = useState(false);
+  const [editAccError, setEditAccError] = useState<string | null>(null);
+
   // 3. Contato Form
   const [conName, setConName] = useState("");
   const [conType, setConType] = useState<"FORNECEDOR" | "CLIENTE" | "FUNCIONARIO" | "OUTRO">("FORNECEDOR");
@@ -93,6 +109,9 @@ export const Management: React.FC = () => {
           const firstSub = catRes.data.find((c: Category) => c.parent_id);
           setItemCatId(firstSub ? firstSub.id : catRes.data[0].id);
         }
+      } else if (activeTab === "CONTAS") {
+        const res = await api.get("/accounts", { params: { profile } });
+        setAccounts(res.data);
       } else if (activeTab === "CONTATOS") {
         const res = await api.get("/contacts", { params: { profile } });
         setContacts(res.data);
@@ -356,6 +375,113 @@ export const Management: React.FC = () => {
   const editModalCatHasChildren = editModalCat ? categories.some((c) => c.parent_id === editModalCat.id) : false;
   const editModalCatChildCount = editModalCat ? categories.filter((c) => c.parent_id === editModalCat.id).length : 0;
 
+  // Handlers de Contas (Criação & Edição)
+  const handleCreateAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!accName.trim()) return;
+    setCreatingAcc(true);
+    try {
+      await api.post("/accounts", {
+        profile,
+        name: accName.trim(),
+        type: accType,
+      });
+      setAccName("");
+      setAccType("CORRENTE");
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao cadastrar conta:", err);
+      alert(err.response?.data?.detail || "Erro ao cadastrar conta.");
+    } finally {
+      setCreatingAcc(false);
+    }
+  };
+
+  const openEditAccount = (acc: Account) => {
+    setEditModalAcc(acc);
+    setEditAccName(acc.name);
+    setEditAccType(acc.type);
+    setEditAccError(null);
+    setEditAccSaving(false);
+  };
+
+  const closeEditAccount = () => {
+    setEditModalAcc(null);
+    setEditAccError(null);
+  };
+
+  const handleSaveEditAccount = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalAcc || !editAccName.trim()) return;
+    setEditAccSaving(true);
+    setEditAccError(null);
+    try {
+      await api.put(`/accounts/${editModalAcc.id}`, {
+        name: editAccName.trim(),
+        type: editAccType,
+      });
+      setEditModalAcc(null);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao editar conta:", err);
+      setEditAccError(err.response?.data?.detail || "Erro ao salvar alterações na conta.");
+    } finally {
+      setEditAccSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async (id: string, name: string) => {
+    if (!confirm(`Deseja realmente excluir a conta "${name}"?`)) return;
+    try {
+      await api.delete(`/accounts/${id}`);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao excluir conta:", err);
+      alert(err.response?.data?.detail || "Erro ao excluir conta.");
+    }
+  };
+
+  const getAccountTypeInfo = (t: AccountType) => {
+    switch (t) {
+      case "CORRENTE":
+        return {
+          label: "Conta Corrente",
+          badge: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200/70 dark:border-emerald-800/50",
+          icon: Landmark,
+          desc: "Movimentação diária, recebimentos e pagamentos"
+        };
+      case "POUPANCA":
+        return {
+          label: "Poupança",
+          badge: "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-800/50",
+          icon: PiggyBank,
+          desc: "Reserva financeira e rendimento básico"
+        };
+      case "INVESTIMENTO":
+        return {
+          label: "Investimentos",
+          badge: "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200/70 dark:border-purple-800/50",
+          icon: CircleDollarSign,
+          desc: "Aplicações, corretoras, CDBs e ações"
+        };
+      case "CAIXA":
+        return {
+          label: "Dinheiro / Caixa",
+          badge: "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200/70 dark:border-amber-800/50",
+          icon: Wallet,
+          desc: "Dinheiro físico, carteira e numerário em espécie"
+        };
+      case "OUTRO":
+      default:
+        return {
+          label: "Outro / Cartão",
+          badge: "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700",
+          icon: CreditCard,
+          desc: "Cartões de benefício, vales e outras contas"
+        };
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header & Tab Selector */}
@@ -365,7 +491,7 @@ export const Management: React.FC = () => {
             Cadastros & Metas
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Gerenciamento de categorias, itens, contatos, dívidas e tetos de gastos ({profile})
+            Gerenciamento de categorias, itens, contas bancárias, contatos, dívidas e orçamentos ({profile})
           </p>
         </div>
 
@@ -393,6 +519,18 @@ export const Management: React.FC = () => {
           >
             <Package className="w-3.5 h-3.5" />
             <span>Itens</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("CONTAS")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+              activeTab === "CONTAS"
+                ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm"
+                : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            }`}
+          >
+            <Landmark className="w-3.5 h-3.5" />
+            <span>Contas</span>
           </button>
 
           <button
@@ -1405,7 +1543,330 @@ export const Management: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: CONTATOS */}
+      {/* ========================================================================= */}
+      {/* TAB 3: CONTAS BANCÁRIAS E CARTEIRAS */}
+      {/* ========================================================================= */}
+      {activeTab === "CONTAS" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+          {/* Form de Criação */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Plus className="w-4 h-4 text-emerald-500" />
+                <span>Nova Conta / Carteira</span>
+              </h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                {profile}
+              </span>
+            </div>
+
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Cadastre contas correntes, poupanças, corretoras de investimento ou caixas físicos para vincular aos lançamentos.
+            </p>
+
+            <form onSubmit={handleCreateAccount} className="space-y-4 pt-1">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <Landmark className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Nome da Conta / Instituição</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Nubank, Itaú PJ, XP Investimentos, Carteira..."
+                  value={accName}
+                  onChange={(e) => setAccName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Tipo de Conta</span>
+                </label>
+                <select
+                  value={accType}
+                  onChange={(e) => setAccType(e.target.value as AccountType)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="CORRENTE">Conta Corrente (Bancos e Fintechs)</option>
+                  <option value="POUPANCA">Poupança (Reserva)</option>
+                  <option value="INVESTIMENTO">Investimentos (Corretoras, CDB, Ações)</option>
+                  <option value="CAIXA">Dinheiro em Espécie (Caixa / Carteira)</option>
+                  <option value="OUTRO">Outro (Cartão Benefício, Vales)</option>
+                </select>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={creatingAcc}
+                  className="w-full py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
+                >
+                  {creatingAcc ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Cadastrando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4" />
+                      <span>Cadastrar Conta</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Listagem de Contas */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* KPI Cards Rápidos */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-sm space-y-1">
+                <span className="text-[11px] text-zinc-400 font-semibold block">Total de Contas</span>
+                <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100 font-mono">
+                  {accounts.length}
+                </span>
+              </div>
+
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-sm space-y-1">
+                <span className="text-[11px] text-zinc-400 font-semibold block">Correntes</span>
+                <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                  {accounts.filter((a) => a.type === "CORRENTE").length}
+                </span>
+              </div>
+
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-sm space-y-1">
+                <span className="text-[11px] text-zinc-400 font-semibold block">Investimentos</span>
+                <span className="text-lg font-bold text-purple-600 dark:text-purple-400 font-mono">
+                  {accounts.filter((a) => a.type === "INVESTIMENTO").length}
+                </span>
+              </div>
+
+              <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-sm space-y-1">
+                <span className="text-[11px] text-zinc-400 font-semibold block">Caixa / Espécie</span>
+                <span className="text-lg font-bold text-amber-600 dark:text-amber-400 font-mono">
+                  {accounts.filter((a) => a.type === "CAIXA").length}
+                </span>
+              </div>
+            </div>
+
+            {/* Main List Card */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+              {/* Filtros e Busca */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+                <div className="relative flex-1 max-w-xs">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar contas..."
+                    value={accSearch}
+                    onChange={(e) => setAccSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+                  {["TODOS", "CORRENTE", "POUPANCA", "INVESTIMENTO", "CAIXA", "OUTRO"].map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setAccFilterType(t)}
+                      className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg transition-all whitespace-nowrap ${
+                        accFilterType === t
+                          ? "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200 bg-zinc-100 dark:bg-zinc-800/60"
+                      }`}
+                    >
+                      {t === "TODOS" ? "Todos" : t === "CORRENTE" ? "Corrente" : t === "POUPANCA" ? "Poupança" : t === "INVESTIMENTO" ? "Investimento" : t === "CAIXA" ? "Caixa" : "Outro"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Listagem em Cards */}
+              {loading && accounts.length === 0 ? (
+                <div className="p-8 text-center text-xs text-zinc-400">
+                  Carregando contas...
+                </div>
+              ) : accounts.length === 0 ? (
+                <div className="p-8 text-center space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto text-zinc-400">
+                    <Landmark className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                    Nenhuma conta cadastrada no perfil {profile}.
+                  </p>
+                  <p className="text-[11px] text-zinc-400">
+                    Utilize o formulário ao lado para cadastrar suas contas bancárias e carteiras.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {accounts
+                    .filter((a) => {
+                      const matchSearch = a.name.toLowerCase().includes(accSearch.toLowerCase());
+                      const matchType = accFilterType === "TODOS" || a.type === accFilterType;
+                      return matchSearch && matchType;
+                    })
+                    .map((acc) => {
+                      const info = getAccountTypeInfo(acc.type);
+                      const Icon = info.icon;
+
+                      return (
+                        <div
+                          key={acc.id}
+                          className="p-4 rounded-xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/30 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-2.5">
+                              <div className="p-2 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm text-zinc-800 dark:text-zinc-200">
+                                <Icon className="w-4 h-4 text-emerald-500" />
+                              </div>
+                              <div>
+                                <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                                  {acc.name}
+                                </h4>
+                                <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border mt-0.5 ${info.badge}`}>
+                                  {info.label}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => openEditAccount(acc)}
+                                title="Editar Conta"
+                                className="p-1.5 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-all"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAccount(acc.id, acc.name)}
+                                title="Excluir Conta"
+                                className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-[10px] text-zinc-400">
+                            <span>{info.desc}</span>
+                            <span className="font-mono">
+                              {new Date(acc.created_at).toLocaleDateString("pt-BR")}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EDIÇÃO DE CONTA */}
+      {editModalAcc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-scale-in">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                  <Landmark className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                    Editar Conta Bancária / Carteira
+                  </h3>
+                  <span className="text-[10px] text-zinc-400 font-medium">
+                    Perfil {profile}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeEditAccount}
+                className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditAccount} className="p-6 space-y-4">
+              {editAccError && (
+                <div className="p-3 text-xs font-medium bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 rounded-lg flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{editAccError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Nome da Conta / Instituição
+                </label>
+                <input
+                  type="text"
+                  required
+                  autoFocus
+                  placeholder="Ex: Nubank, Itaú PJ, Carteira Dinheiro..."
+                  value={editAccName}
+                  onChange={(e) => setEditAccName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Tipo de Conta
+                </label>
+                <select
+                  value={editAccType}
+                  onChange={(e) => setEditAccType(e.target.value as AccountType)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="CORRENTE">Conta Corrente (Bancos e Fintechs)</option>
+                  <option value="POUPANCA">Poupança (Reserva)</option>
+                  <option value="INVESTIMENTO">Investimentos (Corretoras, CDB, Ações)</option>
+                  <option value="CAIXA">Dinheiro em Espécie (Caixa / Carteira)</option>
+                  <option value="OUTRO">Outro (Cartão Benefício, Vales)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={closeEditAccount}
+                  className="px-4 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={editAccSaving}
+                  className="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5"
+                >
+                  {editAccSaving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <span>Salvar Alterações</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: CONTATOS */}
       {activeTab === "CONTATOS" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Form */}

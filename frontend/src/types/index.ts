@@ -9,11 +9,13 @@ export interface User {
   created_at: string;
 }
 
+export type AccountType = "CORRENTE" | "POUPANCA" | "INVESTIMENTO" | "CAIXA" | "OUTRO";
+
 export interface Account {
   id: string;
   profile: ProfileType;
   name: string;
-  type: string;
+  type: AccountType;
   created_at: string;
 }
 
