@@ -38,9 +38,11 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - `NECESSARIO`: Alimentação básica, transporte, saúde e educação.
     - `DESEJO`: Lazer, entretenimento, viagens, restaurantes e supérfluos.
   - [x] Interface em árvore com badges coloridos de alto contraste para o tema escuro.
+  - [x] Edição completa via Modal dedicado (`EditCategoryModal`) para renomeação, troca de natureza, tipo e hierarquia com propagação em cascata.
 
 - [x] **Itens Vinculados a Subcategorias**:
-  - [x] Cadastro de itens específicos vinculados a subcategorias na aba **Cadastros & Metas &gt; Itens**.
+  - [x] Cadastro e edição de itens específicos vinculados a subcategorias na aba **Cadastros & Metas > Itens**.
+  - [x] Modal de edição rápida (`EditItemModal`) para atualização de nome, subcategoria e valor padrão sugerido.
   - [x] Definição de valor padrão sugerido (R$) por item.
   - [x] Bloco de seleção rápida no modal de lançamentos ([TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx)) com auto-preenchimento de subcategoria, descrição e valor sugerido.
 

@@ -6,7 +6,7 @@ import { formatCurrency } from "../utils/format";
 import { 
   FolderTree, Package, Users, CreditCard, PiggyBank, 
   Plus, Trash2, ArrowUpRight, ArrowDownRight, 
-  AlertCircle, CheckCircle2, ShieldAlert, Tag, Search, DollarSign
+  AlertCircle, CheckCircle2, ShieldAlert, Tag, Search, DollarSign, Pencil, X, Info, Layers, Loader2
 } from "lucide-react";
 
 type ManagementTab = "CATEGORIAS" | "ITENS" | "CONTATOS" | "DIVIDAS" | "ORCAMENTOS";
@@ -23,21 +23,40 @@ export const Management: React.FC = () => {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
 
-  // Estados de Formulários Rápidos
-  // 1. Categoria Form
+  // Estados de Formulários de Criação
+  // 1. Categoria Criação
   const [catName, setCatName] = useState("");
   const [catType, setCatType] = useState<"RECEITA" | "DESPESA">("DESPESA");
   const [catNature, setCatNature] = useState<"NENHUM" | "OBRIGATORIO" | "NECESSARIO" | "DESEJO">("NENHUM");
   const [catParentId, setCatParentId] = useState<string>("");
   const [catFilterType, setCatFilterType] = useState<"TODOS" | "RECEITA" | "DESPESA">("TODOS");
   const [catFilterNature, setCatFilterNature] = useState<string>("TODOS");
+  const [creatingCat, setCreatingCat] = useState(false);
 
-  // 2. Item Form
+  // 1.1 Modal de Edição de Categoria / Subcategoria
+  const [editModalCat, setEditModalCat] = useState<Category | null>(null);
+  const [editCatName, setEditCatName] = useState("");
+  const [editCatType, setEditCatType] = useState<"RECEITA" | "DESPESA">("DESPESA");
+  const [editCatNature, setEditCatNature] = useState<"NENHUM" | "OBRIGATORIO" | "NECESSARIO" | "DESEJO">("NENHUM");
+  const [editCatParentId, setEditCatParentId] = useState<string>("");
+  const [editCatSaving, setEditCatSaving] = useState(false);
+  const [editCatError, setEditCatError] = useState<string | null>(null);
+
+  // 2. Item Form (Criação e Edição)
   const [itemName, setItemName] = useState("");
   const [itemCatId, setItemCatId] = useState("");
   const [itemAmountStr, setItemAmountStr] = useState("");
   const [itemSearch, setItemSearch] = useState("");
   const [itemFilterCatId, setItemFilterCatId] = useState("TODAS");
+  const [creatingItem, setCreatingItem] = useState(false);
+
+  // 2.1 Modal de Edição de Item
+  const [editModalItem, setEditModalItem] = useState<Item | null>(null);
+  const [editItemName, setEditItemName] = useState("");
+  const [editItemCatId, setEditItemCatId] = useState("");
+  const [editItemAmountStr, setEditItemAmountStr] = useState("");
+  const [editItemSaving, setEditItemSaving] = useState(false);
+  const [editItemError, setEditItemError] = useState<string | null>(null);
 
   // 3. Contato Form
   const [conName, setConName] = useState("");
@@ -71,7 +90,6 @@ export const Management: React.FC = () => {
         setItems(itemsRes.data);
         setCategories(catRes.data);
         if (catRes.data.length > 0 && !itemCatId) {
-          // Prefere selecionar a primeira subcategoria disponível
           const firstSub = catRes.data.find((c: Category) => c.parent_id);
           setItemCatId(firstSub ? firstSub.id : catRes.data[0].id);
         }
@@ -107,10 +125,11 @@ export const Management: React.FC = () => {
     loadData();
   }, [profile, activeTab, budgetMonth, budgetYear]);
 
-  // Handlers de Criação
+  // Handlers de Categorias (Criação)
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!catName.trim()) return;
+    setCreatingCat(true);
     try {
       await api.post("/categories", {
         profile,
@@ -126,12 +145,54 @@ export const Management: React.FC = () => {
     } catch (err: any) {
       console.error("Erro ao criar categoria:", err);
       alert(err.response?.data?.detail || "Erro ao criar categoria.");
+    } finally {
+      setCreatingCat(false);
     }
   };
 
+  // Handlers do Modal de Edição de Categoria / Subcategoria
+  const openEditCategory = (cat: Category) => {
+    setEditModalCat(cat);
+    setEditCatName(cat.name);
+    setEditCatType(cat.type);
+    setEditCatNature(cat.nature);
+    setEditCatParentId(cat.parent_id || "");
+    setEditCatError(null);
+    setEditCatSaving(false);
+  };
+
+  const closeEditCategory = () => {
+    setEditModalCat(null);
+    setEditCatError(null);
+  };
+
+  const handleSaveEditCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalCat || !editCatName.trim()) return;
+    setEditCatSaving(true);
+    setEditCatError(null);
+    try {
+      await api.put(`/categories/${editModalCat.id}`, {
+        name: editCatName.trim(),
+        type: editCatType,
+        nature: editCatNature,
+        parent_id: editCatParentId ? editCatParentId : null,
+      });
+      setEditModalCat(null);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao editar categoria:", err);
+      setEditCatError(err.response?.data?.detail || "Erro ao salvar alterações na categoria.");
+    } finally {
+      setEditCatSaving(false);
+    }
+  };
+
+  // Handlers de Itens (Criação & Edição)
   const handleCreateItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!itemName.trim() || !itemCatId) return;
+    setCreatingItem(true);
     try {
       const defaultAmount = itemAmountStr.trim()
         ? Math.round(parseFloat(itemAmountStr.replace(",", ".")) * 100)
@@ -149,6 +210,49 @@ export const Management: React.FC = () => {
     } catch (err: any) {
       console.error("Erro ao criar item:", err);
       alert(err.response?.data?.detail || "Erro ao criar item.");
+    } finally {
+      setCreatingItem(false);
+    }
+  };
+
+  const openEditItem = (item: Item) => {
+    setEditModalItem(item);
+    setEditItemName(item.name);
+    setEditItemCatId(item.category_id);
+    setEditItemAmountStr(
+      item.default_amount_cents ? (item.default_amount_cents / 100).toFixed(2).replace(".", ",") : ""
+    );
+    setEditItemError(null);
+    setEditItemSaving(false);
+  };
+
+  const closeEditItem = () => {
+    setEditModalItem(null);
+    setEditItemError(null);
+  };
+
+  const handleSaveEditItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalItem || !editItemName.trim() || !editItemCatId) return;
+    setEditItemSaving(true);
+    setEditItemError(null);
+    try {
+      const defaultAmount = editItemAmountStr.trim()
+        ? Math.round(parseFloat(editItemAmountStr.replace(",", ".")) * 100)
+        : null;
+
+      await api.put(`/items/${editModalItem.id}`, {
+        category_id: editItemCatId,
+        name: editItemName.trim(),
+        default_amount_cents: defaultAmount && defaultAmount > 0 ? defaultAmount : null,
+      });
+      setEditModalItem(null);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao atualizar item:", err);
+      setEditItemError(err.response?.data?.detail || "Erro ao salvar alterações no item.");
+    } finally {
+      setEditItemSaving(false);
     }
   };
 
@@ -217,10 +321,40 @@ export const Management: React.FC = () => {
     try {
       await api.delete(`/${endpoint}/${id}`);
       loadData();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao remover registro:", err);
+      alert(err.response?.data?.detail || "Erro ao excluir registro.");
     }
   };
+
+  const getNatureStyle = (nat?: string | null) => {
+    switch (nat) {
+      case "OBRIGATORIO":
+        return "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/70 shadow-sm shadow-amber-500/5";
+      case "NECESSARIO":
+        return "bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-700/70 shadow-sm shadow-sky-500/5";
+      case "DESEJO":
+        return "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700/70 shadow-sm shadow-purple-500/5";
+      default:
+        return "bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/80";
+    }
+  };
+
+  const getNatureLabel = (nat?: string | null) => {
+    switch (nat) {
+      case "OBRIGATORIO": return "Obrigatório";
+      case "NECESSARIO": return "Necessário";
+      case "DESEJO": return "Desejo";
+      default: return "Nenhum";
+    }
+  };
+
+  // Categoria pai selecionada no form de criação rápida
+  const selectedParentCat = categories.find((c) => c.id === catParentId);
+
+  // Verificações para o Modal de Edição de Categoria
+  const editModalCatHasChildren = editModalCat ? categories.some((c) => c.parent_id === editModalCat.id) : false;
+  const editModalCatChildCount = editModalCat ? categories.filter((c) => c.parent_id === editModalCat.id).length : 0;
 
   return (
     <div className="space-y-6">
@@ -231,7 +365,7 @@ export const Management: React.FC = () => {
             Cadastros & Metas
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Gerenciamento de categorias, contatos, dívidas e tetos de gastos ({profile})
+            Gerenciamento de categorias, itens, contatos, dívidas e tetos de gastos ({profile})
           </p>
         </div>
 
@@ -302,23 +436,43 @@ export const Management: React.FC = () => {
       {/* TAB 1: CATEGORIAS E SUBCATEGORIAS */}
       {activeTab === "CATEGORIAS" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Form */}
+          {/* Form de Criação */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                 <Plus className="w-4 h-4 text-emerald-500" />
                 <span>{catParentId ? "Nova Subcategoria" : "Nova Categoria"}</span>
               </h3>
+
               {catParentId && (
                 <button
                   type="button"
                   onClick={() => setCatParentId("")}
-                  className="text-[11px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 underline"
+                  className="text-[11px] font-semibold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 underline"
                 >
-                  Criar Categoria Raiz
+                  Criar Raiz
                 </button>
               )}
             </div>
+
+            {selectedParentCat && (
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold">↳</span>
+                  <span>
+                    Subcategoria de: <strong>{selectedParentCat.name}</strong>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCatParentId("")}
+                  className="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-md transition-all"
+                  title="Desvincular e criar como Categoria Principal"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             <form onSubmit={handleCreateCategory} className="space-y-3.5">
               <div>
@@ -328,7 +482,7 @@ export const Management: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder={catParentId ? "Ex: Restaurante, Supermercado..." : "Ex: Alimentação, Moradia, Salário..."}
+                  placeholder={catParentId ? "Ex: Restaurante, Supermercado, Farmácia..." : "Ex: Alimentação, Moradia, Salário..."}
                   value={catName}
                   onChange={(e) => setCatName(e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
@@ -386,8 +540,8 @@ export const Management: React.FC = () => {
                 </select>
                 <p className="text-[10px] text-zinc-400 mt-1">
                   {catParentId
-                    ? "Esta categoria será cadastrada como subcategoria da categoria selecionada."
-                    : "Deixe vazio para criar uma categoria principal."}
+                    ? "Esta subcategoria será vinculada à categoria pai selecionada."
+                    : "Deixe vazio para cadastrar como categoria principal."}
                 </p>
               </div>
 
@@ -452,9 +606,17 @@ export const Management: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all mt-2"
+                disabled={creatingCat}
+                className="w-full py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-1.5"
               >
-                {catParentId ? "Cadastrar Subcategoria" : "Cadastrar Categoria"}
+                {creatingCat ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Cadastrando...</span>
+                  </>
+                ) : (
+                  <span>{catParentId ? "Cadastrar Subcategoria" : "Cadastrar Categoria"}</span>
+                )}
               </button>
             </form>
           </div>
@@ -509,33 +671,11 @@ export const Management: React.FC = () => {
                   .filter((c) => catFilterNature === "TODOS" || c.nature === catFilterNature || categories.some(sub => sub.parent_id === c.id && sub.nature === catFilterNature))
                   .map((parentCat) => {
                     const subcategories = categories.filter((sub) => sub.parent_id === parentCat.id);
-                    
-                    const getNatureStyle = (nat: string) => {
-                      switch (nat) {
-                        case "OBRIGATORIO":
-                          return "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/70 shadow-sm shadow-amber-500/5";
-                        case "NECESSARIO":
-                          return "bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-700/70 shadow-sm shadow-sky-500/5";
-                        case "DESEJO":
-                          return "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700/70 shadow-sm shadow-purple-500/5";
-                        default:
-                          return "bg-zinc-100 dark:bg-zinc-800/90 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700/80";
-                      }
-                    };
-
-                    const getNatureLabel = (nat: string) => {
-                      switch (nat) {
-                        case "OBRIGATORIO": return "Obrigatório";
-                        case "NECESSARIO": return "Necessário";
-                        case "DESEJO": return "Desejo";
-                        default: return "Nenhum";
-                      }
-                    };
 
                     return (
                       <div
                         key={parentCat.id}
-                        className="rounded-2xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 shadow-sm overflow-hidden transition-all hover:border-zinc-300 dark:hover:border-zinc-700/80"
+                        className="rounded-2xl border border-zinc-200/90 dark:border-zinc-800/90 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700/80 shadow-sm overflow-hidden transition-all"
                       >
                         {/* Parent Row */}
                         <div className="flex items-center justify-between p-3.5 bg-gradient-to-r from-zinc-100/80 via-zinc-50/50 to-white dark:from-zinc-800/80 dark:via-zinc-800/40 dark:to-zinc-900/60 border-b border-zinc-100 dark:border-zinc-800/80">
@@ -570,12 +710,22 @@ export const Management: React.FC = () => {
                                 setCatParentId(parentCat.id);
                                 setCatType(parentCat.type);
                                 setCatNature(parentCat.nature || "NENHUM");
+                                window.scrollTo({ top: 0, behavior: "smooth" });
                               }}
                               className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-950/80 border border-emerald-200/80 dark:border-emerald-800/60 rounded-lg transition-all"
                               title="Adicionar Subcategoria nesta Categoria"
                             >
                               <Plus className="w-3.5 h-3.5" />
                               <span className="hidden sm:inline">Subcategoria</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => openEditCategory(parentCat)}
+                              className="p-1.5 text-zinc-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-lg transition-all"
+                              title="Editar Categoria"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
                             </button>
 
                             <button
@@ -594,7 +744,7 @@ export const Management: React.FC = () => {
                             {subcategories.map((sub) => (
                               <div
                                 key={sub.id}
-                                className="flex items-center justify-between px-3 py-2 rounded-xl bg-white dark:bg-zinc-900/90 border border-zinc-200/70 dark:border-zinc-800/80 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all shadow-sm"
+                                className="flex items-center justify-between px-3 py-2 rounded-xl border border-zinc-200/70 dark:border-zinc-800/80 bg-white dark:bg-zinc-900/90 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-all shadow-sm"
                               >
                                 <div className="flex items-center gap-2.5">
                                   <span className="text-emerald-500 dark:text-emerald-400 font-mono text-xs font-bold">↳</span>
@@ -621,6 +771,15 @@ export const Management: React.FC = () => {
                                   </button>
 
                                   <button
+                                    type="button"
+                                    onClick={() => openEditCategory(sub)}
+                                    className="p-1 text-zinc-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded transition-all"
+                                    title="Editar Subcategoria"
+                                  >
+                                    <Pencil className="w-3 h-3" />
+                                  </button>
+
+                                  <button
                                     onClick={() => handleDeleteItem("categories", sub.id)}
                                     className="p-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition-all"
                                     title="Excluir Subcategoria"
@@ -637,6 +796,236 @@ export const Management: React.FC = () => {
                   })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EDIÇÃO DE CATEGORIA / SUBCATEGORIA */}
+      {editModalCat && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-r from-sky-50/50 via-white to-white dark:from-sky-950/20 dark:via-zinc-900 dark:to-zinc-900">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-sky-100 dark:bg-sky-950/80 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800/60 shadow-sm">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                    {editModalCat.parent_id ? "Editar Subcategoria" : "Editar Categoria Principal"}
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Perfil {profile} • Atualize nome, fluxo, hierarquia e essencialidade
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditCategory}
+                className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveEditCategory} className="p-5 space-y-4">
+              {editCatError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{editCatError}</span>
+                </div>
+              )}
+
+              {/* Nome */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Nome da {editModalCat.parent_id ? "Subcategoria" : "Categoria"}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editCatName}
+                  onChange={(e) => setEditCatName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              {/* Tipo de Fluxo */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Tipo de Fluxo
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditCatType("DESPESA");
+                      if (editModalCat.parent_id) {
+                        const curParent = categories.find((c) => c.id === editCatParentId);
+                        if (curParent && curParent.type !== "DESPESA") {
+                          setEditCatParentId("");
+                        }
+                      }
+                    }}
+                    className={`py-2 text-xs font-bold rounded-lg border transition-all ${
+                      editCatType === "DESPESA"
+                        ? "border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-600 shadow-sm"
+                        : "border-zinc-200 dark:border-zinc-700 text-zinc-500"
+                    }`}
+                  >
+                    Despesa
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditCatType("RECEITA");
+                      if (editModalCat.parent_id) {
+                        const curParent = categories.find((c) => c.id === editCatParentId);
+                        if (curParent && curParent.type !== "RECEITA") {
+                          setEditCatParentId("");
+                        }
+                      }
+                    }}
+                    className={`py-2 text-xs font-bold rounded-lg border transition-all ${
+                      editCatType === "RECEITA"
+                        ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 shadow-sm"
+                        : "border-zinc-200 dark:border-zinc-700 text-zinc-500"
+                    }`}
+                  >
+                    Receita
+                  </button>
+                </div>
+                {editModalCatHasChildren && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5 flex items-center gap-1">
+                    <Info className="w-3.5 h-3.5 shrink-0" />
+                    <span>Ao alterar o fluxo desta categoria raiz, suas {editModalCatChildCount} subcategorias serão atualizadas em cascata.</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Categoria Pai (Hierarquia) */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Hierarquia (Categoria Pai)
+                </label>
+                {editModalCatHasChildren ? (
+                  <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-600 dark:text-zinc-400 space-y-1">
+                    <div className="flex items-center gap-1.5 font-bold text-zinc-800 dark:text-zinc-200">
+                      <Layers className="w-4 h-4 text-sky-500" />
+                      <span>Categoria Principal (Possui {editModalCatChildCount} subcategorias)</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400">
+                      Esta categoria não pode ser convertida em subcategoria enquanto tiver subcategorias filhas vinculadas.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      value={editCatParentId}
+                      onChange={(e) => setEditCatParentId(e.target.value)}
+                      className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100"
+                    >
+                      <option value="">[Nenhuma - Categoria Principal (Raiz)]</option>
+                      {categories
+                        .filter((c) => !c.parent_id && c.type === editCatType && c.id !== editModalCat.id)
+                        .map((c) => (
+                          <option key={c.id} value={c.id}>
+                            ↳ Subcategoria de: {c.name}
+                          </option>
+                        ))}
+                    </select>
+                    <p className="text-[10px] text-zinc-400 mt-1">
+                      {editCatParentId
+                        ? "Esta categoria passará a pertencer como subcategoria da categoria selecionada acima."
+                        : "Esta categoria será tratada como uma Categoria Principal (Raiz)."}
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/* Natureza da Categoria */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Natureza da Categoria
+                </label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setEditCatNature("NENHUM")}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border text-left transition-all ${
+                      editCatNature === "NENHUM"
+                        ? "border-zinc-800 bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-sm"
+                        : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/30"
+                    }`}
+                  >
+                    Nenhum
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditCatNature("OBRIGATORIO")}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border text-left transition-all ${
+                      editCatNature === "OBRIGATORIO"
+                        ? "border-amber-500 bg-amber-500 text-white shadow-sm"
+                        : "border-amber-200 dark:border-amber-900/60 text-amber-700 dark:text-amber-300 bg-amber-50/50 dark:bg-amber-950/20"
+                    }`}
+                  >
+                    Obrigatório
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditCatNature("NECESSARIO")}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border text-left transition-all ${
+                      editCatNature === "NECESSARIO"
+                        ? "border-blue-500 bg-blue-500 text-white shadow-sm"
+                        : "border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300 bg-blue-50/50 dark:bg-blue-950/20"
+                    }`}
+                  >
+                    Necessário
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditCatNature("DESEJO")}
+                    className={`px-2.5 py-1.5 text-[11px] font-bold rounded-lg border text-left transition-all ${
+                      editCatNature === "DESEJO"
+                        ? "border-purple-500 bg-purple-500 text-white shadow-sm"
+                        : "border-purple-200 dark:border-purple-900/60 text-purple-700 dark:text-purple-300 bg-purple-50/50 dark:bg-purple-950/20"
+                    }`}
+                  >
+                    Desejo
+                  </button>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={closeEditCategory}
+                  className="px-4 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={editCatSaving}
+                  className="px-5 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-sky-600/20 transition-all flex items-center gap-1.5"
+                >
+                  {editCatSaving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <span>Salvar Alterações</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -857,18 +1246,161 @@ export const Management: React.FC = () => {
                           ) : null}
                         </div>
 
-                        <button
-                          onClick={() => handleDeleteItem("items", item.id)}
-                          className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all shrink-0"
-                          title="Excluir Item"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => openEditItem(item)}
+                            className="p-1.5 text-zinc-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-lg transition-all"
+                            title="Editar Item"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteItem("items", item.id)}
+                            className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all"
+                            title="Excluir Item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE EDIÇÃO DE ITEM */}
+      {editModalItem && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-r from-sky-50/50 via-white to-white dark:from-sky-950/20 dark:via-zinc-900 dark:to-zinc-900">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-sky-100 dark:bg-sky-950/80 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800/60 shadow-sm">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                    Editar Item
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Perfil {profile} • Atualize nome, subcategoria vinculada ou valor sugerido
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeEditItem}
+                className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleSaveEditItem} className="p-5 space-y-4">
+              {editItemError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{editItemError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Nome do Item
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editItemName}
+                  onChange={(e) => setEditItemName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Subcategoria Vinculada
+                </label>
+                <select
+                  required
+                  value={editItemCatId}
+                  onChange={(e) => setEditItemCatId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100"
+                >
+                  {categories
+                    .filter((c) => !c.parent_id)
+                    .map((parentCat) => {
+                      const subs = categories.filter((s) => s.parent_id === parentCat.id);
+                      const getNat = (n?: string) => (n && n !== "NENHUM" ? ` [${n.charAt(0) + n.slice(1).toLowerCase()}]` : "");
+
+                      if (subs.length === 0) {
+                        return (
+                          <option key={parentCat.id} value={parentCat.id}>
+                            {parentCat.name}{getNat(parentCat.nature)} ({parentCat.type})
+                          </option>
+                        );
+                      }
+
+                      return (
+                        <optgroup key={parentCat.id} label={`${parentCat.name} (${parentCat.type})`}>
+                          <option value={parentCat.id}>
+                            {parentCat.name} (Principal){getNat(parentCat.nature)}
+                          </option>
+                          {subs.map((sub) => (
+                            <option key={sub.id} value={sub.id}>
+                              ↳ {sub.name}{getNat(sub.nature)}
+                            </option>
+                          ))}
+                        </optgroup>
+                      );
+                    })}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Valor Padrão Sugerido (R$ - Opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="0,00"
+                  value={editItemAmountStr}
+                  onChange={(e) => setEditItemAmountStr(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={closeEditItem}
+                  className="px-4 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={editItemSaving}
+                  className="px-5 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-sky-600/20 transition-all flex items-center gap-1.5"
+                >
+                  {editItemSaving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <span>Salvar Alterações</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

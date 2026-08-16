@@ -126,19 +126,51 @@ async def update_category(
     if not category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categoria não encontrada.")
     
+    # Validação de hierarquia quando parent_id for informado
     if cat_in.parent_id:
         if cat_in.parent_id == category_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uma categoria não pode ser pai de si mesma.")
+        
+        # Não pode virar subcategoria se já possuir subcategorias filhas
+        sub_check = await db.execute(select(Category).where(Category.parent_id == category_id))
+        if sub_check.scalars().first():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Esta categoria possui subcategorias vinculadas e não pode ser transformada em subcategoria."
+            )
+
         parent = await db.get(Category, cat_in.parent_id)
         if not parent:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoria pai inexistente.")
+        if parent.profile != category.profile:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A categoria pai deve pertencer ao mesmo perfil.")
+        
+        target_type = cat_in.type or category.type
+        if parent.type != target_type:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A categoria pai deve pertencer ao mesmo tipo de fluxo (Receita/Despesa).")
+
         if parent.parent_id is not None:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não é permitido aninhamento além de subcategorias.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Não é permitido aninhamento além de 1 nível de subcategoria.")
+    elif category.parent_id and cat_in.type and not cat_in.parent_id:
+        # Se for subcategoria e mudar apenas o tipo sem mudar o pai, validar compatibilidade com o pai atual
+        parent = await db.get(Category, category.parent_id)
+        if parent and parent.type != cat_in.type:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="O tipo da subcategoria deve ser idêntico ao tipo da sua categoria pai."
+            )
 
     update_data = cat_in.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(category, field, value)
     
+    # Se o tipo da categoria pai foi alterado, propaga para todas as suas subcategorias
+    if cat_in.type and category.parent_id is None:
+        sub_result = await db.execute(select(Category).where(Category.parent_id == category_id))
+        subcategories = sub_result.scalars().all()
+        for sub in subcategories:
+            sub.type = cat_in.type
+
     await db.commit()
     await db.refresh(category)
     return category

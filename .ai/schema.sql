@@ -6,14 +6,6 @@
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
 
-CREATE TABLE users (
-	id VARCHAR(36) NOT NULL, 
-	username VARCHAR(50) NOT NULL, 
-	password_hash VARCHAR(255) NOT NULL, 
-	created_at VARCHAR(30) NOT NULL, 
-	PRIMARY KEY (id)
-);
-
 CREATE TABLE accounts (
 	id VARCHAR(36) NOT NULL, 
 	profile VARCHAR(10) NOT NULL, 
@@ -29,11 +21,13 @@ CREATE TABLE categories (
 	profile VARCHAR(10) NOT NULL, 
 	type VARCHAR(10) NOT NULL, 
 	name VARCHAR(100) NOT NULL, 
+	nature VARCHAR(20) NOT NULL, 
 	parent_id VARCHAR(36), 
-	created_at VARCHAR(30) NOT NULL, nature VARCHAR(20) DEFAULT 'NENHUM' NOT NULL, 
+	created_at VARCHAR(30) NOT NULL, 
 	PRIMARY KEY (id), 
 	CONSTRAINT chk_category_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
 	CONSTRAINT chk_category_type CHECK (type IN ('RECEITA', 'DESPESA')), 
+	CONSTRAINT chk_category_nature CHECK (nature IN ('NENHUM', 'OBRIGATORIO', 'NECESSARIO', 'DESEJO')), 
 	FOREIGN KEY(parent_id) REFERENCES categories (id) ON DELETE CASCADE
 );
 
@@ -64,16 +58,45 @@ CREATE TABLE goals (
 	CONSTRAINT chk_goal_status CHECK (status IN ('EM_ANDAMENTO', 'CONCLUIDA', 'CANCELADA'))
 );
 
-CREATE TABLE items (
+CREATE TABLE sync_logs (
+	id VARCHAR(36) NOT NULL, 
+	action VARCHAR(20) NOT NULL, 
+	status VARCHAR(20) NOT NULL, 
+	items_imported INTEGER NOT NULL, 
+	items_exported INTEGER NOT NULL, 
+	message TEXT NOT NULL, 
+	details TEXT, 
+	created_at VARCHAR(30) NOT NULL, 
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE system_configs (
+	key VARCHAR(100) NOT NULL, 
+	value TEXT, 
+	updated_at VARCHAR(30) NOT NULL, 
+	PRIMARY KEY (key)
+);
+
+CREATE TABLE users (
+	id VARCHAR(36) NOT NULL, 
+	username VARCHAR(50) NOT NULL, 
+	password_hash VARCHAR(255) NOT NULL, 
+	created_at VARCHAR(30) NOT NULL, 
+	PRIMARY KEY (id)
+);
+
+CREATE TABLE budgets (
 	id VARCHAR(36) NOT NULL, 
 	profile VARCHAR(10) NOT NULL, 
 	category_id VARCHAR(36) NOT NULL, 
-	name VARCHAR(100) NOT NULL, 
-	default_amount_cents INTEGER, 
+	month INTEGER NOT NULL, 
+	year INTEGER NOT NULL, 
+	limit_amount_cents INTEGER NOT NULL, 
 	created_at VARCHAR(30) NOT NULL, 
 	PRIMARY KEY (id), 
-	CONSTRAINT chk_item_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
-	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE RESTRICT
+	CONSTRAINT chk_budget_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
+	CONSTRAINT chk_budget_month CHECK (month BETWEEN 1 AND 12), 
+	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE CASCADE
 );
 
 CREATE TABLE debts (
@@ -92,18 +115,16 @@ CREATE TABLE debts (
 	FOREIGN KEY(contact_id) REFERENCES contacts (id) ON DELETE SET NULL
 );
 
-CREATE TABLE budgets (
+CREATE TABLE items (
 	id VARCHAR(36) NOT NULL, 
 	profile VARCHAR(10) NOT NULL, 
 	category_id VARCHAR(36) NOT NULL, 
-	month INTEGER NOT NULL, 
-	year INTEGER NOT NULL, 
-	limit_amount_cents INTEGER NOT NULL, 
+	name VARCHAR(100) NOT NULL, 
+	default_amount_cents INTEGER, 
 	created_at VARCHAR(30) NOT NULL, 
 	PRIMARY KEY (id), 
-	CONSTRAINT chk_budget_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
-	CONSTRAINT chk_budget_month CHECK (month BETWEEN 1 AND 12), 
-	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE CASCADE
+	CONSTRAINT chk_item_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
+	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE RESTRICT
 );
 
 CREATE TABLE schedules (
@@ -169,25 +190,6 @@ CREATE TABLE transactions (
 	FOREIGN KEY(schedule_id) REFERENCES schedules (id) ON DELETE CASCADE
 );
 
-CREATE TABLE system_configs (
-	"key" VARCHAR(100) NOT NULL, 
-	value TEXT, 
-	updated_at VARCHAR(30) NOT NULL, 
-	PRIMARY KEY ("key")
-);
-
-CREATE TABLE sync_logs (
-	id VARCHAR(36) NOT NULL, 
-	action VARCHAR(20) NOT NULL, 
-	status VARCHAR(20) NOT NULL, 
-	items_imported INTEGER NOT NULL, 
-	items_exported INTEGER NOT NULL, 
-	message TEXT NOT NULL, 
-	details TEXT, 
-	created_at VARCHAR(30) NOT NULL, 
-	PRIMARY KEY (id)
-);
-
 CREATE UNIQUE INDEX ix_users_username ON users (username);
 
 CREATE INDEX idx_trans_profile_due ON transactions (profile, due_date);
@@ -195,4 +197,3 @@ CREATE INDEX idx_trans_profile_due ON transactions (profile, due_date);
 CREATE INDEX idx_trans_sync ON transactions (sync_status);
 
 CREATE INDEX idx_trans_status ON transactions (status);
-
