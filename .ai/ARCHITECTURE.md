@@ -72,15 +72,21 @@ backend/
 
 ---
 
-## 3. Integração com Google Sheets
+## 3. Integração com Google Sheets (Espelho Integral & Base App Mobile)
 
-### 3.1 Estrutura das Abas da Planilha
-1. **`Transacoes`**:
-   - Cabeçalhos: `ID | Perfil | Tipo | Categoria | Item | Descricao | Valor_Centavos | Valor_Formatado | Vencimento | Pagamento | Status | Contato | Notas`
-   - Função: Espelho analítico completo das transações registradas no SQLite local.
-2. **`Fila_Mobile`**:
-   - Cabeçalhos: `ID_Temporario | Perfil | Tipo | Categoria_Nome | Item_Nome | Descricao | Valor | Data_Vencimento | Contato_Nome | Status_Fila`
-   - Função: Fila de recepção para lançamentos inseridos remotamente (ex: app mobile ou formulários rápidos).
+### 3.1 Estrutura das 8 Abas da Planilha
+1. **`Transacoes`**: Espelho analítico completo de todas as receitas e despesas com metadados, valores em R$ e centavos, IDs e referências.
+2. **`Categorias`**: Árvore hierárquica completa (categorias e subcategorias), tipo de fluxo e natureza de essencialidade.
+3. **`Itens`**: Catálogo de itens vinculados a subcategorias com valor padrão sugerido.
+4. **`Contas`**: Contas bancárias, carteiras e aplicações cadastradas.
+5. **`Contatos`**: Cadastro consolidado de clientes, fornecedores e favorecidos.
+6. **`Dividas`**: Passivos, credores, valor total/restante, status e vencimentos.
+7. **`Orcamentos`**: Tetos e limites mensais de gastos por categoria.
+8. **`Fila_Mobile`**: Fila de recepção para lançamentos inseridos remotamente pelo app mobile Android.
+
+### 3.2 Otimização em Lote (Batch Operations)
+- Utilização de `batchClear` e `values.batchUpdate` para exportar todas as 7 abas mestras em uma única chamada de API atômica, evitando *rate limits*.
+- Criação e inicialização automática de abas ausentes via `ensure_all_sheets_exist`.
 
 ---
 

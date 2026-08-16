@@ -10,17 +10,23 @@ No modelo de operação com SQLite local, os dados primários residem no banco l
 3. Total controle sobre credenciais, com histórico de auditoria e logs de execução.
 
 ## Decisão
-1. **Google Sheets como Ponte em Nuvem**: Utilizar a API oficial do Google Sheets (v4) com autenticação via Service Account OAuth2 (`credentials.json`).
-2. **Separação de Papéis por Abas**:
-   - **`Transacoes`**: Aba que recebe a exportação consolidada de todas as transações do SQLite local, atuando como espelho analítico de leitura.
-   - **`Fila_Mobile`**: Aba que funciona como fila de entrada de lançamentos gerados remotamente. A rotina de importação lê os novos itens da fila, converte-os em transações locais no SQLite e atualiza o status na planilha para `PROCESSADO`.
-3. **Ações Direcionais Independentes**:
-   - **Exportar (`/sync/export`)**: Envio unidirecional SQLite -&gt; Aba `Transacoes`.
-   - **Importar (`/sync/import`)**: Leitura unidirecional Aba `Fila_Mobile` -&gt; SQLite.
-   - **Sincronização Completa (`/sync/full`)**: Importa a fila pendente e em seguida reexporta a visão consolidada.
-4. **Armazenamento Seguro de Credenciais e Auditoria**:
+1. **Google Sheets como Ponte em Nuvem & Catálogo do App**: Utilizar a API oficial do Google Sheets (v4) com autenticação via Service Account OAuth2 (`credentials.json`).
+2. **Separação de Papéis por 8 Abas Especializadas**:
+   - **`Transacoes`**: Espelho analítico consolidado de receitas e despesas com metadados e IDs relacionais.
+   - **`Categorias`**: Catálogo de categorias, subcategorias, fluxo e natureza de essencialidade.
+   - **`Itens`**: Catálogo de itens vinculados a subcategorias e valores padrão para auto-preenchimento.
+   - **`Contas`**: Contas bancárias e carteiras cadastradas.
+   - **`Contatos`**: Clientes, fornecedores e favorecidos.
+   - **`Dividas`**: Passivos, saldos devedores, credores e datas de vencimento.
+   - **`Orcamentos`**: Tetos e limites mensais de gastos por categoria.
+   - **`Fila_Mobile`**: Fila de entrada de lançamentos gerados no celular pelo app Android.
+3. **Ações Direcionais Otimizadas em Lote**:
+   - **Exportar (`/sync/export`)**: Envio unidirecional atômico SQLite -> Planilha (todas as 7 abas mestras e operacionais via `batchUpdate`).
+   - **Importar (`/sync/import`)**: Leitura unidirecional e reconciliação da aba `Fila_Mobile` -> SQLite.
+   - **Sincronização Completa (`/sync/full`)**: Importa a fila pendente e em seguida reexporta todas as abas consolidadas.
+4. **Armazenamento Seguro de Credenciais e Auditoria Granular**:
    - As credenciais de serviço e o ID da planilha são persistidos na tabela `system_configs` do banco de dados local.
-   - Cada operação gera um registro na tabela `sync_logs` com status (`SUCESSO`, `FALHA`), contagem de itens importados/exportados, mensagem descritiva e timestamp ISO 8601.
+   - Cada operação gera um registro na tabela `sync_logs` com status (`SUCESSO`, `ERRO`), contagem de itens importados/exportados, quantitativo detalhado em JSON no campo `details` e timestamp ISO 8601.
 
 ## Consequências
 

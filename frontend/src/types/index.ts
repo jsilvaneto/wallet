@@ -153,3 +153,22 @@ export interface SyncTestResult {
   service_account_email?: string | null;
 }
 
+export interface SyncResultResponse {
+  success: boolean;
+  message: string;
+  imported_from_queue: number;
+  exported_to_mirror: number;
+  entity_counts?: {
+    transacoes?: number;
+    categorias?: number;
+    itens?: number;
+    contas?: number;
+    contatos?: number;
+    dividas?: number;
+    orcamentos?: number;
+    [key: string]: number | undefined;
+  };
+  errors?: string[];
+}
+
+

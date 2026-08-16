@@ -53,14 +53,19 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Módulo de Dívidas com acompanhamento de amortização e saldo devedor.
   - [x] Módulo de Orçamentos com tetos de gastos mensais e alertas de consumo percentual.
 
-- [x] **Sincronização Nuvem com Google Sheets**:
-  - [x] Gerenciamento web das configurações na aba **Configurações &gt; Sincronização Nuvem**.
-  - [x] Upload/edição de `credentials.json` (Service Account) e ID da planilha salvos no banco.
-  - [x] Teste de conexão e auditoria de logs com status, mensagens e quantitativos.
-  - [x] Ações direcionais:
-    - **Exportação de Dados**: Envio de transações do SQLite para a aba `Transacoes`.
-    - **Recebimento de Dados**: Leitura e conciliação da aba `Fila_Mobile` para o SQLite.
-    - **Sincronização Completa (Mirror)**: Leitura da fila + Envio consolidado.
+- [x] **Sincronização Nuvem com Google Sheets (Espelho Integral & Base do App Mobile)**:
+  - [x] Gerenciamento web das configurações na aba **Configurações > Sincronização Nuvem**.
+  - [x] Upload/edição de `credentials.json` (Service Account) e ID da planilha salvos no banco local.
+  - [x] Espelhamento automático de **8 abas integradas**:
+    - `Transacoes` (Lançamentos consolidados de receitas e despesas com metadados)
+    - `Categorias` (Árvore hierárquica, tipo e natureza de essencialidade)
+    - `Itens` (Catálogo de itens vinculados a subcategorias e valores padrão sugeridos)
+    - `Contas` (Contas bancárias, carteiras e aplicações)
+    - `Contatos` (Clientes, fornecedores, colaboradores e favorecidos)
+    - `Dividas` (Passivos, credores, valor total/restante e status)
+    - `Orcamentos` (Metas e limites de gastos mensais por categoria)
+    - `Fila_Mobile` (Buffer para ingestão e reconciliação de lançamentos do app mobile)
+  - [x] Ações direcionais em lote (*batchUpdate*) com auditoria detalhada por entidade em `sync_logs`.
 
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.

@@ -6,21 +6,64 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import aliased
 
 from app.core.config import settings
-from app.models import Transaction, Category, Item, Contact, Account, SystemConfig, SyncLog
+from app.models import (
+    Transaction, Category, Item, Contact, Account, 
+    Debt, Budget, SystemConfig, SyncLog
+)
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
+# Definição dos Cabeçalhos das 8 Abas da Planilha
 HEADER_TRANSACOES = [
-    "ID", "Perfil", "Tipo", "Descricao", "Valor_R$", "Categoria", 
-    "Item", "Contato", "Conta", "Vencimento", "Pagamento", "Status", "Notas", "Atualizado_Em"
+    "ID", "Perfil", "Tipo", "Descricao", "Valor_R$", "Valor_Centavos", "Categoria", 
+    "Categoria_ID", "Item", "Item_ID", "Contato", "Contato_ID", "Conta", "Conta_ID", 
+    "Divida_ID", "Vencimento", "Pagamento", "Status", "Sync_Status", "Notas", "Criado_Em", "Atualizado_Em"
+]
+
+HEADER_CATEGORIAS = [
+    "ID", "Perfil", "Tipo", "Nome", "Natureza", "Categoria_Pai_ID", "Categoria_Pai_Nome", "Criado_Em"
+]
+
+HEADER_ITENS = [
+    "ID", "Perfil", "Subcategoria_ID", "Subcategoria_Nome", "Categoria_Pai_Nome", "Nome", 
+    "Valor_Padrao_R$", "Valor_Padrao_Centavos", "Criado_Em"
+]
+
+HEADER_CONTAS = [
+    "ID", "Perfil", "Nome", "Tipo", "Criado_Em"
+]
+
+HEADER_CONTATOS = [
+    "ID", "Perfil", "Nome", "Tipo", "Documento_CPF_CNPJ", "Notas", "Criado_Em"
+]
+
+HEADER_DIVIDAS = [
+    "ID", "Perfil", "Titulo", "Valor_Total_R$", "Valor_Total_Centavos", "Valor_Restante_R$", 
+    "Valor_Restante_Centavos", "Credor_Contato", "Contato_ID", "Vencimento_Final", "Status", "Criado_Em"
+]
+
+HEADER_ORCAMENTOS = [
+    "ID", "Perfil", "Categoria_ID", "Categoria_Nome", "Mes", "Ano", "Limite_R$", "Limite_Centavos", "Criado_Em"
 ]
 
 HEADER_FILA_MOBILE = [
-    "ID", "Perfil", "Tipo", "Descricao", "Valor_Centavos", "Categoria", 
-    "Item", "Contato", "Vencimento", "Pagamento", "Status", "Notas", "Criado_Em"
+    "ID_Temporario", "Perfil", "Tipo", "Descricao", "Valor_Centavos", "Categoria_Nome", 
+    "Item_Nome", "Contato_Nome", "Conta_Nome", "Data_Vencimento", "Data_Pagamento", "Status", "Notas", "Status_Fila", "Criado_Em"
 ]
+
+ALL_SHEETS_HEADERS: Dict[str, List[str]] = {
+    "Transacoes": HEADER_TRANSACOES,
+    "Categorias": HEADER_CATEGORIAS,
+    "Itens": HEADER_ITENS,
+    "Contas": HEADER_CONTAS,
+    "Contatos": HEADER_CONTATOS,
+    "Dividas": HEADER_DIVIDAS,
+    "Orcamentos": HEADER_ORCAMENTOS,
+    "Fila_Mobile": HEADER_FILA_MOBILE,
+}
 
 async def get_config_value(db: AsyncSession, key: str) -> Optional[str]:
     """Busca uma configuração do sistema no banco de dados."""
@@ -110,16 +153,15 @@ async def record_sync_log(
     await db.refresh(log)
     return log
 
-def ensure_sheets_exist(service, spreadsheet_id: str):
-    """Garante que as abas 'Transacoes' e 'Fila_Mobile' existam com seus cabeçalhos."""
+def ensure_all_sheets_exist(service, spreadsheet_id: str) -> List[str]:
+    """Garante que todas as 8 abas necessárias existam na planilha e possuam cabeçalhos formatados."""
     sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
     existing_sheets = [s["properties"]["title"] for s in sheet_metadata.get("sheets", [])]
     
     requests = []
-    if "Transacoes" not in existing_sheets:
-        requests.append({"addSheet": {"properties": {"title": "Transacoes"}}})
-    if "Fila_Mobile" not in existing_sheets:
-        requests.append({"addSheet": {"properties": {"title": "Fila_Mobile"}}})
+    for sheet_name in ALL_SHEETS_HEADERS.keys():
+        if sheet_name not in existing_sheets:
+            requests.append({"addSheet": {"properties": {"title": sheet_name}}})
         
     if requests:
         service.spreadsheets().batchUpdate(
@@ -127,30 +169,26 @@ def ensure_sheets_exist(service, spreadsheet_id: str):
             body={"requests": requests}
         ).execute()
 
-    # Define cabeçalhos na aba Transacoes
-    service.spreadsheets().values().update(
-        spreadsheetId=spreadsheet_id,
-        range="Transacoes!A1:N1",
-        valueInputOption="RAW",
-        body={"values": [HEADER_TRANSACOES]}
-    ).execute()
-
     # Inicializa cabeçalho da Fila_Mobile se a linha 1 estiver vazia
     res_fila = service.spreadsheets().values().get(
         spreadsheetId=spreadsheet_id,
-        range="Fila_Mobile!A1:M1"
+        range="Fila_Mobile!A1:O1"
     ).execute()
     
     if not res_fila.get("values"):
         service.spreadsheets().values().update(
             spreadsheetId=spreadsheet_id,
-            range="Fila_Mobile!A1:M1",
+            range="Fila_Mobile!A1:O1",
             valueInputOption="RAW",
             body={"values": [HEADER_FILA_MOBILE]}
         ).execute()
 
+    # Recarrega metadados com as abas criadas
+    sheet_metadata_after = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+    return [s["properties"]["title"] for s in sheet_metadata_after.get("sheets", [])]
+
 async def test_connection(db: AsyncSession, spreadsheet_id: Optional[str] = None) -> Dict[str, Any]:
-    """Testa a conexão completa com a planilha do Google e valida permissões."""
+    """Testa a conexão completa com a planilha do Google e valida permissões em todas as abas."""
     target_id = await get_effective_spreadsheet_id(db, spreadsheet_id)
     if not target_id:
         raise ValueError("ID da Planilha do Google não informado.")
@@ -162,19 +200,21 @@ async def test_connection(db: AsyncSession, spreadsheet_id: Optional[str] = None
     sheet_metadata = service.spreadsheets().get(spreadsheetId=target_id).execute()
     title = sheet_metadata.get("properties", {}).get("title", "Planilha Google")
     
-    # Garante existência das abas
-    ensure_sheets_exist(service, target_id)
-    
-    # Recarrega abas atualizadas
-    sheet_metadata_after = service.spreadsheets().get(spreadsheetId=target_id).execute()
-    sheets_found = [s["properties"]["title"] for s in sheet_metadata_after.get("sheets", [])]
+    # Garante existência de todas as 8 abas
+    sheets_found = ensure_all_sheets_exist(service, target_id)
+
+    details_payload = {
+        "service_account": client_email,
+        "spreadsheet_id": target_id,
+        "sheets_configured": sheets_found
+    }
 
     await record_sync_log(
         db,
         action="TEST",
         status="SUCESSO",
-        message=f"Conexão com a planilha '{title}' testada com sucesso. Abas configuradas: {', '.join(sheets_found)}.",
-        details=f"Service Account: {client_email} | Spreadsheet ID: {target_id}"
+        message=f"Conexão com a planilha '{title}' testada com sucesso. {len(sheets_found)} abas configuradas.",
+        details=json.dumps(details_payload, ensure_ascii=False)
     )
 
     return {
@@ -182,17 +222,17 @@ async def test_connection(db: AsyncSession, spreadsheet_id: Optional[str] = None
         "spreadsheet_title": title,
         "sheets_found": sheets_found,
         "service_account_email": client_email,
-        "message": f"Conexão bem sucedida com a planilha '{title}'!"
+        "message": f"Conexão bem sucedida com a planilha '{title}'! {len(sheets_found)} abas verificadas."
     }
 
 async def process_mobile_queue(db: AsyncSession, service, spreadsheet_id: str) -> Tuple[int, List[str]]:
-    """Lê registros da aba Fila_Mobile, valida, insere no SQLite e limpa a fila."""
+    """Lê registros da aba Fila_Mobile, valida, reconcilia categorias/itens/contas/contatos, insere no SQLite e limpa a fila."""
     imported_count = 0
     errors: List[str] = []
 
     res = service.spreadsheets().values().get(
         spreadsheetId=spreadsheet_id,
-        range="Fila_Mobile!A2:M"
+        range="Fila_Mobile!A2:O"
     ).execute()
     rows = res.get("values", [])
 
@@ -205,18 +245,33 @@ async def process_mobile_queue(db: AsyncSession, service, spreadsheet_id: str) -
                 continue
 
             trans_id = row[0].strip()
-            profile = row[1].strip().upper()
-            trans_type = row[2].strip().upper()
-            description = row[3].strip()
-            amount_cents = int(row[4].strip())
-            cat_name = row[5].strip() if len(row) > 5 and row[5] else "Outras Despesas"
-            contact_name = row[7].strip() if len(row) > 7 and row[7] else None
-            due_date = row[8].strip() if len(row) > 8 and row[8] else datetime.now(timezone.utc).strftime("%Y-%m-%d")
-            payment_date = row[9].strip() if len(row) > 9 and row[9] else None
-            status_val = row[10].strip().upper() if len(row) > 10 and row[10] else "PENDENTE"
-            notes = row[11].strip() if len(row) > 11 else None
+            profile = row[1].strip().upper() if len(row) > 1 and row[1] else "PESSOAL"
+            if profile not in ["PESSOAL", "EMPRESA"]:
+                profile = "PESSOAL"
 
-            # 1. Verifica duplicidade por UUID
+            trans_type = row[2].strip().upper() if len(row) > 2 and row[2] else "DESPESA"
+            if trans_type not in ["RECEITA", "DESPESA"]:
+                trans_type = "DESPESA"
+
+            description = row[3].strip() if len(row) > 3 and row[3] else "Lançamento Mobile"
+            
+            # Valor em centavos
+            amount_raw = row[4].strip()
+            amount_cents = int(float(amount_raw.replace(",", "."))) if amount_raw else 0
+            if amount_cents <= 0:
+                errors.append(f"Linha {index}: Valor inválido ({amount_raw}). Lançamento ignorado.")
+                continue
+
+            cat_name = row[5].strip() if len(row) > 5 and row[5] else ("Outras Receitas" if trans_type == "RECEITA" else "Outras Despesas")
+            item_name = row[6].strip() if len(row) > 6 and row[6] else None
+            contact_name = row[7].strip() if len(row) > 7 and row[7] else None
+            account_name = row[8].strip() if len(row) > 8 and row[8] else None
+            due_date = row[9].strip() if len(row) > 9 and row[9] else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            payment_date = row[10].strip() if len(row) > 10 and row[10] else None
+            status_val = row[11].strip().upper() if len(row) > 11 and row[11] else "PENDENTE"
+            notes = row[12].strip() if len(row) > 12 and row[12] else None
+
+            # 1. Verifica duplicidade por ID
             existing_trans = await db.get(Transaction, trans_id)
             if existing_trans:
                 continue
@@ -234,12 +289,33 @@ async def process_mobile_queue(db: AsyncSession, service, spreadsheet_id: str) -
                 category = Category(
                     profile=profile,
                     type=trans_type,
+                    nature="NENHUM",
                     name=cat_name
                 )
                 db.add(category)
                 await db.flush()
 
-            # 3. Resolve ou cria contato se informado
+            # 3. Resolve ou cria Item se informado
+            item_id = None
+            if item_name:
+                item_query = select(Item).where(
+                    Item.profile == profile,
+                    Item.name == item_name,
+                    Item.category_id == category.id
+                )
+                i_res = await db.execute(item_query)
+                item = i_res.scalar_one_or_none()
+                if not item:
+                    item = Item(
+                        profile=profile,
+                        category_id=category.id,
+                        name=item_name
+                    )
+                    db.add(item)
+                    await db.flush()
+                item_id = item.id
+
+            # 4. Resolve ou cria Contato se informado
             contact_id = None
             if contact_name:
                 contact_query = select(Contact).where(
@@ -258,12 +334,26 @@ async def process_mobile_queue(db: AsyncSession, service, spreadsheet_id: str) -
                     await db.flush()
                 contact_id = contact.id
 
-            # 4. Grava transação no SQLite
+            # 5. Resolve Conta se informada
+            account_id = None
+            if account_name:
+                acc_query = select(Account).where(
+                    Account.profile == profile,
+                    Account.name == account_name
+                )
+                a_res = await db.execute(acc_query)
+                account = a_res.scalar_one_or_none()
+                if account:
+                    account_id = account.id
+
+            # 6. Grava transação no SQLite
             new_trans = Transaction(
                 id=trans_id,
                 profile=profile,
                 type=trans_type,
+                account_id=account_id,
                 category_id=category.id,
+                item_id=item_id,
                 contact_id=contact_id,
                 description=description,
                 amount_cents=amount_cents,
@@ -281,17 +371,142 @@ async def process_mobile_queue(db: AsyncSession, service, spreadsheet_id: str) -
 
     if imported_count > 0:
         await db.commit()
-        # Limpa as linhas processadas da Fila_Mobile (mantendo a linha de cabeçalho A1:M1)
+        # Limpa as linhas processadas da Fila_Mobile (mantendo a linha de cabeçalho A1:O1)
         service.spreadsheets().values().clear(
             spreadsheetId=spreadsheet_id,
-            range="Fila_Mobile!A2:M"
+            range="Fila_Mobile!A2:O"
         ).execute()
 
     return (imported_count, errors)
 
-async def export_sqlite_to_sheets(db: AsyncSession, service, spreadsheet_id: str) -> int:
-    """Exporta todas as transações consolidadas do SQLite para a aba Transacoes."""
-    query = (
+async def export_sqlite_to_sheets(db: AsyncSession, service, spreadsheet_id: str) -> Tuple[int, Dict[str, int]]:
+    """
+    Exporta todas as entidades mestras e operacionais do SQLite para as abas correspondentes na Planilha Google.
+    Utiliza batchUpdate para máxima performance e integridade atômica.
+    """
+    ParentCategory = aliased(Category)
+    
+    # 1. Categorias
+    cat_query = (
+        select(Category, ParentCategory.name.label("parent_name"))
+        .outerjoin(ParentCategory, Category.parent_id == ParentCategory.id)
+        .order_by(Category.profile.asc(), Category.type.asc(), Category.name.asc())
+    )
+    cat_records = (await db.execute(cat_query)).all()
+    cat_values = [HEADER_CATEGORIAS]
+    for cat, parent_name in cat_records:
+        cat_values.append([
+            cat.id,
+            cat.profile,
+            cat.type,
+            cat.name,
+            cat.nature,
+            cat.parent_id or "",
+            parent_name or "",
+            cat.created_at
+        ])
+
+    # 2. Itens
+    item_query = (
+        select(
+            Item,
+            Category.name.label("sub_name"),
+            ParentCategory.name.label("parent_name")
+        )
+        .join(Category, Item.category_id == Category.id)
+        .outerjoin(ParentCategory, Category.parent_id == ParentCategory.id)
+        .order_by(Item.profile.asc(), Category.name.asc(), Item.name.asc())
+    )
+    item_records = (await db.execute(item_query)).all()
+    item_values = [HEADER_ITENS]
+    for item, sub_name, parent_name in item_records:
+        item_values.append([
+            item.id,
+            item.profile,
+            item.category_id,
+            sub_name or "",
+            parent_name or "",
+            item.name,
+            round((item.default_amount_cents or 0) / 100.0, 2) if item.default_amount_cents else "",
+            item.default_amount_cents or "",
+            item.created_at
+        ])
+
+    # 3. Contas
+    acc_query = select(Account).order_by(Account.profile.asc(), Account.name.asc())
+    acc_records = (await db.execute(acc_query)).scalars().all()
+    acc_values = [HEADER_CONTAS]
+    for acc in acc_records:
+        acc_values.append([
+            acc.id,
+            acc.profile,
+            acc.name,
+            acc.type,
+            acc.created_at
+        ])
+
+    # 4. Contatos
+    con_query = select(Contact).order_by(Contact.profile.asc(), Contact.name.asc())
+    con_records = (await db.execute(con_query)).scalars().all()
+    con_values = [HEADER_CONTATOS]
+    for con in con_records:
+        con_values.append([
+            con.id,
+            con.profile,
+            con.name,
+            con.type,
+            con.document or "",
+            con.notes or "",
+            con.created_at
+        ])
+
+    # 5. Dívidas
+    debt_query = (
+        select(Debt, Contact.name.label("contact_name"))
+        .outerjoin(Contact, Debt.contact_id == Contact.id)
+        .order_by(Debt.profile.asc(), Debt.created_at.desc())
+    )
+    debt_records = (await db.execute(debt_query)).all()
+    debt_values = [HEADER_DIVIDAS]
+    for debt, contact_name in debt_records:
+        debt_values.append([
+            debt.id,
+            debt.profile,
+            debt.title,
+            round(debt.total_amount_cents / 100.0, 2),
+            debt.total_amount_cents,
+            round(debt.remaining_amount_cents / 100.0, 2),
+            debt.remaining_amount_cents,
+            contact_name or "",
+            debt.contact_id or "",
+            debt.due_date or "",
+            debt.status,
+            debt.created_at
+        ])
+
+    # 6. Orçamentos
+    bud_query = (
+        select(Budget, Category.name.label("category_name"))
+        .join(Category, Budget.category_id == Category.id)
+        .order_by(Budget.year.desc(), Budget.month.desc(), Budget.profile.asc())
+    )
+    bud_records = (await db.execute(bud_query)).all()
+    bud_values = [HEADER_ORCAMENTOS]
+    for bud, category_name in bud_records:
+        bud_values.append([
+            bud.id,
+            bud.profile,
+            bud.category_id,
+            category_name or "",
+            bud.month,
+            bud.year,
+            round(bud.limit_amount_cents / 100.0, 2),
+            bud.limit_amount_cents,
+            bud.created_at
+        ])
+
+    # 7. Transações Consolidadas
+    trans_query = (
         select(
             Transaction,
             Category.name.label("category_name"),
@@ -305,44 +520,82 @@ async def export_sqlite_to_sheets(db: AsyncSession, service, spreadsheet_id: str
         .outerjoin(Account, Transaction.account_id == Account.id)
         .order_by(Transaction.due_date.desc(), Transaction.created_at.desc())
     )
-    result = await db.execute(query)
-    records = result.all()
-
-    values = [HEADER_TRANSACOES]
-    for trans, cat_name, item_name, contact_name, account_name in records:
-        values.append([
+    trans_records = (await db.execute(trans_query)).all()
+    trans_values = [HEADER_TRANSACOES]
+    for trans, cat_name, item_name, contact_name, account_name in trans_records:
+        trans_values.append([
             trans.id,
             trans.profile,
             trans.type,
             trans.description,
             round(trans.amount_cents / 100.0, 2),
+            trans.amount_cents,
             cat_name or "",
+            trans.category_id,
             item_name or "",
+            trans.item_id or "",
             contact_name or "",
+            trans.contact_id or "",
             account_name or "",
+            trans.account_id or "",
+            trans.debt_id or "",
             trans.due_date,
             trans.payment_date or "",
             trans.status,
+            trans.sync_status,
             trans.notes or "",
+            trans.created_at,
             trans.updated_at
         ])
 
-    # Limpa a aba Transacoes e sobrescreve com os dados atualizados
-    service.spreadsheets().values().clear(
+    # Mapeamento consolidado das 7 abas para envio em lote
+    all_export_data = {
+        "Transacoes": trans_values,
+        "Categorias": cat_values,
+        "Itens": item_values,
+        "Contas": acc_values,
+        "Contatos": con_values,
+        "Dividas": debt_values,
+        "Orcamentos": bud_values,
+    }
+
+    # 1. Limpa todas as 7 abas
+    service.spreadsheets().values().batchClear(
         spreadsheetId=spreadsheet_id,
-        range="Transacoes!A:N"
+        body={"ranges": [f"{sheet}!A:V" for sheet in all_export_data.keys()]}
     ).execute()
 
-    service.spreadsheets().values().update(
+    # 2. Atualiza os dados em lote
+    batch_update_payload = [
+        {
+            "range": f"{sheet}!A1",
+            "values": values
+        }
+        for sheet, values in all_export_data.items()
+    ]
+
+    service.spreadsheets().values().batchUpdate(
         spreadsheetId=spreadsheet_id,
-        range="Transacoes!A1",
-        valueInputOption="USER_ENTERED",
-        body={"values": values}
+        body={
+            "valueInputOption": "USER_ENTERED",
+            "data": batch_update_payload
+        }
     ).execute()
 
-    # Marca todas as transações como SINCRONIZADO
-    for trans, _, _, _, _ in records:
+    # 3. Marca transações como SINCRONIZADO no banco local
+    for trans, _, _, _, _ in trans_records:
         trans.sync_status = "SINCRONIZADO"
     await db.commit()
 
-    return len(records)
+    entity_counts = {
+        "transacoes": len(trans_records),
+        "categorias": len(cat_records),
+        "itens": len(item_records),
+        "contas": len(acc_records),
+        "contatos": len(con_records),
+        "dividas": len(debt_records),
+        "orcamentos": len(bud_records)
+    }
+    total_exported = sum(entity_counts.values())
+
+    return (total_exported, entity_counts)

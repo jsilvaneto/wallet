@@ -20,7 +20,7 @@ from app.services.google_sheets_service import (
     get_effective_spreadsheet_id,
     get_service_account_info,
     get_sheets_service,
-    ensure_sheets_exist,
+    ensure_all_sheets_exist,
     test_connection,
     process_mobile_queue,
     export_sqlite_to_sheets,
@@ -131,22 +131,37 @@ async def export_data_to_sheets(
 
     try:
         service = await get_sheets_service(db)
-        ensure_sheets_exist(service, target_id)
+        ensure_all_sheets_exist(service, target_id)
 
-        exported_count = await export_sqlite_to_sheets(db, service, target_id)
+        exported_count, entity_counts = await export_sqlite_to_sheets(db, service, target_id)
+
+        details_payload = {
+            "entity_counts": entity_counts,
+            "spreadsheet_id": target_id
+        }
+
+        msg = (
+            f"Exportação completa realizada: {exported_count} registros enviados "
+            f"({entity_counts.get('transacoes', 0)} transações, {entity_counts.get('categorias', 0)} categorias, "
+            f"{entity_counts.get('itens', 0)} itens, {entity_counts.get('contas', 0)} contas, "
+            f"{entity_counts.get('contatos', 0)} contatos, {entity_counts.get('dividas', 0)} dívidas, "
+            f"{entity_counts.get('orcamentos', 0)} orçamentos)."
+        )
 
         await record_sync_log(
             db,
             action="EXPORT",
             status="SUCESSO",
-            message=f"Exportação concluída com sucesso: {exported_count} lançamentos enviados para a aba 'Transacoes'.",
-            exported=exported_count
+            message=msg,
+            exported=exported_count,
+            details=json.dumps(details_payload, ensure_ascii=False)
         )
 
         return SyncResultResponse(
             success=True,
-            message=f"{exported_count} lançamentos exportados para a planilha.",
-            exported_to_mirror=exported_count
+            message=msg,
+            exported_to_mirror=exported_count,
+            entity_counts=entity_counts
         )
     except Exception as e:
         error_msg = str(e)
@@ -177,12 +192,12 @@ async def import_data_from_queue(
 
     try:
         service = await get_sheets_service(db)
-        ensure_sheets_exist(service, target_id)
+        ensure_all_sheets_exist(service, target_id)
 
         imported_count, errors = await process_mobile_queue(db, service, target_id)
 
         log_status = "SUCESSO" if not errors else "ERRO" if imported_count == 0 else "SUCESSO"
-        msg = f"Importação da Fila concluída: {imported_count} itens recebidos."
+        msg = f"Importação da Fila concluída: {imported_count} itens recebidos e gravados no SQLite."
         if errors:
             msg += f" {len(errors)} avisos/erros encontrados."
 
@@ -230,15 +245,28 @@ async def trigger_full_sync(
 
     try:
         service = await get_sheets_service(db)
-        ensure_sheets_exist(service, target_id)
+        ensure_all_sheets_exist(service, target_id)
 
         # 1. Ingestão da Fila Mobile
         imported_count, errors = await process_mobile_queue(db, service, target_id)
 
-        # 2. Exportação Consolidada do SQLite -> Transacoes
-        exported_count = await export_sqlite_to_sheets(db, service, target_id)
+        # 2. Exportação Consolidada de todas as entidades do SQLite -> Planilha
+        exported_count, entity_counts = await export_sqlite_to_sheets(db, service, target_id)
 
-        msg = f"Sincronização completa realizada: {imported_count} recebidos da fila, {exported_count} enviados para o espelho."
+        details_payload = {
+            "imported_from_queue": imported_count,
+            "entity_counts": entity_counts,
+            "errors": errors
+        }
+
+        msg = (
+            f"Sincronização completa realizada: {imported_count} recebidos da fila, {exported_count} enviados "
+            f"({entity_counts.get('transacoes', 0)} transações, {entity_counts.get('categorias', 0)} categorias, "
+            f"{entity_counts.get('itens', 0)} itens, {entity_counts.get('contas', 0)} contas, "
+            f"{entity_counts.get('contatos', 0)} contatos, {entity_counts.get('dividas', 0)} dívidas, "
+            f"{entity_counts.get('orcamentos', 0)} orçamentos)."
+        )
+
         await record_sync_log(
             db,
             action="FULL",
@@ -246,7 +274,7 @@ async def trigger_full_sync(
             message=msg,
             imported=imported_count,
             exported=exported_count,
-            details="\n".join(errors) if errors else None
+            details=json.dumps(details_payload, ensure_ascii=False)
         )
 
         return SyncResultResponse(
@@ -254,6 +282,7 @@ async def trigger_full_sync(
             message=msg,
             imported_from_queue=imported_count,
             exported_to_mirror=exported_count,
+            entity_counts=entity_counts,
             errors=errors
         )
     except Exception as e:

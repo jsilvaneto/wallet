@@ -5102,6 +5102,14 @@
             "title": "Exported To Mirror",
             "default": 0
           },
+          "entity_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Entity Counts",
+            "description": "Quantitativo de registros exportados por tabela"
+          },
           "errors": {
             "items": {
               "type": "string"

@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import List, Optional, Dict
 
 class SyncConfigResponse(BaseModel):
     spreadsheet_id: Optional[str] = None
@@ -29,6 +29,7 @@ class SyncResultResponse(BaseModel):
     message: str
     imported_from_queue: int = 0
     exported_to_mirror: int = 0
+    entity_counts: Dict[str, int] = Field(default_factory=dict, description="Quantitativo de registros exportados por tabela")
     errors: List[str] = []
 
 class SyncLogResponse(BaseModel):
@@ -40,3 +41,4 @@ class SyncLogResponse(BaseModel):
     message: str
     details: Optional[str] = None
     created_at: str
+

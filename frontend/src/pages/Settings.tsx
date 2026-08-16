@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { User, SyncConfig, SyncLog, SyncTestResult } from "../types";
+import { User, SyncConfig, SyncLog, SyncTestResult, SyncResultResponse } from "../types";
 import { 
   Settings as SettingsIcon, Palette, Users, Cloud, 
   Sun, Moon, Eye, EyeOff, UserPlus, Trash2, ShieldCheck, 
   CheckCircle2, AlertCircle, RefreshCw, Upload, FileJson, 
   ExternalLink, Copy, Check, ArrowUpRight, ArrowDownRight, Key, HelpCircle,
-  ShieldAlert, Lock, User as UserIcon
+  ShieldAlert, Lock, User as UserIcon, FileSpreadsheet, FolderTree,
+  Package, CreditCard, Scale, Target, Smartphone, Database, Layers
 } from "lucide-react";
 
 type SettingsTab = "APARENCIA" | "USUARIOS" | "SYNC";
@@ -226,12 +227,20 @@ export const Settings: React.FC = () => {
     setExportingSync(true);
     setSyncFeedback(null);
     try {
-      const res = await api.post("/sync/export", {
+      const res = await api.post<SyncResultResponse>("/sync/export", {
         spreadsheet_id: spreadsheetId.trim() || undefined
       });
+      
+      let countsText = "";
+      if (res.data.entity_counts) {
+        const ec = res.data.entity_counts;
+        countsText = `Tabelas Atualizadas: Transações (${ec.transacoes || 0}), Categorias (${ec.categorias || 0}), Itens (${ec.itens || 0}), Contas (${ec.contas || 0}), Contatos (${ec.contatos || 0}), Dívidas (${ec.dividas || 0}), Orçamentos (${ec.orcamentos || 0})`;
+      }
+
       setSyncFeedback({
         type: "success",
-        message: res.data.message
+        message: res.data.message,
+        details: countsText || undefined
       });
       fetchSyncConfig();
       fetchSyncLogs();
@@ -250,12 +259,13 @@ export const Settings: React.FC = () => {
     setImportingSync(true);
     setSyncFeedback(null);
     try {
-      const res = await api.post("/sync/import", {
+      const res = await api.post<SyncResultResponse>("/sync/import", {
         spreadsheet_id: spreadsheetId.trim() || undefined
       });
       setSyncFeedback({
         type: "success",
-        message: res.data.message
+        message: res.data.message,
+        details: res.data.errors && res.data.errors.length > 0 ? res.data.errors.join(" | ") : undefined
       });
       fetchSyncConfig();
       fetchSyncLogs();
@@ -274,13 +284,20 @@ export const Settings: React.FC = () => {
     setSyncingFull(true);
     setSyncFeedback(null);
     try {
-      const res = await api.post("/sync/full", {
+      const res = await api.post<SyncResultResponse>("/sync/full", {
         spreadsheet_id: spreadsheetId.trim() || undefined
       });
+
+      let countsText = `Recebidos da Fila: ${res.data.imported_from_queue} | Total Enviados: ${res.data.exported_to_mirror}`;
+      if (res.data.entity_counts) {
+        const ec = res.data.entity_counts;
+        countsText += ` [Transações: ${ec.transacoes || 0}, Categorias: ${ec.categorias || 0}, Itens: ${ec.itens || 0}, Contas: ${ec.contas || 0}, Contatos: ${ec.contatos || 0}, Dívidas: ${ec.dividas || 0}, Orçamentos: ${ec.orcamentos || 0}]`;
+      }
+
       setSyncFeedback({
         type: "success",
         message: res.data.message,
-        details: `Recebidos: ${res.data.imported_from_queue} | Enviados: ${res.data.exported_to_mirror}`
+        details: countsText
       });
       fetchSyncConfig();
       fetchSyncLogs();
@@ -808,6 +825,90 @@ export const Settings: React.FC = () => {
             </div>
           </div>
 
+          {/* Abas Gerenciadas na Planilha */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                  <span>Abas Integradas na Planilha Google (Espelho Completo & App Mobile)</span>
+                </h3>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  Todas as tabelas do SQLite são espelhadas automaticamente para consultas e catálogo do app mobile
+                </p>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/50">
+                8 Abas Ativas
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-700/50 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                  <Database className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Transacoes</span>
+                </div>
+                <p className="text-[10px] text-zinc-400">Lançamentos consolidados</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-700/50 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                  <FolderTree className="w-3.5 h-3.5 text-blue-500" />
+                  <span>Categorias</span>
+                </div>
+                <p className="text-[10px] text-zinc-400">Hierarquia & Natureza</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-700/50 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                  <Package className="w-3.5 h-3.5 text-purple-500" />
+                  <span>Itens</span>
+                </div>
+                <p className="text-[10px] text-zinc-400">Catálogo com valores</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-700/50 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                  <CreditCard className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Contas</span>
+                </div>
+                <p className="text-[10px] text-zinc-400">Bancos e carteiras</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-700/50 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                  <Users className="w-3.5 h-3.5 text-cyan-500" />
+                  <span>Contatos</span>
+                </div>
+                <p className="text-[10px] text-zinc-400">Clientes & fornecedores</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-700/50 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                  <Scale className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Dividas</span>
+                </div>
+                <p className="text-[10px] text-zinc-400">Passivos e saldos</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-700/50 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                  <Target className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Orcamentos</span>
+                </div>
+                <p className="text-[10px] text-zinc-400">Tetos e limites mensais</p>
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-700/50 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                  <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Fila_Mobile</span>
+                </div>
+                <p className="text-[10px] text-zinc-400">Ingestão app móvel</p>
+              </div>
+            </div>
+          </div>
+
           {/* Action Buttons Bar */}
           <div className="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm space-y-3">
             <div className="flex items-center justify-between">
@@ -994,49 +1095,69 @@ export const Settings: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                    {syncLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30 transition-colors">
-                        <td className="py-3 px-3 whitespace-nowrap font-mono text-zinc-600 dark:text-zinc-400 text-[11px]">
-                          {new Date(log.created_at).toLocaleString("pt-BR")}
-                        </td>
+                    {syncLogs.map((log) => {
+                      let parsedDetails: any = null;
+                      if (log.details) {
+                        try {
+                          parsedDetails = JSON.parse(log.details);
+                        } catch {}
+                      }
 
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <span className="font-semibold px-2 py-0.5 rounded text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200">
-                            {log.action === "EXPORT" ? "ENVIO" : log.action === "IMPORT" ? "RECEBIMENTO" : log.action === "FULL" ? "COMPLETO" : "TESTE"}
-                          </span>
-                        </td>
+                      return (
+                        <tr key={log.id} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30 transition-colors">
+                          <td className="py-3 px-3 whitespace-nowrap font-mono text-zinc-600 dark:text-zinc-400 text-[11px]">
+                            {new Date(log.created_at).toLocaleString("pt-BR")}
+                          </td>
 
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded-full ${
-                            log.status === "SUCESSO"
-                              ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
-                              : "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
-                          }`}>
-                            {log.status === "SUCESSO" ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-                            {log.status}
-                          </span>
-                        </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className="font-semibold px-2 py-0.5 rounded text-[11px] bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200">
+                              {log.action === "EXPORT" ? "ENVIO" : log.action === "IMPORT" ? "RECEBIMENTO" : log.action === "FULL" ? "COMPLETO" : "TESTE"}
+                            </span>
+                          </td>
 
-                        <td className="py-3 px-3 text-center font-mono font-semibold text-emerald-600 dark:text-emerald-400">
-                          {log.items_exported > 0 ? `+${log.items_exported}` : "0"}
-                        </td>
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded-full ${
+                              log.status === "SUCESSO"
+                                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400"
+                                : "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
+                            }`}>
+                              {log.status === "SUCESSO" ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                              {log.status}
+                            </span>
+                          </td>
 
-                        <td className="py-3 px-3 text-center font-mono font-semibold text-teal-600 dark:text-teal-400">
-                          {log.items_imported > 0 ? `+${log.items_imported}` : "0"}
-                        </td>
+                          <td className="py-3 px-3 text-center font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                            {log.items_exported > 0 ? `+${log.items_exported}` : "0"}
+                          </td>
 
-                        <td className="py-3 px-3 max-w-md">
-                          <p className="text-zinc-800 dark:text-zinc-200 font-medium truncate" title={log.message}>
-                            {log.message}
-                          </p>
-                          {log.details && (
-                            <p className="text-[10px] font-mono text-zinc-400 truncate mt-0.5" title={log.details}>
-                              {log.details}
+                          <td className="py-3 px-3 text-center font-mono font-semibold text-teal-600 dark:text-teal-400">
+                            {log.items_imported > 0 ? `+${log.items_imported}` : "0"}
+                          </td>
+
+                          <td className="py-3 px-3 max-w-md">
+                            <p className="text-zinc-800 dark:text-zinc-200 font-medium" title={log.message}>
+                              {log.message}
                             </p>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                            {parsedDetails?.entity_counts ? (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {Object.entries(parsedDetails.entity_counts).map(([ent, count]) => (
+                                  <span
+                                    key={ent}
+                                    className="inline-flex items-center text-[9px] font-semibold px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700"
+                                  >
+                                    {ent}: {count as number}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : log.details ? (
+                              <p className="text-[10px] font-mono text-zinc-400 truncate mt-0.5" title={log.details}>
+                                {log.details}
+                              </p>
+                            ) : null}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
