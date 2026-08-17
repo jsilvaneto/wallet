@@ -152,7 +152,7 @@ const MainLayout: React.FC = () => {
 
       {/* Main Tab Navigation */}
       <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm sticky top-16 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-6 overflow-x-auto">
+        <div className="w-full max-w-[1780px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 flex items-center gap-6 overflow-x-auto">
           <button
             onClick={() => setActiveTab("dashboard")}
             className={`flex items-center gap-2 py-3.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
@@ -192,7 +192,7 @@ const MainLayout: React.FC = () => {
       </div>
 
       {/* Page Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="flex-1 w-full max-w-[1780px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6">
         {activeTab === "dashboard" && <Dashboard />}
         {activeTab === "transactions" && <Transactions />}
         {activeTab === "settings" && <Settings />}

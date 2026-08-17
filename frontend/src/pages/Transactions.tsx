@@ -374,42 +374,42 @@ export const Transactions: React.FC = () => {
       )}
 
       {/* CARDS DE RESUMO & ATALHOS INTELIGENTES (KPIs) */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 xl:gap-4">
         {/* Receitas Filtradas */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-1">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 xl:p-5 shadow-sm space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Receitas</span>
             <span className="p-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
               <ArrowUpRight className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+          <div className="text-base xl:text-lg font-bold text-emerald-600 dark:text-emerald-400 font-mono">
             {formatCurrency(metrics.incomeCents, hideValues)}
           </div>
         </div>
 
         {/* Despesas Filtradas */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-1">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 xl:p-5 shadow-sm space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Despesas</span>
             <span className="p-1 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
               <ArrowDownRight className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="text-base font-bold text-rose-600 dark:text-rose-400 font-mono">
+          <div className="text-base xl:text-lg font-bold text-rose-600 dark:text-rose-400 font-mono">
             {formatCurrency(metrics.expenseCents, hideValues)}
           </div>
         </div>
 
         {/* Saldo Líquido do Período */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm space-y-1">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 xl:p-5 shadow-sm space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-semibold text-zinc-400">Saldo Filtrado</span>
             <span className="p-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">
               <DollarSign className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className={`text-base font-bold font-mono ${
+          <div className={`text-base xl:text-lg font-bold font-mono ${
             metrics.balanceCents >= 0 
               ? "text-emerald-600 dark:text-emerald-400" 
               : "text-rose-600 dark:text-rose-400"
@@ -419,7 +419,7 @@ export const Transactions: React.FC = () => {
         </div>
 
         {/* Atalhos Rápidos de Atrasadas / Hoje */}
-        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between gap-1.5">
+        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 xl:p-5 shadow-sm flex flex-col justify-between gap-1.5">
           <span className="text-[11px] font-semibold text-zinc-400">Atalhos de Urgência</span>
           <div className="flex items-center gap-2">
             <button
@@ -706,14 +706,14 @@ export const Transactions: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/50 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                  <th className="py-3.5 px-4 w-12 text-center">Status</th>
-                  <th className="py-3.5 px-4">Vencimento</th>
-                  <th className="py-3.5 px-4">Descrição</th>
-                  <th className="py-3.5 px-4">Categoria</th>
-                  <th className="py-3.5 px-4">Conta / Carteira</th>
-                  <th className="py-3.5 px-4">Contato</th>
-                  <th className="py-3.5 px-4 text-right">Valor</th>
-                  <th className="py-3.5 px-4 w-16 text-center">Ações</th>
+                  <th className="py-3.5 px-3 xl:px-4 w-12 text-center">Status</th>
+                  <th className="py-3.5 px-4 xl:px-6">Vencimento</th>
+                  <th className="py-3.5 px-4 xl:px-6">Descrição</th>
+                  <th className="py-3.5 px-4 xl:px-6">Categoria</th>
+                  <th className="py-3.5 px-4 xl:px-6">Conta / Carteira</th>
+                  <th className="py-3.5 px-4 xl:px-6">Contato</th>
+                  <th className="py-3.5 px-4 xl:px-6 text-right">Valor</th>
+                  <th className="py-3.5 px-4 xl:px-6 w-20 text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-xs">
@@ -740,7 +740,7 @@ export const Transactions: React.FC = () => {
                       }`}
                     >
                       {/* Status / Checkbox */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-3 xl:px-4 text-center">
                         <button
                           onClick={() => !isCompleted && handleComplete(t.id)}
                           title={isCompleted ? "Liquidada" : "Clique para liquidar"}
@@ -758,7 +758,7 @@ export const Transactions: React.FC = () => {
                       </td>
 
                       {/* Due Date */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-4 xl:px-6 whitespace-nowrap">
                         <div className="font-mono font-semibold text-zinc-800 dark:text-zinc-200">
                           {formatDateToBR(t.due_date)}
                         </div>
@@ -775,7 +775,7 @@ export const Transactions: React.FC = () => {
                       </td>
 
                       {/* Description */}
-                      <td className="py-3.5 px-4">
+                      <td className="py-3.5 px-4 xl:px-6">
                         <div className="flex items-center gap-2">
                           <span className={`p-1 rounded-md shrink-0 ${
                             t.type === "RECEITA"
@@ -827,12 +827,12 @@ export const Transactions: React.FC = () => {
                       </td>
 
                       {/* Category */}
-                      <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-300 font-medium whitespace-nowrap">
+                      <td className="py-3.5 px-4 xl:px-6 text-zinc-600 dark:text-zinc-300 font-medium whitespace-nowrap">
                         {categories[t.category_id]?.name || "-"}
                       </td>
 
                       {/* Account / Carteira */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-4 xl:px-6 whitespace-nowrap">
                         {acc ? (
                           <div className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 font-medium">
                             <AccIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -844,12 +844,12 @@ export const Transactions: React.FC = () => {
                       </td>
 
                       {/* Contact */}
-                      <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+                      <td className="py-3.5 px-4 xl:px-6 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
                         {t.contact_id ? contacts[t.contact_id]?.name || "-" : "-"}
                       </td>
 
                       {/* Amount */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      <td className="py-3.5 px-4 xl:px-6 text-right whitespace-nowrap">
                         <span className={`font-mono font-bold text-sm ${
                           t.type === "DESPESA"
                             ? "text-rose-600 dark:text-rose-400"
@@ -860,7 +860,7 @@ export const Transactions: React.FC = () => {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3.5 px-4 text-center">
+                      <td className="py-3.5 px-4 xl:px-6 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"

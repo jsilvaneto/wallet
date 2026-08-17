@@ -1084,7 +1084,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       </div>
 
       {/* Grid Principal: Sidebar Fixa (Desktop) + Conteúdo Ativo */}
-      <div className="grid grid-cols-1 lg:grid-cols-[270px_1fr] items-start gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr] items-start gap-6 xl:gap-8">
         {/* Sidebar Desktop */}
         <aside className="hidden lg:block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-4 sticky top-6">
           {/* Campo de Busca Rápida */}
@@ -1331,7 +1331,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 Nenhuma categoria cadastrada.
               </div>
             ) : (
-              <div className="space-y-2.5 max-h-[560px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-2.5 max-h-[600px] overflow-y-auto pr-1">
                 {sortedCategories
                   .filter((c) => catFilterType === "TODOS" || c.type === catFilterType)
                   .filter((c) => catFilterNature === "TODOS" || c.nature === catFilterNature)
@@ -1528,7 +1528,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 Nenhum item cadastrado ainda.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[560px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-2.5 max-h-[600px] overflow-y-auto pr-1">
                 {sortedItems
                   .filter((item) => {
                     if (itemFilterCatId !== "TODAS" && item.category_id !== itemFilterCatId) return false;
@@ -1712,7 +1712,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 Nenhuma conta bancária cadastrada.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[560px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-1">
                 {sortedAccounts
                   .filter((acc) => {
                     if (accFilterType !== "TODOS" && acc.type !== accFilterType) return false;
@@ -1898,7 +1898,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 Nenhum contato cadastrado.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[560px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-1">
                 {sortedContacts
                   .filter((c) => {
                     if (conFilterType !== "TODOS" && c.type !== conFilterType) return false;
@@ -2066,7 +2066,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 Nenhuma dívida registrada.
               </div>
             ) : (
-              <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3.5 max-h-[600px] overflow-y-auto pr-1">
                 {sortedDebts.map((debt) => {
                   const paid = debt.total_amount_cents - debt.remaining_amount_cents;
                   const pct = Math.min(100, Math.round((paid / debt.total_amount_cents) * 100));
@@ -2266,7 +2266,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 Nenhum orçamento configurado para este mês.
               </div>
             ) : (
-              <div className="space-y-3 max-h-[560px] overflow-y-auto pr-1">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3.5 max-h-[600px] overflow-y-auto pr-1">
                 {sortedBudgets.map((b) => {
                   const pct = b.percentage_used || 0;
                   const isOver = pct > 100;
@@ -3010,7 +3010,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 Nenhum usuário cadastrado.
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                 {sortedUsers.map((u) => (
                   <div
                     key={u.id}
@@ -3050,7 +3050,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       {/* ABA 9: APARÊNCIA & TEMAS                   */}
       {/* ========================================== */}
       {activeTab === "APARENCIA" && (
-        <div className="max-w-2xl space-y-6 animate-fade-in">
+        <div className="max-w-4xl space-y-6 animate-fade-in">
           {/* Modo Claro / Escuro Global */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-3">
             <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">

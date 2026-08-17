@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigateToSync }) => {
 
   return (
     <header className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div className="w-full max-w-[1780px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 h-16 flex items-center justify-between">
         
         {/* Left: Brand + Profile Selector */}
         <div className="flex items-center gap-6">
