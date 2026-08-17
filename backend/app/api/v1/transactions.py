@@ -1,15 +1,28 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, update
+from sqlalchemy.orm import selectinload
 from typing import List, Optional
 
 from app.database import get_db
-from app.models import Transaction, Debt, User
+from app.models import Transaction, Debt, User, Attachment
 from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse
+from app.services.attachment_service import enrich_attachment_schema
 from app.api.v1.deps import get_current_user
 
 router = APIRouter(prefix="/transactions", tags=["Transações e Fluxo"])
+
+def enrich_transaction_response(trans: Transaction) -> TransactionResponse:
+    """Serializa a transação incluindo lista de comprovantes e contador."""
+    attachments_list = []
+    if trans.attachments:
+        attachments_list = [enrich_attachment_schema(att) for att in trans.attachments]
+    
+    resp = TransactionResponse.model_validate(trans)
+    resp.attachments = attachments_list
+    resp.attachments_count = len(attachments_list)
+    return resp
 
 @router.get("", response_model=List[TransactionResponse])
 async def list_transactions(
@@ -27,35 +40,36 @@ async def list_transactions(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user)
 ):
-    query = select(Transaction)
-    if profile:
+    query = select(Transaction).options(selectinload(Transaction.attachments))
+    if isinstance(profile, str) and profile:
         query = query.where(Transaction.profile == profile)
-    if type:
+    if isinstance(type, str) and type:
         query = query.where(Transaction.type == type)
-    if status_filter:
+    if isinstance(status_filter, str) and status_filter:
         query = query.where(Transaction.status == status_filter)
-    if is_overdue:
+    if is_overdue is True:
         today_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         query = query.where(Transaction.status == "PENDENTE", Transaction.due_date < today_iso)
-    if start_due_date:
+    if isinstance(start_due_date, str) and start_due_date:
         query = query.where(Transaction.due_date >= start_due_date)
-    if end_due_date:
+    if isinstance(end_due_date, str) and end_due_date:
         query = query.where(Transaction.due_date <= end_due_date)
-    if category_id:
+    if isinstance(category_id, str) and category_id:
         query = query.where(Transaction.category_id == category_id)
-    if account_id:
+    if isinstance(account_id, str) and account_id:
         query = query.where(Transaction.account_id == account_id)
-    if contact_id:
+    if isinstance(contact_id, str) and contact_id:
         query = query.where(Transaction.contact_id == contact_id)
-    if debt_id:
+    if isinstance(debt_id, str) and debt_id:
         query = query.where(Transaction.debt_id == debt_id)
-    if search and search.strip():
+    if isinstance(search, str) and search.strip():
         term = f"%{search.strip()}%"
         query = query.where(or_(Transaction.description.ilike(term), Transaction.notes.ilike(term)))
         
     query = query.order_by(Transaction.due_date.asc(), Transaction.created_at.asc())
     result = await db.execute(query)
-    return result.scalars().all()
+    transactions = result.scalars().all()
+    return [enrich_transaction_response(t) for t in transactions]
 
 @router.post("", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
 async def create_transaction(
@@ -63,7 +77,10 @@ async def create_transaction(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user)
 ):
-    new_trans = Transaction(**trans_in.model_dump())
+    trans_data = trans_in.model_dump()
+    attachment_ids = trans_data.pop("attachment_ids", None)
+
+    new_trans = Transaction(**trans_data)
     db.add(new_trans)
     
     # Se já for criada como CONCLUIDO e vinculada a uma dívida, abate o saldo
@@ -78,7 +95,32 @@ async def create_transaction(
 
     await db.commit()
     await db.refresh(new_trans)
-    return new_trans
+
+    # Vincula comprovantes pré-carregados se informados
+    if attachment_ids:
+        await db.execute(
+            update(Attachment)
+            .where(Attachment.id.in_(attachment_ids))
+            .values(transaction_id=new_trans.id)
+        )
+        await db.commit()
+
+    # Recarrega com relacionamentos
+    query = select(Transaction).options(selectinload(Transaction.attachments)).where(Transaction.id == new_trans.id)
+    reloaded = (await db.execute(query)).scalar_one()
+    return enrich_transaction_response(reloaded)
+
+@router.get("/{trans_id}", response_model=TransactionResponse)
+async def get_transaction(
+    trans_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    query = select(Transaction).options(selectinload(Transaction.attachments)).where(Transaction.id == trans_id)
+    trans = (await db.execute(query)).scalar_one_or_none()
+    if not trans:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transação não encontrada")
+    return enrich_transaction_response(trans)
 
 @router.patch("/{trans_id}/complete", response_model=TransactionResponse)
 async def complete_transaction(
@@ -88,7 +130,7 @@ async def complete_transaction(
     _: User = Depends(get_current_user)
 ):
     """Marca uma transação pendente como CONCLUIDA e abate dívidas vinculadas."""
-    query = select(Transaction).where(Transaction.id == trans_id)
+    query = select(Transaction).options(selectinload(Transaction.attachments)).where(Transaction.id == trans_id)
     result = await db.execute(query)
     trans = result.scalar_one_or_none()
     if not trans:
@@ -112,7 +154,7 @@ async def complete_transaction(
         await db.commit()
         await db.refresh(trans)
         
-    return trans
+    return enrich_transaction_response(trans)
 
 @router.put("/{trans_id}", response_model=TransactionResponse)
 async def update_transaction(
@@ -121,7 +163,7 @@ async def update_transaction(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user)
 ):
-    query = select(Transaction).where(Transaction.id == trans_id)
+    query = select(Transaction).options(selectinload(Transaction.attachments)).where(Transaction.id == trans_id)
     result = await db.execute(query)
     trans = result.scalar_one_or_none()
     if not trans:
@@ -135,7 +177,7 @@ async def update_transaction(
     trans.updated_at = datetime.now(timezone.utc).isoformat()
     await db.commit()
     await db.refresh(trans)
-    return trans
+    return enrich_transaction_response(trans)
 
 @router.delete("/{trans_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_transaction(

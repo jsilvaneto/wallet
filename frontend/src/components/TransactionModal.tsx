@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Category, Contact, Item, Account } from "../types";
+import { Category, Contact, Item, Account, Attachment } from "../types";
 import { formatCurrency, getTodayBR, maskDateBR, parseDateBRToISO, formatDateToBR } from "../utils/format";
-import { X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, Package, Sparkles, Landmark } from "lucide-react";
+import { 
+  X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, 
+  Package, Sparkles, Landmark, Paperclip, Upload, Image as ImageIcon, 
+  CheckCircle2, Loader2, Trash2 
+} from "lucide-react";
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -16,6 +20,7 @@ type Mode = "UNICO" | "PARCELADO" | "RECORRENTE";
 export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { profile } = useApp();
   const datePickerRef = useRef<HTMLInputElement>(null);
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<Mode>("UNICO");
   const [type, setType] = useState<"DESPESA" | "RECEITA">("DESPESA");
   const [itemId, setItemId] = useState("");
@@ -28,6 +33,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const [installments, setInstallments] = useState("2");
   const [dueDay, setDueDay] = useState(String(new Date().getDate()));
   const [notes, setNotes] = useState("");
+  const [uploadedAttachments, setUploadedAttachments] = useState<Attachment[]>([]);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
 
   const handleOpenDatePicker = () => {
     if (datePickerRef.current) {
@@ -54,6 +61,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
     if (!isOpen) return;
     setError(null);
     setDueDateStr(getTodayBR());
+    setUploadedAttachments([]);
     const loadDependencies = async () => {
       try {
         const [catRes, conRes, itemRes, accRes] = await Promise.all([
@@ -79,6 +87,42 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   }, [isOpen, profile, type]);
 
   if (!isOpen) return null;
+
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploadingAttachment(true);
+    setError(null);
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("profile", profile);
+
+      try {
+        const res = await api.post<Attachment>("/attachments/upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        setUploadedAttachments((prev) => [...prev, res.data]);
+      } catch (err: any) {
+        setError(err.response?.data?.detail || `Erro ao carregar anexo ${file.name}`);
+      }
+    }
+
+    setIsUploadingAttachment(false);
+    if (attachmentInputRef.current) attachmentInputRef.current.value = "";
+  };
+
+  const handleRemoveAttachment = async (attachmentId: string) => {
+    try {
+      await api.delete(`/attachments/${attachmentId}`);
+      setUploadedAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    } catch {
+      setUploadedAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+    }
+  };
 
   const handleItemSelect = (selectedItemId: string) => {
     setItemId(selectedItemId);
@@ -143,6 +187,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           due_date: isoDueDate,
           notes: notes || null,
           status: "PENDENTE",
+          attachment_ids: uploadedAttachments.map((a) => a.id),
         });
       } else {
         await api.post("/schedules", {
@@ -168,6 +213,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
       setAmountStr("");
       setAccountId("");
       setDueDateStr(getTodayBR());
+      setUploadedAttachments([]);
       setNotes("");
       onSuccess();
       onClose();
@@ -519,6 +565,81 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
               onChange={(e) => setNotes(e.target.value)}
               className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
             />
+          </div>
+
+          {/* Comprovantes & Anexos (Opcional) */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                <Paperclip className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Comprovantes & Recibos (Opcional)</span>
+              </label>
+              <span className="text-[10px] text-zinc-400">JPG, PNG, WEBP ou PDF</span>
+            </div>
+
+            <input
+              type="file"
+              ref={attachmentInputRef}
+              onChange={handleAttachmentUpload}
+              multiple
+              accept="image/*,.pdf"
+              className="hidden"
+            />
+
+            {/* Dropzone / Botão de upload */}
+            <button
+              type="button"
+              onClick={() => attachmentInputRef.current?.click()}
+              disabled={isUploadingAttachment}
+              className="w-full p-3 border border-dashed border-zinc-300 dark:border-zinc-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-xl bg-zinc-50 dark:bg-zinc-800/30 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 text-zinc-600 dark:text-zinc-400 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-xs font-medium"
+            >
+              {isUploadingAttachment ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+                  <span>Carregando comprovante...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 text-emerald-500" />
+                  <span>Clique para anexar foto de recibo, PIX ou PDF</span>
+                </>
+              )}
+            </button>
+
+            {/* Lista de Comprovantes Carregados */}
+            {uploadedAttachments.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                {uploadedAttachments.map((att) => {
+                  const isPdf = att.mime_type === "application/pdf" || att.file_name.toLowerCase().endsWith(".pdf");
+                  return (
+                    <div
+                      key={att.id}
+                      className="flex items-center justify-between p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 text-xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isPdf ? (
+                          <FileText className="w-4 h-4 text-rose-500 shrink-0" />
+                        ) : (
+                          <ImageIcon className="w-4 h-4 text-emerald-500 shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-zinc-800 dark:text-zinc-200 truncate">{att.file_name}</p>
+                          <p className="text-[10px] text-zinc-400">{att.formatted_size || "Carregado"}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAttachment(att.id)}
+                        className="p-1 text-zinc-400 hover:text-rose-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                        title="Remover anexo"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Actions */}

@@ -28,6 +28,7 @@ from app.services.google_sheets_service import (
     record_sync_log,
     check_sync_pending_status,
 )
+from app.services.google_drive_service import sync_all_pending_attachments
 from app.api.v1.deps import get_current_user
 
 router = APIRouter(prefix="/sync", tags=["Sincronização Nuvem"])
@@ -263,6 +264,12 @@ async def trigger_full_sync(
 
         # 2. Exportação Consolidada de todas as entidades do SQLite -> Planilha
         exported_count, entity_counts = await export_sqlite_to_sheets(db, service, target_id)
+
+        # 3. Backup de Comprovantes no Google Drive
+        try:
+            drive_res = await sync_all_pending_attachments(db)
+        except Exception as e:
+            errors.append(f"Google Drive Backup: {str(e)}")
 
         details_payload = {
             "imported_from_queue": imported_count,

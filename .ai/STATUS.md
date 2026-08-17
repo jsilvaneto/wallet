@@ -75,6 +75,23 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - `Fila_Mobile` (Buffer para ingestão e reconciliação de lançamentos do app mobile)
   - [x] Ações direcionais em lote (*batchUpdate*) com auditoria detalhada por entidade em `sync_logs`.
 
+- [x] **Gestão de Comprovantes & Backup no Google Drive (Local-First)**:
+  - [x] **Armazenamento Local Primário Instantâneo**:
+    - [x] Modelo `Attachment` no SQLite WAL com particionamento inteligente em disco: `data/attachments/{profile}/{ano}/{mes}/`.
+    - [x] Suporte completo a fotos (JPG, PNG, WEBP) e documentos fiscais/recibos em PDF até 15MB.
+    - [x] Resposta de upload ultrarrápida (< 50ms) com desacoplamento de I/O em rede.
+  - [x] **Backup Assíncrono no Google Drive**:
+    - [x] Integração via Google Drive API v3 utilizando as credenciais da Service Account.
+    - [x] Estrutura automática de pastas no Drive: `Wallet - Comprovantes / {PESSOAL | EMPRESA}`.
+    - [x] Sincronização em segundo plano via `BackgroundTasks` com links de visualização (`webViewLink`) gravados no SQLite.
+    - [x] Sincronização em lote integrada ao botão geral de sincronização e acionável sob demanda na aba **Sincronização Nuvem**.
+    - [x] Tratamento gracioso e resiliente caso a Drive API esteja indisponível ou pendente de ativação no console Google Cloud.
+  - [x] **Interface do Usuário (Frontend)**:
+    - [x] Modal e lightbox interativo [AttachmentViewerModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/AttachmentViewerModal.tsx) com zoom, rotação, visualizador embutido de PDF, download direto, link para o Google Drive e exclusão.
+    - [x] Área de upload no modal de lançamentos [TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx) com miniaturas dos comprovantes carregados antes de salvar.
+    - [x] Indicador de clipe 📎 com contagem na tabela de lançamentos [Transactions.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/pages/Transactions.tsx) e abertura instantânea do visualizador.
+    - [x] Painel de métricas de armazenamento local, espaço em disco e status do Drive na aba **Configurações > Sincronização Nuvem**.
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 

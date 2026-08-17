@@ -188,10 +188,37 @@ CREATE TABLE transactions (
 	FOREIGN KEY(schedule_id) REFERENCES schedules (id) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX ix_users_username ON users (username);
+CREATE TABLE attachments (
+	id VARCHAR(36) NOT NULL, 
+	profile VARCHAR(10) NOT NULL, 
+	transaction_id VARCHAR(36), 
+	file_name VARCHAR(255) NOT NULL, 
+	file_path VARCHAR(500) NOT NULL, 
+	file_size_bytes INTEGER NOT NULL, 
+	mime_type VARCHAR(100) NOT NULL, 
+	drive_file_id VARCHAR(100), 
+	drive_web_view_link TEXT, 
+	drive_folder_id VARCHAR(100), 
+	sync_status VARCHAR(20) NOT NULL, 
+	sync_error TEXT, 
+	created_at VARCHAR(30) NOT NULL, 
+	synced_at VARCHAR(30), 
+	PRIMARY KEY (id), 
+	CONSTRAINT chk_attachment_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
+	CONSTRAINT chk_attachment_sync_status CHECK (sync_status IN ('PENDENTE', 'SINCRONIZADO', 'ERRO', 'LOCAL_ONLY')), 
+	FOREIGN KEY(transaction_id) REFERENCES transactions (id) ON DELETE CASCADE
+);
 
-CREATE INDEX idx_trans_profile_due ON transactions (profile, due_date);
+CREATE UNIQUE INDEX ix_users_username ON users (username);
 
 CREATE INDEX idx_trans_sync ON transactions (sync_status);
 
 CREATE INDEX idx_trans_status ON transactions (status);
+
+CREATE INDEX idx_trans_profile_due ON transactions (profile, due_date);
+
+CREATE INDEX idx_attachment_profile ON attachments (profile);
+
+CREATE INDEX idx_attachment_sync ON attachments (sync_status);
+
+CREATE INDEX idx_attachment_transaction ON attachments (transaction_id);

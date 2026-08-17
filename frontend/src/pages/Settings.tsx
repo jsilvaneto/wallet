@@ -3,7 +3,8 @@ import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
 import { 
   Category, Item, Account, AccountType, Contact, Debt, Budget, 
-  User, SyncConfig, SyncLog, SyncTestResult, SyncResultResponse 
+  User, SyncConfig, SyncLog, SyncTestResult, SyncResultResponse,
+  AttachmentStats, DriveSyncTriggerResponse
 } from "../types";
 import { formatCurrency } from "../utils/format";
 import { 
@@ -15,7 +16,8 @@ import {
   Package, CreditCard, Scale, Target, Smartphone, Database, Layers,
   Plus, Pencil, X, Loader2, Search, DollarSign, Calendar,
   Building2, Landmark, PiggyBank, Percent, ChevronLeft, ChevronRight,
-  Info, Coins, Wallet, CircleDollarSign, ArrowUp, ArrowDown
+  Info, Coins, Wallet, CircleDollarSign, ArrowUp, ArrowDown,
+  HardDrive, Paperclip
 } from "lucide-react";
 
 export type SettingsTab = 
@@ -165,6 +167,8 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [exportingSync, setExportingSync] = useState(false);
   const [importingSync, setImportingSync] = useState(false);
   const [syncingFull, setSyncingFull] = useState(false);
+  const [syncingDrive, setSyncingDrive] = useState(false);
+  const [attachmentStats, setAttachmentStats] = useState<AttachmentStats | null>(null);
   const [savingSyncConfig, setSavingSyncConfig] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: "success" | "error"; message: string; details?: string } | null>(null);
   const [copiedEmail, setCopiedEmail] = useState(false);
@@ -229,15 +233,19 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       } else if (activeTab === "SYNC") {
         setLoadingSyncConfig(true);
         setLoadingSyncLogs(true);
-        const [cfgRes, logRes] = await Promise.all([
+        const [cfgRes, logRes, attRes] = await Promise.all([
           api.get<SyncConfig>("/sync/config"),
           api.get<SyncLog[]>("/sync/logs"),
+          api.get<AttachmentStats>("/attachments/stats", { params: { profile } }).catch(() => ({ data: null })),
         ]);
         setSyncConfig(cfgRes.data);
         if (cfgRes.data.spreadsheet_id) {
           setSpreadsheetId(cfgRes.data.spreadsheet_id);
         }
         setSyncLogs(logRes.data);
+        if (attRes && attRes.data) {
+          setAttachmentStats(attRes.data);
+        }
         setLoadingSyncConfig(false);
         setLoadingSyncLogs(false);
       }
@@ -850,6 +858,27 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       });
     } finally {
       setSyncingFull(false);
+    }
+  };
+
+  const handleSyncAllDrive = async () => {
+    setSyncingDrive(true);
+    setSyncFeedback(null);
+    try {
+      const res = await api.post<DriveSyncTriggerResponse>("/attachments/sync-drive");
+      setSyncFeedback({
+        type: res.data.success ? "success" : "error",
+        message: res.data.message,
+      });
+      loadData();
+      await refreshSyncStatus(true);
+    } catch (err: any) {
+      setSyncFeedback({
+        type: "error",
+        message: err.response?.data?.detail || "Erro ao sincronizar comprovantes com o Google Drive.",
+      });
+    } finally {
+      setSyncingDrive(false);
     }
   };
 
@@ -2148,25 +2177,43 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       {activeTab === "SYNC" && (
         <div className="space-y-6 animate-fade-in">
           {/* Feedback Alertas */}
-          {syncFeedback && (
-            <div className={`p-4 rounded-2xl border flex items-start gap-3 animate-fade-in ${
-              syncFeedback.type === "success"
-                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-200"
-                : "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/80 text-rose-800 dark:text-rose-200"
-            }`}>
-              {syncFeedback.type === "success" ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-              )}
-              <div className="space-y-1">
-                <p className="text-xs font-semibold">{syncFeedback.message}</p>
-                {syncFeedback.details && (
-                  <p className="text-[11px] font-mono opacity-80">{syncFeedback.details}</p>
+          {syncFeedback && (() => {
+            const urlMatch = (syncFeedback.message + " " + (syncFeedback.details || "")).match(/https:\/\/[^\s]+/);
+            const actionUrl = urlMatch ? urlMatch[0] : null;
+
+            return (
+              <div className={`p-4 rounded-2xl border flex items-start gap-3 animate-fade-in ${
+                syncFeedback.type === "success"
+                  ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-200"
+                  : "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/80 text-rose-800 dark:text-rose-200"
+              }`}>
+                {syncFeedback.type === "success" ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                 )}
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <p className="text-xs font-semibold break-words">{syncFeedback.message}</p>
+                  {syncFeedback.details && (
+                    <p className="text-[11px] font-mono opacity-80 break-words">{syncFeedback.details}</p>
+                  )}
+                  {actionUrl && (
+                    <div className="pt-1">
+                      <a
+                        href={actionUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-sm transition-all"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Ativar Google Drive API no Console Google Cloud</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* Card das 8 Abas Integradas */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
@@ -2445,6 +2492,106 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Seção de Backup de Comprovantes no Google Drive */}
+            <div className="col-span-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                    <Cloud className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                      <span>Backup de Comprovantes no Google Drive</span>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                        Local-First
+                      </span>
+                    </h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      Os arquivos são salvos instantaneamente no disco local e sincronizados de forma segura no Google Drive da sua conta de serviço.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSyncAllDrive}
+                  disabled={syncingDrive || !syncConfig?.has_credentials}
+                  className="px-4 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-xl shadow-md shadow-sky-600/20 transition-all flex items-center gap-2"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${syncingDrive ? "animate-spin" : ""}`} />
+                  <span>Sincronizar Comprovantes com o Drive</span>
+                </button>
+              </div>
+
+              {/* Métricas de Comprovantes */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-xl">
+                  <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <Paperclip className="w-3.5 h-3.5 text-zinc-400" />
+                      <span>Total de Arquivos</span>
+                    </span>
+                  </div>
+                  <p className="text-lg font-black font-mono text-zinc-900 dark:text-zinc-100">
+                    {attachmentStats?.total_count || 0}
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-xl">
+                  <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <HardDrive className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>Armazenamento Local</span>
+                    </span>
+                  </div>
+                  <p className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
+                    {attachmentStats?.formatted_total_size || "0 B"}
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-xl">
+                  <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <Cloud className="w-3.5 h-3.5 text-sky-500" />
+                      <span>No Google Drive</span>
+                    </span>
+                  </div>
+                  <p className="text-lg font-black font-mono text-sky-600 dark:text-sky-400">
+                    {attachmentStats?.synced_count || 0}
+                  </p>
+                </div>
+
+                <div className={`p-3.5 rounded-xl border transition-all ${
+                  (attachmentStats?.pending_count || 0) > 0
+                    ? "bg-amber-50/80 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-100"
+                    : "bg-zinc-50 dark:bg-zinc-800/40 border-zinc-200/70 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
+                }`}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>Backup Pendente</span>
+                    </span>
+                  </div>
+                  <p className="text-lg font-black font-mono text-amber-600 dark:text-amber-400">
+                    {attachmentStats?.pending_count || 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Informações da Estrutura de Pastas */}
+              <div className="p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200/60 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <FolderTree className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>
+                    Pasta no Google Drive: <strong className="text-zinc-800 dark:text-zinc-200">Wallet - Comprovantes / {profile}</strong>
+                  </span>
+                </div>
+                <span className="text-[11px] text-zinc-400">
+                  Tipos suportados: Fotos (JPG, PNG, WEBP) e Documentos (PDF) até 15MB
+                </span>
               </div>
             </div>
           </div>

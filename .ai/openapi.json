@@ -1983,14 +1983,13 @@
         }
       }
     },
-    "/api/v1/transactions/{trans_id}/complete": {
-      "patch": {
+    "/api/v1/transactions/{trans_id}": {
+      "get": {
         "tags": [
           "Transações e Fluxo"
         ],
-        "summary": "Complete Transaction",
-        "description": "Marca uma transação pendente como CONCLUIDA e abate dívidas vinculadas.",
-        "operationId": "complete_transaction_api_v1_transactions__trans_id__complete_patch",
+        "summary": "Get Transaction",
+        "operationId": "get_transaction_api_v1_transactions__trans_id__get",
         "security": [
           {
             "OAuth2PasswordBearer": []
@@ -2005,24 +2004,6 @@
               "type": "string",
               "title": "Trans Id"
             }
-          },
-          {
-            "name": "payment_date",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Data de pagamento (YYYY-MM-DD), padrão hoje",
-              "title": "Payment Date"
-            },
-            "description": "Data de pagamento (YYYY-MM-DD), padrão hoje"
           }
         ],
         "responses": {
@@ -2047,9 +2028,7 @@
             }
           }
         }
-      }
-    },
-    "/api/v1/transactions/{trans_id}": {
+      },
       "put": {
         "tags": [
           "Transações e Fluxo"
@@ -2130,6 +2109,72 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transactions/{trans_id}/complete": {
+      "patch": {
+        "tags": [
+          "Transações e Fluxo"
+        ],
+        "summary": "Complete Transaction",
+        "description": "Marca uma transação pendente como CONCLUIDA e abate dívidas vinculadas.",
+        "operationId": "complete_transaction_api_v1_transactions__trans_id__complete_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trans_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trans Id"
+            }
+          },
+          {
+            "name": "payment_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Data de pagamento (YYYY-MM-DD), padrão hoje",
+              "title": "Payment Date"
+            },
+            "description": "Data de pagamento (YYYY-MM-DD), padrão hoje"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -3046,6 +3091,420 @@
         }
       }
     },
+    "/api/v1/attachments/upload": {
+      "post": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Upload Attachment",
+        "description": "Realiza o upload imediato e seguro do comprovante para o disco local (< 50ms)\ne agenda em segundo plano o backup assíncrono para o Google Drive.",
+        "operationId": "upload_attachment_api_v1_attachments_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_attachment_api_v1_attachments_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/attachments": {
+      "get": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "List Attachments",
+        "description": "Lista todos os anexos cadastrados com opções de filtro e URLs formatadas.",
+        "operationId": "list_attachments_api_v1_attachments_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PESSOAL",
+                    "EMPRESA"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar por PESSOAL ou EMPRESA",
+              "title": "Profile"
+            },
+            "description": "Filtrar por PESSOAL ou EMPRESA"
+          },
+          {
+            "name": "transaction_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar por lançamento",
+              "title": "Transaction Id"
+            },
+            "description": "Filtrar por lançamento"
+          },
+          {
+            "name": "sync_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PENDENTE",
+                    "SINCRONIZADO",
+                    "ERRO",
+                    "LOCAL_ONLY"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar por status de sincronização",
+              "title": "Sync Status"
+            },
+            "description": "Filtrar por status de sincronização"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AttachmentResponse"
+                  },
+                  "title": "Response List Attachments Api V1 Attachments Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attachments/stats": {
+      "get": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Get Attachment Statistics",
+        "description": "Retorna métricas de armazenamento local e status do Google Drive.",
+        "operationId": "get_attachment_statistics_api_v1_attachments_stats_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "PESSOAL",
+                    "EMPRESA"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Profile"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentStatsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attachments/{attachment_id}": {
+      "get": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Get Attachment",
+        "description": "Busca os metadados de um anexo específico.",
+        "operationId": "get_attachment_api_v1_attachments__attachment_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Remove Attachment",
+        "description": "Exclui o anexo do banco, apaga o arquivo do disco local e agenda remoção no Google Drive.",
+        "operationId": "remove_attachment_api_v1_attachments__attachment_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attachments/{attachment_id}/file": {
+      "get": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Preview Attachment File",
+        "description": "Serve o arquivo binário localmente com headers inline para exibição direta no navegador\n(fotos, recibos e PDFs).",
+        "operationId": "preview_attachment_file_api_v1_attachments__attachment_id__file_get",
+        "parameters": [
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attachments/{attachment_id}/download": {
+      "get": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Download Attachment File",
+        "description": "Força o download direto do arquivo com o nome original.",
+        "operationId": "download_attachment_file_api_v1_attachments__attachment_id__download_get",
+        "parameters": [
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attachments/sync-drive": {
+      "post": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Trigger Drive Sync",
+        "description": "Dispara a sincronização/backup de todos os comprovantes pendentes para o Google Drive.",
+        "operationId": "trigger_drive_sync_api_v1_attachments_sync_drive_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveSyncTriggerResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -3192,6 +3651,215 @@
         "type": "object",
         "title": "AccountUpdate"
       },
+      "AttachmentResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Id"
+          },
+          "file_name": {
+            "type": "string",
+            "title": "File Name"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "file_size_bytes": {
+            "type": "integer",
+            "title": "File Size Bytes"
+          },
+          "mime_type": {
+            "type": "string",
+            "title": "Mime Type"
+          },
+          "drive_file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drive File Id"
+          },
+          "drive_web_view_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drive Web View Link"
+          },
+          "drive_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drive Folder Id"
+          },
+          "sync_status": {
+            "type": "string",
+            "enum": [
+              "PENDENTE",
+              "SINCRONIZADO",
+              "ERRO",
+              "LOCAL_ONLY"
+            ],
+            "title": "Sync Status",
+            "default": "PENDENTE"
+          },
+          "sync_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Error"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "download_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Download Url"
+          },
+          "file_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Url"
+          },
+          "formatted_size": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formatted Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "profile",
+          "file_name",
+          "file_path",
+          "file_size_bytes",
+          "mime_type",
+          "created_at"
+        ],
+        "title": "AttachmentResponse"
+      },
+      "AttachmentStatsResponse": {
+        "properties": {
+          "total_count": {
+            "type": "integer",
+            "title": "Total Count",
+            "default": 0
+          },
+          "total_size_bytes": {
+            "type": "integer",
+            "title": "Total Size Bytes",
+            "default": 0
+          },
+          "formatted_total_size": {
+            "type": "string",
+            "title": "Formatted Total Size",
+            "default": "0 B"
+          },
+          "synced_count": {
+            "type": "integer",
+            "title": "Synced Count",
+            "default": 0
+          },
+          "pending_count": {
+            "type": "integer",
+            "title": "Pending Count",
+            "default": 0
+          },
+          "error_count": {
+            "type": "integer",
+            "title": "Error Count",
+            "default": 0
+          },
+          "drive_connected": {
+            "type": "boolean",
+            "title": "Drive Connected",
+            "default": false
+          },
+          "drive_folder_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drive Folder Name"
+          }
+        },
+        "type": "object",
+        "title": "AttachmentStatsResponse"
+      },
       "Body_login_api_v1_auth_login_post": {
         "properties": {
           "grant_type": {
@@ -3250,6 +3918,40 @@
           "password"
         ],
         "title": "Body_login_api_v1_auth_login_post"
+      },
+      "Body_upload_attachment_api_v1_attachments_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          },
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "transaction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transaction Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "profile"
+        ],
+        "title": "Body_upload_attachment_api_v1_attachments_upload_post"
       },
       "BudgetCreate": {
         "properties": {
@@ -4092,6 +4794,46 @@
         },
         "type": "object",
         "title": "DebtUpdate"
+      },
+      "DriveSyncTriggerResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "total_processed": {
+            "type": "integer",
+            "title": "Total Processed",
+            "default": 0
+          },
+          "synced_count": {
+            "type": "integer",
+            "title": "Synced Count",
+            "default": 0
+          },
+          "failed_count": {
+            "type": "integer",
+            "title": "Failed Count",
+            "default": 0
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "title": "DriveSyncTriggerResponse"
       },
       "GoalCreate": {
         "properties": {
@@ -5020,6 +5762,11 @@
             "title": "Pending Budgets",
             "default": 0
           },
+          "pending_attachments": {
+            "type": "integer",
+            "title": "Pending Attachments",
+            "default": 0
+          },
           "queue_rows": {
             "type": "integer",
             "title": "Queue Rows",
@@ -5386,6 +6133,21 @@
             ],
             "title": "Profile",
             "description": "Perfil da transação"
+          },
+          "attachment_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Ids",
+            "description": "IDs dos anexos previamente carregados para vincular"
           }
         },
         "type": "object",
@@ -5569,6 +6331,18 @@
           "updated_at": {
             "type": "string",
             "title": "Updated At"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/AttachmentResponse"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "attachments_count": {
+            "type": "integer",
+            "title": "Attachments Count",
+            "default": 0
           }
         },
         "type": "object",

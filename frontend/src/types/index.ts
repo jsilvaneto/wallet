@@ -96,6 +96,8 @@ export interface Transaction {
   sync_status: "PENDENTE" | "SINCRONIZADO";
   notes?: string;
   created_at: string;
+  attachments?: Attachment[];
+  attachments_count?: number;
 }
 
 export interface CategoryBreakdown {
@@ -178,6 +180,7 @@ export interface SyncPendingDetails {
   pending_contacts: number;
   pending_debts: number;
   pending_budgets: number;
+  pending_attachments: number;
   queue_rows: number;
 }
 
@@ -196,3 +199,44 @@ export interface SyncStatus {
   last_action?: string | null;
   details?: SyncPendingDetails | null;
 }
+
+export interface Attachment {
+  id: string;
+  profile: ProfileType;
+  transaction_id?: string | null;
+  file_name: string;
+  file_path: string;
+  file_size_bytes: number;
+  mime_type: string;
+  drive_file_id?: string | null;
+  drive_web_view_link?: string | null;
+  drive_folder_id?: string | null;
+  sync_status: "PENDENTE" | "SINCRONIZADO" | "ERRO" | "LOCAL_ONLY";
+  sync_error?: string | null;
+  created_at: string;
+  synced_at?: string | null;
+  download_url?: string;
+  file_url?: string;
+  formatted_size?: string;
+}
+
+export interface AttachmentStats {
+  total_count: number;
+  total_size_bytes: number;
+  formatted_total_size: string;
+  synced_count: number;
+  pending_count: number;
+  error_count: number;
+  drive_connected: boolean;
+  drive_folder_name?: string | null;
+}
+
+export interface DriveSyncTriggerResponse {
+  success: boolean;
+  message: string;
+  total_processed: number;
+  synced_count: number;
+  failed_count: number;
+  errors: string[];
+}
+

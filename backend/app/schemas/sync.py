@@ -40,6 +40,7 @@ class SyncPendingDetails(BaseModel):
     pending_contacts: int = 0
     pending_debts: int = 0
     pending_budgets: int = 0
+    pending_attachments: int = 0
     queue_rows: int = 0
 
 class SyncStatusResponse(BaseModel):

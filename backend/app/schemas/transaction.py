@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Literal, Optional
+from typing import Literal, Optional, List
+from app.schemas.attachment import AttachmentResponse
 
 ProfileType = Literal["PESSOAL", "EMPRESA"]
 TransactionType = Literal["RECEITA", "DESPESA"]
@@ -22,6 +23,7 @@ class TransactionBase(BaseModel):
 
 class TransactionCreate(TransactionBase):
     profile: ProfileType = Field(..., description="Perfil da transação")
+    attachment_ids: Optional[List[str]] = Field(default=None, description="IDs dos anexos previamente carregados para vincular")
 
 class TransactionUpdate(BaseModel):
     account_id: Optional[str] = None
@@ -45,5 +47,8 @@ class TransactionResponse(TransactionBase):
     sync_status: SyncStatus
     created_at: str
     updated_at: str
+    attachments: List[AttachmentResponse] = Field(default_factory=list)
+    attachments_count: int = 0
 
     model_config = ConfigDict(from_attributes=True)
+

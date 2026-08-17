@@ -4,11 +4,13 @@ import { api } from "../api/client";
 import { Transaction, Category, Contact, Account } from "../types";
 import { formatCurrency, formatDateToBR } from "../utils/format";
 import { TransactionModal } from "../components/TransactionModal";
+import { AttachmentViewerModal } from "../components/AttachmentViewerModal";
 import { 
   Plus, Check, Trash2, ArrowUpRight, ArrowDownRight, 
   Filter, AlertCircle, Search, X, Calendar, 
   ChevronLeft, ChevronRight, Clock, DollarSign, 
-  Landmark, Tag, Users, CheckCircle2, RotateCcw, AlertTriangle, Layers, Wallet, PiggyBank, CircleDollarSign, CreditCard
+  Landmark, Tag, Users, CheckCircle2, RotateCcw, AlertTriangle, 
+  Layers, Wallet, PiggyBank, CircleDollarSign, CreditCard, Paperclip, FileText
 } from "lucide-react";
 
 type PeriodPreset = 
@@ -34,6 +36,10 @@ export const Transactions: React.FC = () => {
   const [accountsList, setAccountsList] = useState<Account[]>([]);
   const [contactsList, setContactsList] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Estados de Anexos / Comprovantes
+  const [selectedTransactionForAttachments, setSelectedTransactionForAttachments] = useState<Transaction | null>(null);
+  const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
 
   // Estados de Filtros
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("MES_ATUAL");
@@ -784,7 +790,7 @@ export const Transactions: React.FC = () => {
                           </span>
 
                           <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className={`font-semibold ${isCompleted ? "line-through text-zinc-400 dark:text-zinc-500" : "text-zinc-900 dark:text-zinc-100"}`}>
                                 {t.description}
                               </span>
@@ -794,6 +800,22 @@ export const Transactions: React.FC = () => {
                                 <span className="text-[10px] font-mono px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-md font-semibold">
                                   {t.installment_number}/{t.total_installments}
                                 </span>
+                              )}
+
+                              {/* Badge de Comprovantes */}
+                              {t.attachments && t.attachments.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedTransactionForAttachments(t);
+                                    setIsAttachmentModalOpen(true);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all cursor-pointer"
+                                  title={`${t.attachments.length} comprovante(s) anexado(s) - Clique para visualizar`}
+                                >
+                                  <Paperclip className="w-3 h-3" />
+                                  <span>{t.attachments.length}</span>
+                                </button>
                               )}
                             </div>
 
@@ -837,15 +859,34 @@ export const Transactions: React.FC = () => {
                         </span>
                       </td>
 
-                      {/* Delete Action */}
+                      {/* Actions */}
                       <td className="py-3.5 px-4 text-center">
-                        <button
-                          onClick={() => handleDelete(t.id)}
-                          title="Excluir Lançamento"
-                          className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedTransactionForAttachments(t);
+                              setIsAttachmentModalOpen(true);
+                            }}
+                            title={t.attachments && t.attachments.length > 0 ? "Visualizar Comprovantes" : "Anexar Comprovante"}
+                            className={`p-1.5 rounded-lg transition-all ${
+                              t.attachments && t.attachments.length > 0
+                                ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                : "text-zinc-400 hover:text-emerald-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                            }`}
+                          >
+                            <Paperclip className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(t.id)}
+                            title="Excluir Lançamento"
+                            className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -861,6 +902,23 @@ export const Transactions: React.FC = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => {
+          fetchData();
+          refreshSyncStatus(false);
+        }}
+      />
+
+      {/* Visualizador de Comprovantes & Lightbox */}
+      <AttachmentViewerModal
+        isOpen={isAttachmentModalOpen}
+        onClose={() => {
+          setIsAttachmentModalOpen(false);
+          setSelectedTransactionForAttachments(null);
+        }}
+        attachments={selectedTransactionForAttachments?.attachments || []}
+        transactionTitle={selectedTransactionForAttachments?.description || "Comprovantes do Lançamento"}
+        transactionId={selectedTransactionForAttachments?.id}
+        profile={profile}
+        onAttachmentsChanged={() => {
           fetchData();
           refreshSyncStatus(false);
         }}

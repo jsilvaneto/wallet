@@ -173,6 +173,7 @@ class Transaction(Base):
     contact: Mapped[Optional["Contact"]] = relationship("Contact")
     debt: Mapped[Optional["Debt"]] = relationship("Debt")
     schedule: Mapped[Optional["Schedule"]] = relationship("Schedule")
+    attachments: Mapped[List["Attachment"]] = relationship("Attachment", back_populates="transaction", cascade="all, delete-orphan")
 
     __table_args__ = (
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_trans_profile"),
@@ -241,4 +242,37 @@ class SyncLog(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
+
+# 13. Anexos e Comprovantes (Recibos, Cupons, PDFs)
+class Attachment(Base):
+    __tablename__ = "attachments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    profile: Mapped[str] = mapped_column(String(10), nullable=False) # 'PESSOAL' ou 'EMPRESA'
+    transaction_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("transactions.id", ondelete="CASCADE"), nullable=True)
+    
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    
+    drive_file_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    drive_web_view_link: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    drive_folder_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    
+    sync_status: Mapped[str] = mapped_column(String(20), default="PENDENTE", nullable=False) # PENDENTE, SINCRONIZADO, ERRO, LOCAL_ONLY
+    sync_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
+    synced_at: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+
+    transaction: Mapped[Optional["Transaction"]] = relationship("Transaction", back_populates="attachments")
+
+    __table_args__ = (
+        CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_attachment_profile"),
+        CheckConstraint("sync_status IN ('PENDENTE', 'SINCRONIZADO', 'ERRO', 'LOCAL_ONLY')", name="chk_attachment_sync_status"),
+        Index("idx_attachment_profile", "profile"),
+        Index("idx_attachment_transaction", "transaction_id"),
+        Index("idx_attachment_sync", "sync_status"),
+    )
+
 

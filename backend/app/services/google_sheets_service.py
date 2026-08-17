@@ -11,7 +11,7 @@ from sqlalchemy.orm import aliased
 from app.core.config import settings
 from app.models import (
     Transaction, Category, Item, Contact, Account, 
-    Debt, Budget, SystemConfig, SyncLog
+    Debt, Budget, SystemConfig, SyncLog, Attachment
 )
 from app.schemas.sync import SyncStatusResponse, SyncPendingDetails
 
@@ -621,7 +621,7 @@ async def check_sync_pending_status(db: AsyncSession, check_remote: bool = True)
     pending_trans_query = select(func.count(Transaction.id)).where(Transaction.sync_status == "PENDENTE")
     pending_trans_count = (await db.execute(pending_trans_query)).scalar() or 0
 
-    # 4. Alterações em tabelas mestras
+    # 4. Alterações em tabelas mestras e comprovantes
     if last_export_time:
         cat_cnt = (await db.execute(select(func.count(Category.id)).where(Category.created_at > last_export_time))).scalar() or 0
         item_cnt = (await db.execute(select(func.count(Item.id)).where(Item.created_at > last_export_time))).scalar() or 0
@@ -637,8 +637,13 @@ async def check_sync_pending_status(db: AsyncSession, check_remote: bool = True)
         debt_cnt = (await db.execute(select(func.count(Debt.id)))).scalar() or 0
         bud_cnt = (await db.execute(select(func.count(Budget.id)))).scalar() or 0
 
+    # Comprovantes com backup pendente no Drive
+    pending_att_cnt = (await db.execute(
+        select(func.count(Attachment.id)).where(Attachment.sync_status.in_(["PENDENTE", "ERRO"]))
+    )).scalar() or 0
+
     master_changes = cat_cnt + item_cnt + acc_cnt + con_cnt + debt_cnt + bud_cnt
-    pending_send = pending_trans_count + master_changes
+    pending_send = pending_trans_count + master_changes + pending_att_cnt
 
     # 5. Pendências de Recebimento na Fila Mobile (Google Sheets)
     pending_receive = 0
@@ -680,6 +685,7 @@ async def check_sync_pending_status(db: AsyncSession, check_remote: bool = True)
             pending_contacts=con_cnt,
             pending_debts=debt_cnt,
             pending_budgets=bud_cnt,
+            pending_attachments=pending_att_cnt,
             queue_rows=pending_receive,
         )
     )
