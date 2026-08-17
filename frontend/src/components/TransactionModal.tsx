@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
 import { Category, Contact, Item, Account } from "../types";
@@ -15,6 +15,7 @@ type Mode = "UNICO" | "PARCELADO" | "RECORRENTE";
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { profile } = useApp();
+  const datePickerRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<Mode>("UNICO");
   const [type, setType] = useState<"DESPESA" | "RECEITA">("DESPESA");
   const [itemId, setItemId] = useState("");
@@ -27,6 +28,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const [installments, setInstallments] = useState("2");
   const [dueDay, setDueDay] = useState(String(new Date().getDate()));
   const [notes, setNotes] = useState("");
+
+  const handleOpenDatePicker = () => {
+    if (datePickerRef.current) {
+      if (typeof datePickerRef.current.showPicker === "function") {
+        try {
+          datePickerRef.current.showPicker();
+        } catch {
+          datePickerRef.current.focus();
+        }
+      } else {
+        datePickerRef.current.focus();
+      }
+    }
+  };
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -340,29 +355,33 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                   maxLength={10}
                   className="w-full pl-3.5 pr-10 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
                 />
-                {/* Seletor nativo de calendário integrado */}
-                <label 
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md cursor-pointer transition-all"
+                {/* Botão de calendário com acionamento nativo confiável */}
+                <button 
+                  type="button"
+                  onClick={handleOpenDatePicker}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-all flex items-center justify-center cursor-pointer"
                   title="Abrir calendário para escolher data"
                 >
-                  <Calendar className="w-4 h-4" />
-                  <input
-                    type="date"
-                    tabIndex={-1}
-                    value={parseDateBRToISO(dueDateStr) || ""}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        const br = formatDateToBR(e.target.value);
-                        setDueDateStr(br);
-                        const dayNum = parseInt(br.split("/")[0], 10);
-                        if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
-                          setDueDay(String(dayNum));
-                        }
+                  <Calendar className="w-4 h-4 pointer-events-none" />
+                </button>
+                <input
+                  ref={datePickerRef}
+                  type="date"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  value={parseDateBRToISO(dueDateStr) || ""}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      const br = formatDateToBR(e.target.value);
+                      setDueDateStr(br);
+                      const dayNum = parseInt(br.split("/")[0], 10);
+                      if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
+                        setDueDay(String(dayNum));
                       }
-                    }}
-                    className="sr-only"
-                  />
-                </label>
+                    }
+                  }}
+                  className="absolute opacity-0 pointer-events-none w-0 h-0 bottom-0 right-0 overflow-hidden"
+                />
               </div>
             </div>
           </div>
