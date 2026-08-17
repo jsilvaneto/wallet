@@ -74,6 +74,10 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - `Orcamentos` (Metas e limites de gastos mensais por categoria)
     - `Fila_Mobile` (Buffer para ingestão e reconciliação de lançamentos do app mobile)
   - [x] Ações direcionais em lote (*batchUpdate*) com auditoria detalhada por entidade em `sync_logs`.
+  - [x] **Guia Interativo Passo a Passo de Configuração & Tutorial**:
+    - [x] Modal interativo [SyncSetupGuideModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/SyncSetupGuideModal.tsx) com 4 passos visuais (Criação de Service Account, Ativação das APIs Sheets & Drive, Criação e Compartilhamento da Planilha Google, e Conexão no Wallet).
+    - [x] Botões com links diretos para ativação da Google Sheets API, Google Drive API e Google Cloud Console.
+    - [x] Cópia em 1 clique do e-mail da Service Account e banner informativo na aba **Configurações > Sincronização Nuvem**.
 
 - [x] **Gestão de Comprovantes & Backup no Google Drive (Local-First)**:
   - [x] **Armazenamento Local Primário Instantâneo**:
