@@ -38,13 +38,29 @@ class AttachmentStatsResponse(BaseModel):
     total_count: int = 0
     total_size_bytes: int = 0
     formatted_total_size: str = "0 B"
+    active_directory: str = ""
+    default_directory: str = ""
+    is_custom_directory: bool = False
+    is_writable: bool = True
+    free_space_bytes: Optional[int] = None
+    formatted_free_space: Optional[str] = None
     synced_count: int = 0
     pending_count: int = 0
     error_count: int = 0
-    drive_connected: bool = False
-    drive_folder_id: Optional[str] = None
-    drive_folder_url: Optional[str] = None
-    drive_folder_name: Optional[str] = None
+
+class StorageDirectoryConfigRequest(BaseModel):
+    directory_path: str = Field(..., description="Caminho absoluto do diretório onde os anexos serão gravados e lidos")
+    migrate_existing: bool = Field(True, description="Se verdadeiro, copia os arquivos existentes do diretório antigo para o novo")
+
+class StorageDirectoryConfigResponse(BaseModel):
+    active_directory: str
+    default_directory: str
+    is_custom: bool
+    is_writable: bool
+    free_space_bytes: Optional[int] = None
+    formatted_free_space: Optional[str] = None
+    migrated_count: int = 0
+    message: str
 
 class DriveFolderConfigRequest(BaseModel):
     folder_id_or_url: str = Field(..., description="ID ou Link da pasta no Google Drive")

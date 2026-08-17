@@ -79,24 +79,24 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - [x] Botões com links diretos para ativação da Google Sheets API, Google Drive API e Google Cloud Console.
     - [x] Cópia em 1 clique do e-mail da Service Account e banner informativo na aba **Configurações > Sincronização Nuvem**.
 
-- [x] **Gestão de Comprovantes & Backup no Google Drive (Local-First)**:
-  - [x] **Armazenamento Local Primário Instantâneo**:
-    - [x] Modelo `Attachment` no SQLite WAL com particionamento inteligente em disco: `data/attachments/{profile}/{ano}/{mes}/`.
-    - [x] Suporte completo a fotos (JPG, PNG, WEBP) e documentos fiscais/recibos em PDF até 15MB.
-    - [x] Resposta de upload ultrarrápida (< 50ms) com desacoplamento de I/O em rede.
-  - [x] **Backup Assíncrono no Google Drive**:
-    - [x] Suporte completo a **Pasta Compartilhada Customizada do Google Drive** para contornar limitação de quota zero em Service Accounts:
-      - [x] Parser inteligente de links e IDs de pastas do Google Drive (`folders/...`).
-      - [x] Endpoints `POST /api/v1/attachments/drive-folder` e `DELETE /api/v1/attachments/drive-folder`.
-      - [x] Formulário dedicado em **Configurações > Sincronização Nuvem** com validação em tempo real e botão de abertura direta no Drive.
-    - [x] Sincronização em segundo plano via `BackgroundTasks` com links de visualização (`webViewLink`) gravados no SQLite.
-    - [x] Sincronização em lote integrada ao botão geral de sincronização e acionável sob demanda na aba **Sincronização Nuvem**.
-    - [x] Tratamento gracioso e resiliente caso a Drive API esteja indisponível ou pendente de ativação no console Google Cloud.
+- [x] **Gestão de Comprovantes & Armazenamento em Diretório Customizado (Local-First)**:
+  - [x] **Armazenamento Local Primário Instantâneo com Diretório Customizável**:
+    - [x] Modelo `Attachment` no SQLite WAL com particionamento inteligente em disco: `{storage_dir}/{profile}/{ano}/{mes}/`.
+    - [x] Suporte a definição de qualquer diretório base (disco local, HD externo, pasta na rede ou sincronizada) persistido em `SystemConfig("storage_directory")`.
+    - [x] Endpoints `GET /api/v1/attachments/storage-dir`, `POST /api/v1/attachments/storage-dir` e `POST /api/v1/attachments/storage-dir/reset`.
+    - [x] Migração e cópia automática em lote de comprovantes existentes ao alternar o diretório, com validação de permissões de escrita e cálculo de espaço livre em disco.
+    - [x] Fallback inteligente para o diretório padrão original caso algum arquivo antigo não tenha sido migrado.
+    - [x] Suporte completo a fotos (JPG, PNG, WEBP, HEIC) e documentos fiscais/recibos em PDF até 15MB.
+    - [x] Resposta de upload e leitura ultrarrápida (< 50ms).
   - [x] **Interface do Usuário (Frontend)**:
-    - [x] Modal e lightbox interativo [AttachmentViewerModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/AttachmentViewerModal.tsx) com zoom, rotação, visualizador embutido de PDF, download direto, link para o Google Drive e exclusão.
+    - [x] Painel de **Armazenamento de Anexos & Comprovantes** na aba **Configurações > Sincronização Nuvem**:
+      - [x] Indicador de diretório ativo com badge de gravação (`✓ Gravável & Ativo`).
+      - [x] Indicador de `Diretório Padrão` vs. `Diretório Personalizado`.
+      - [x] Métricas de contagem total de arquivos, espaço ocupado e espaço livre na partição do disco.
+      - [x] Formulário para alteração de diretório com checkbox de migração automática e botão para restaurar o diretório padrão.
+    - [x] Modal e lightbox interativo [AttachmentViewerModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/AttachmentViewerModal.tsx) com zoom, rotação, visualizador embutido de PDF, download direto e exclusão.
     - [x] Área de upload no modal de lançamentos [TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx) com miniaturas dos comprovantes carregados antes de salvar.
     - [x] Indicador de clipe 📎 com contagem na tabela de lançamentos [Transactions.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/pages/Transactions.tsx) e abertura instantânea do visualizador.
-    - [x] Painel de métricas de armazenamento local, espaço em disco e status do Drive na aba **Configurações > Sincronização Nuvem**.
 
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.

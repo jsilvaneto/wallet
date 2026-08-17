@@ -184,31 +184,12 @@ export const AttachmentViewerModal: React.FC<AttachmentViewerModalProps> = ({
         </div>
 
         {/* Feedback visual de alertas */}
-        {(actionError || (currentAttachment?.sync_status === "ERRO" && currentAttachment?.sync_error)) && (() => {
-          const errText = actionError || currentAttachment?.sync_error || "";
-          const urlMatch = errText.match(/https:\/\/[^\s]+/);
-          const actionUrl = urlMatch ? urlMatch[0] : null;
-
-          return (
-            <div className="px-5 py-2.5 bg-rose-50 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
-                <span className="truncate">{errText}</span>
-              </div>
-              {actionUrl && (
-                <a
-                  href={actionUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold text-[11px] flex items-center gap-1 shadow-sm transition-all shrink-0"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                  <span>Ativar no Google Cloud</span>
-                </a>
-              )}
-            </div>
-          );
-        })()}
+        {actionError && (
+          <div className="px-5 py-2.5 bg-rose-50 dark:bg-rose-950/40 border-b border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
+            <span>{actionError}</span>
+          </div>
+        )}
 
         {actionSuccess && (
           <div className="px-5 py-2 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 text-xs flex items-center gap-2">

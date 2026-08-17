@@ -1,19 +1,18 @@
 import os
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.database import get_db, AsyncSessionLocal
+from app.database import get_db
 from app.models import User, Attachment, Transaction
 from app.api.v1.deps import get_current_user
 from app.schemas.attachment import (
     AttachmentResponse,
     AttachmentStatsResponse,
-    DriveSyncTriggerResponse,
-    DriveFolderConfigRequest,
-    DriveFolderConfigResponse,
+    StorageDirectoryConfigRequest,
+    StorageDirectoryConfigResponse,
     ProfileType,
     SyncStatusType
 )
@@ -22,38 +21,20 @@ from app.services.attachment_service import (
     get_absolute_file_path,
     delete_attachment,
     get_storage_stats,
-    enrich_attachment_schema
+    enrich_attachment_schema,
+    get_storage_directory,
+    validate_and_set_storage_directory,
+    reset_storage_directory,
+    is_directory_writable,
+    get_directory_free_space,
+    format_bytes,
+    DEFAULT_ATTACHMENT_DIR
 )
-from app.services.google_drive_service import (
-    upload_attachment_to_drive,
-    sync_all_pending_attachments,
-    delete_attachment_from_drive
-)
-from app.services.google_sheets_service import get_service_account_info, get_config_value
 
 router = APIRouter(prefix="/attachments", tags=["Anexos e Comprovantes"])
 
-async def background_drive_upload(attachment_id: str):
-    """Worker em background para realizar o upload assíncrono ao Google Drive."""
-    try:
-        async with AsyncSessionLocal() as session:
-            await upload_attachment_to_drive(session, attachment_id)
-    except Exception as e:
-        print(f"Erro no worker de backup do Google Drive para {attachment_id}: {e}")
-
-async def background_drive_delete(drive_file_id: Optional[str]):
-    """Worker em background para remover arquivo do Google Drive."""
-    if not drive_file_id:
-        return
-    try:
-        async with AsyncSessionLocal() as session:
-            await delete_attachment_from_drive(session, drive_file_id)
-    except Exception as e:
-        print(f"Erro no worker de remoção do Google Drive para {drive_file_id}: {e}")
-
 @router.post("/upload", response_model=AttachmentResponse, status_code=status.HTTP_201_CREATED)
 async def upload_attachment(
-    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     profile: ProfileType = Form(...),
     transaction_id: Optional[str] = Form(None),
@@ -61,8 +42,7 @@ async def upload_attachment(
     _: User = Depends(get_current_user)
 ):
     """
-    Realiza o upload imediato e seguro do comprovante para o disco local (< 50ms)
-    e agenda em segundo plano o backup assíncrono para o Google Drive.
+    Realiza o upload imediato e seguro do comprovante para o diretório de armazenamento configurado (< 50ms).
     """
     attachment = await save_uploaded_attachment(
         db=db,
@@ -70,9 +50,6 @@ async def upload_attachment(
         profile=profile,
         transaction_id=transaction_id
     )
-
-    # Agenda o backup em background para não travar a resposta HTTP
-    background_tasks.add_task(background_drive_upload, attachment.id)
 
     return enrich_attachment_schema(attachment)
 
@@ -104,15 +81,86 @@ async def get_attachment_statistics(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user)
 ):
-    """Retorna métricas de armazenamento local e status do Google Drive."""
-    stats = await get_storage_stats(db, profile)
+    """Retorna métricas de armazenamento local e status do diretório."""
+    return await get_storage_stats(db, profile)
 
-    # Checa status de conexão com Google Drive
-    info, _ = await get_service_account_info(db)
-    stats.drive_connected = info is not None
-    stats.drive_folder_name = await get_config_value(db, "google_drive_folder_id") or "Wallet - Comprovantes"
+@router.get("/storage-dir", response_model=StorageDirectoryConfigResponse)
+async def get_storage_directory_info(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Retorna informações detalhadas do diretório de armazenamento ativo."""
+    active_dir = await get_storage_directory(db)
+    is_custom = active_dir != DEFAULT_ATTACHMENT_DIR
+    is_writable = is_directory_writable(active_dir)
+    free_space = get_directory_free_space(active_dir)
 
-    return stats
+    return StorageDirectoryConfigResponse(
+        active_directory=active_dir,
+        default_directory=DEFAULT_ATTACHMENT_DIR,
+        is_custom=is_custom,
+        is_writable=is_writable,
+        free_space_bytes=free_space,
+        formatted_free_space=format_bytes(free_space) if free_space is not None else None,
+        migrated_count=0,
+        message="Diretório de armazenamento consultado com sucesso."
+    )
+
+@router.post("/storage-dir", response_model=StorageDirectoryConfigResponse)
+async def configure_storage_directory(
+    payload: StorageDirectoryConfigRequest,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Define um novo diretório de armazenamento e opcionalmente migra os comprovantes existentes."""
+    success, message, migrated_count = await validate_and_set_storage_directory(
+        db=db,
+        directory_path=payload.directory_path,
+        migrate_files=payload.migrate_existing
+    )
+
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=message
+        )
+
+    active_dir = await get_storage_directory(db)
+    is_custom = active_dir != DEFAULT_ATTACHMENT_DIR
+    is_writable = is_directory_writable(active_dir)
+    free_space = get_directory_free_space(active_dir)
+
+    return StorageDirectoryConfigResponse(
+        active_directory=active_dir,
+        default_directory=DEFAULT_ATTACHMENT_DIR,
+        is_custom=is_custom,
+        is_writable=is_writable,
+        free_space_bytes=free_space,
+        formatted_free_space=format_bytes(free_space) if free_space is not None else None,
+        migrated_count=migrated_count,
+        message=message
+    )
+
+@router.post("/storage-dir/reset", response_model=StorageDirectoryConfigResponse)
+async def reset_storage_directory_endpoint(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Restaura o diretório de armazenamento para o padrão original."""
+    default_dir = await reset_storage_directory(db)
+    is_writable = is_directory_writable(default_dir)
+    free_space = get_directory_free_space(default_dir)
+
+    return StorageDirectoryConfigResponse(
+        active_directory=default_dir,
+        default_directory=DEFAULT_ATTACHMENT_DIR,
+        is_custom=False,
+        is_writable=is_writable,
+        free_space_bytes=free_space,
+        formatted_free_space=format_bytes(free_space) if free_space is not None else None,
+        migrated_count=0,
+        message="Diretório de armazenamento restaurado para o padrão."
+    )
 
 @router.get("/{attachment_id}", response_model=AttachmentResponse)
 async def get_attachment(
@@ -135,7 +183,7 @@ async def preview_attachment_file(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Serve o arquivo binário localmente com headers inline para exibição direta no navegador
+    Serve o arquivo binário com headers inline para exibição direta no navegador
     (fotos, recibos e PDFs).
     """
     att = await db.get(Attachment, attachment_id)
@@ -145,11 +193,11 @@ async def preview_attachment_file(
             detail="Comprovante não encontrado."
         )
 
-    abs_path = get_absolute_file_path(att)
+    abs_path = await get_absolute_file_path(db, att)
     if not os.path.exists(abs_path):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Arquivo físico não encontrado no disco."
+            detail=f"Arquivo físico não encontrado no diretório: {abs_path}"
         )
 
     return FileResponse(
@@ -174,11 +222,11 @@ async def download_attachment_file(
             detail="Comprovante não encontrado."
         )
 
-    abs_path = get_absolute_file_path(att)
+    abs_path = await get_absolute_file_path(db, att)
     if not os.path.exists(abs_path):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Arquivo físico não encontrado no disco."
+            detail="Arquivo físico não encontrado no diretório."
         )
 
     return FileResponse(
@@ -190,11 +238,10 @@ async def download_attachment_file(
 @router.delete("/{attachment_id}")
 async def remove_attachment(
     attachment_id: str,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user)
 ):
-    """Exclui o anexo do banco, apaga o arquivo do disco local e agenda remoção no Google Drive."""
+    """Exclui o anexo do banco e apaga o arquivo físico do disco."""
     att = await db.get(Attachment, attachment_id)
     if not att:
         raise HTTPException(
@@ -202,59 +249,12 @@ async def remove_attachment(
             detail="Comprovante não encontrado."
         )
 
-    drive_file_id = att.drive_file_id
     success = await delete_attachment(db, attachment_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Falha ao remover comprovante."
+            detail="Falha ao remover comprovante do diretório."
         )
-
-    if drive_file_id:
-        background_tasks.add_task(background_drive_delete, drive_file_id)
 
     return {"success": True, "message": "Comprovante removido com sucesso."}
 
-@router.post("/sync-drive", response_model=DriveSyncTriggerResponse)
-async def trigger_drive_sync(
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user)
-):
-    """Dispara a sincronização/backup de todos os comprovantes pendentes para o Google Drive."""
-    return await sync_all_pending_attachments(db)
-
-@router.post("/drive-folder", response_model=DriveFolderConfigResponse)
-async def configure_drive_folder(
-    payload: DriveFolderConfigRequest,
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user)
-):
-    """Configura e valida a pasta compartilhada do Google Drive onde os comprovantes serão salvos."""
-    from app.services.google_drive_service import validate_and_set_drive_folder
-    valid, message, folder_id, folder_url = await validate_and_set_drive_folder(db, payload.folder_id_or_url)
-    
-    if not valid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=message
-        )
-
-    folder_name = await get_config_value(db, "google_drive_folder_name")
-    return DriveFolderConfigResponse(
-        folder_id=folder_id,
-        folder_url=folder_url,
-        folder_name=folder_name,
-        is_valid=True,
-        message=message
-    )
-
-@router.delete("/drive-folder")
-async def reset_drive_folder(
-    db: AsyncSession = Depends(get_db),
-    _: User = Depends(get_current_user)
-):
-    """Remove a pasta customizada do Google Drive e restaura o padrão automático."""
-    from app.services.google_sheets_service import set_config_value
-    await set_config_value(db, "google_drive_folder_id", "")
-    await set_config_value(db, "google_drive_folder_name", "")
-    return {"success": True, "message": "Configuração de pasta do Google Drive redefinida para o padrão."}

@@ -36,8 +36,8 @@ export const SyncSetupGuideModal: React.FC<SyncSetupGuideModalProps> = ({
     },
     {
       id: 2,
-      title: "2. Ativar as APIs (Sheets e Drive)",
-      shortTitle: "Ativar APIs",
+      title: "2. Ativar a Google Sheets API",
+      shortTitle: "Ativar API Sheets",
       icon: Cloud,
     },
     {
@@ -181,72 +181,44 @@ export const SyncSetupGuideModal: React.FC<SyncSetupGuideModalProps> = ({
           {/* PASSO 2 */}
           {activeStep === 2 && (
             <div className="space-y-4 animate-fade-in">
-              <div className="flex items-center gap-2.5 text-sky-600 dark:text-sky-400">
-                <Cloud className="w-5 h-5" />
+              <div className="flex items-center gap-2.5 text-emerald-600 dark:text-emerald-400">
+                <FileSpreadsheet className="w-5 h-5" />
                 <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                  Passo 2: Ativar as APIs Obrigatórias do Google
+                  Passo 2: Ativar a Google Sheets API
                 </h3>
               </div>
 
               <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Para que o Google aceite as conexões, você precisa ativar exatamente <strong>duas APIs</strong> no seu projeto do Google Cloud. Utilize os links diretos abaixo:
+                Para que o Google permita o espelhamento das 8 abas de dados financeiros do Wallet com a sua planilha, ative a <strong>Google Sheets API</strong> no seu projeto do Google Cloud:
               </p>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* API 1: Google Sheets */}
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600">
-                      <FileSpreadsheet className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">1. Google Sheets API</h4>
-                      <p className="text-[11px] text-zinc-500">Espelhamento das 8 abas de dados</p>
-                    </div>
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-600">
+                    <FileSpreadsheet className="w-5 h-5" />
                   </div>
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                    Permite ao Wallet ler a Fila_Mobile e exportar tabelas para a planilha Google.
-                  </p>
-                  <a
-                    href="https://console.cloud.google.com/apis/library/sheets.googleapis.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Ativar Google Sheets API</span>
-                  </a>
-                </div>
-
-                {/* API 2: Google Drive */}
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 rounded-2xl border border-zinc-200 dark:border-zinc-800 space-y-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-sky-100 dark:bg-sky-950 text-sky-600">
-                      <Cloud className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">2. Google Drive API</h4>
-                      <p className="text-[11px] text-zinc-500">Backup de Comprovantes & PDFs</p>
-                    </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Google Sheets API</h4>
+                    <p className="text-[11px] text-zinc-500">Espelhamento das 8 abas (Transações, Metas, Categorias, etc.)</p>
                   </div>
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                    Permite criar a pasta <code>Wallet - Comprovantes</code> e salvar fotos e recibos.
-                  </p>
-                  <a
-                    href="https://console.cloud.google.com/apis/library/drive.googleapis.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-2 px-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-1.5 transition-all"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Ativar Google Drive API</span>
-                  </a>
                 </div>
+                <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                  Permite ao Wallet ler a Fila_Mobile e exportar tabelas financeiras para a planilha Google com segurança.
+                </p>
+                <a
+                  href="https://console.cloud.google.com/apis/library/sheets.googleapis.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-all"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Ativar Google Sheets API no Console</span>
+                </a>
               </div>
 
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
-                <span>Após clicar em <strong>Ativar</strong> em cada uma das APIs, aguarde cerca de 30 segundos para o Google propagar as permissões.</span>
+              <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 rounded-xl text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                <span>Após clicar em <strong>Ativar</strong>, aguarde cerca de 30 segundos para o Google propagar as permissões.</span>
               </div>
             </div>
           )}
@@ -331,22 +303,6 @@ export const SyncSetupGuideModal: React.FC<SyncSetupGuideModalProps> = ({
                     </p>
                   </div>
                 </div>
-
-                {/* Subpasso Pasta do Google Drive */}
-                <div className="flex items-start gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-700/60 bg-sky-50/50 dark:bg-sky-950/20 -mx-4 px-4 py-3 rounded-xl">
-                  <span className="w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-600 font-bold flex items-center justify-center shrink-0 mt-0.5">5</span>
-                  <div className="flex-1">
-                    <p className="font-semibold text-sky-900 dark:text-sky-200">Criar e Compartilhar a Pasta de Comprovantes no Drive (Essencial)</p>
-                    <p className="text-zinc-600 dark:text-zinc-400 mt-0.5">
-                      Para evitar o erro de <em>"armazenamento esgotado"</em> (pois Service Accounts possuem 0 bytes de quota própria):
-                    </p>
-                    <ul className="list-disc list-inside mt-1.5 space-y-1 text-zinc-600 dark:text-zinc-400">
-                      <li>Acesse o seu <strong>Google Drive</strong> e crie uma pasta (ex: <em>"Wallet Comprovantes"</em>).</li>
-                      <li>Clique em <strong>Compartilhar</strong> na pasta, adicione o e-mail da Service Account e selecione <strong>Editor</strong>.</li>
-                      <li>Copie o link ou ID da pasta para colar no Wallet no Passo 4.</li>
-                    </ul>
-                  </div>
-                </div>
               </div>
             </div>
           )}
@@ -362,7 +318,7 @@ export const SyncSetupGuideModal: React.FC<SyncSetupGuideModalProps> = ({
               </div>
 
               <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Agora é só colar as configurações no formulário do Wallet para ativar o fluxo completo.
+                Agora é só colar o ID da planilha e o arquivo JSON no formulário do Wallet para ativar o fluxo completo.
               </p>
 
               <div className="space-y-3 bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 text-xs">
@@ -379,9 +335,9 @@ export const SyncSetupGuideModal: React.FC<SyncSetupGuideModalProps> = ({
                 <div className="flex items-start gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-700/60">
                   <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
                   <div>
-                    <p className="font-semibold text-zinc-800 dark:text-zinc-200">Cole o Link da Pasta do Google Drive</p>
+                    <p className="font-semibold text-zinc-800 dark:text-zinc-200">Clique em "Testar Conexão"</p>
                     <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      No card <em>Backup de Comprovantes no Google Drive</em>, cole o link da pasta criada no Passo 3 e clique em <strong>Salvar Pasta</strong>.
+                      O Wallet fará um ping de teste no Google Sheets para confirmar que a Service Account tem permissão de escrita.
                     </p>
                   </div>
                 </div>
@@ -389,9 +345,9 @@ export const SyncSetupGuideModal: React.FC<SyncSetupGuideModalProps> = ({
                 <div className="flex items-start gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-700/60">
                   <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
                   <div>
-                    <p className="font-semibold text-zinc-800 dark:text-zinc-200">Clique em "Testar Conexão" &amp; "Sincronização Completa"</p>
+                    <p className="font-semibold text-zinc-800 dark:text-zinc-200">Clique em "Sincronização Completa (Bidirecional)"</p>
                     <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      O Wallet criará automaticamente todas as 8 abas espelho e subpastas (<code>PESSOAL</code> / <code>EMPRESA</code>) na sua pasta do Google Drive!
+                      O sistema criará automaticamente as 8 abas espelho (<code>Transacoes</code>, <code>Categorias</code>, <code>Itens</code>, <code>Contas</code>, <code>Contatos</code>, <code>Dividas</code>, <code>Orcamentos</code>, <code>Fila_Mobile</code>) e enviará todos os dados existentes no SQLite!
                     </p>
                   </div>
                 </div>

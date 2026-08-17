@@ -138,11 +138,11 @@ def format_drive_error(e: Exception) -> str:
         match = re.search(r"https://console\.developers\.google\.com/apis/api/drive\.googleapis\.com/overview\?project=\d+", err_str)
         link = match.group(0) if match else "https://console.cloud.google.com/apis/library/drive.googleapis.com"
         return f"A Google Drive API não está ativada no seu projeto do Google Cloud. Ative acessando: {link}"
-    elif "storage quota" in err_str.lower() or "quota" in err_str.lower():
+    elif "storage quota" in err_str.lower() or "quota" in err_str.lower() or "service accounts do not have storage quota" in err_str.lower():
         return (
-            "Espaço esgotado na Service Account. No Google Drive, a conta de serviço não tem armazenamento próprio: "
-            "crie uma pasta no seu Google Drive (ex: 'Wallet Comprovantes'), compartilhe-a com o e-mail da Service Account "
-            "como Editor e informe o ID ou link da pasta nas Configurações > Sincronização Nuvem."
+            "Limitação do Google Drive: Contas de Serviço (Service Accounts) possuem quota zero para upload de arquivos em pastas de contas pessoais (@gmail.com). "
+            "Seus comprovantes continuam 100% salvos e acessíveis pelo Armazenamento Local do Wallet. "
+            "No Google Workspace empresarial, utilize um Drive Compartilhado (Shared Drive)."
         )
     elif "insufficient permissions" in err_str.lower() or "403" in err_str:
         return f"Permissão negada no Google Drive. Verifique se a pasta foi compartilhada como Editor: {err_str}"

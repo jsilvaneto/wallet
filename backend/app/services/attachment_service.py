@@ -1,6 +1,7 @@
 import os
 import re
 import uuid
+import shutil
 from datetime import datetime, timezone
 from typing import Optional, List, Tuple
 from fastapi import UploadFile, HTTPException, status
@@ -9,9 +10,10 @@ from sqlalchemy import select, func
 
 from app.models import Attachment, Transaction, generate_uuid, now_utc_iso
 from app.schemas.attachment import AttachmentResponse, AttachmentStatsResponse
+from app.services.google_sheets_service import get_config_value, set_config_value
 
-# Diretório base de armazenamento local
-BASE_ATTACHMENT_DIR = os.path.abspath(
+# Diretório base padrão de armazenamento local
+DEFAULT_ATTACHMENT_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "data", "attachments")
 )
 
@@ -29,18 +31,103 @@ ALLOWED_MIME_TYPES = {
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".pdf", ".heic", ".heif"}
 
 def format_bytes(size_bytes: int) -> str:
-    """Formata bytes para exibição humana (KB, MB, etc)."""
+    """Formata bytes para exibição humana (KB, MB, GB)."""
     if size_bytes < 1024:
         return f"{size_bytes} B"
     elif size_bytes < 1024 * 1024:
         return f"{size_bytes / 1024:.1f} KB"
-    else:
+    elif size_bytes < 1024 * 1024 * 1024:
         return f"{size_bytes / (1024 * 1024):.2f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
 
 def sanitize_filename(name: str) -> str:
     """Sanitiza o nome do arquivo para segurança no sistema de arquivos."""
     clean = re.sub(r'[^a-zA-Z0-9_\.\-]', '_', name)
     return clean[:100]
+
+async def get_storage_directory(db: AsyncSession) -> str:
+    """Retorna o diretório ativo de armazenamento configurado ou o padrão."""
+    custom_dir = await get_config_value(db, "storage_directory")
+    if custom_dir and custom_dir.strip():
+        return os.path.abspath(os.path.expanduser(custom_dir.strip()))
+    return DEFAULT_ATTACHMENT_DIR
+
+def is_directory_writable(dir_path: str) -> bool:
+    """Verifica se o processo tem permissão de escrita no diretório."""
+    try:
+        os.makedirs(dir_path, exist_ok=True)
+        test_file = os.path.join(dir_path, f".wallet_write_test_{uuid.uuid4().hex}.tmp")
+        with open(test_file, "w") as f:
+            f.write("wallet_ok")
+        if os.path.exists(test_file):
+            os.remove(test_file)
+        return True
+    except Exception:
+        return False
+
+def get_directory_free_space(dir_path: str) -> Optional[int]:
+    """Retorna o espaço livre em bytes na partição do diretório."""
+    try:
+        check_path = dir_path
+        while check_path and not os.path.exists(check_path):
+            parent = os.path.dirname(check_path)
+            if parent == check_path:
+                break
+            check_path = parent
+        if os.path.exists(check_path):
+            return shutil.disk_usage(check_path).free
+    except Exception:
+        pass
+    return None
+
+async def validate_and_set_storage_directory(
+    db: AsyncSession,
+    directory_path: str,
+    migrate_files: bool = True
+) -> Tuple[bool, str, int]:
+    """
+    Valida as permissões do novo diretório, migra arquivos existentes se solicitado
+    e persiste a nova rota nas configurações do sistema.
+    """
+    if not directory_path or not directory_path.strip():
+        return False, "O caminho do diretório não pode ser vazio.", 0
+
+    clean_path = os.path.abspath(os.path.expanduser(directory_path.strip()))
+
+    try:
+        os.makedirs(clean_path, exist_ok=True)
+    except Exception as e:
+        return False, f"Não foi possível criar o diretório '{clean_path}': {e}", 0
+
+    if not is_directory_writable(clean_path):
+        return False, f"O diretório '{clean_path}' não possui permissões de gravação.", 0
+
+    old_dir = await get_storage_directory(db)
+    migrated_count = 0
+
+    if migrate_files and os.path.exists(old_dir) and old_dir != clean_path:
+        for root, _, files in os.walk(old_dir):
+            for file in files:
+                if file.startswith("."):
+                    continue
+                old_file_path = os.path.join(root, file)
+                rel_path = os.path.relpath(old_file_path, old_dir)
+                new_file_path = os.path.join(clean_path, rel_path)
+                
+                os.makedirs(os.path.dirname(new_file_path), exist_ok=True)
+                if not os.path.exists(new_file_path):
+                    shutil.copy2(old_file_path, new_file_path)
+                    migrated_count += 1
+
+    await set_config_value(db, "storage_directory", clean_path)
+    return True, f"Diretório de armazenamento configurado para '{clean_path}' com sucesso!", migrated_count
+
+async def reset_storage_directory(db: AsyncSession) -> str:
+    """Restaura o diretório de armazenamento para o padrão do Wallet."""
+    await set_config_value(db, "storage_directory", "")
+    os.makedirs(DEFAULT_ATTACHMENT_DIR, exist_ok=True)
+    return DEFAULT_ATTACHMENT_DIR
 
 def enrich_attachment_schema(att: Attachment) -> AttachmentResponse:
     """Enriquece o schema de resposta com URLs úteis e tamanho formatado."""
@@ -57,7 +144,7 @@ async def save_uploaded_attachment(
     transaction_id: Optional[str] = None
 ) -> Attachment:
     """
-    Valida e salva o arquivo fisicamente no disco local de forma assíncrona,
+    Valida e salva o arquivo fisicamente no diretório de armazenamento ativo,
     persistindo os metadados na tabela attachments do SQLite.
     """
     if profile not in ("PESSOAL", "EMPRESA"):
@@ -76,7 +163,6 @@ async def save_uploaded_attachment(
             detail=f"Formato de arquivo não suportado ({ext}). Envie imagens (JPG, PNG, WEBP) ou PDFs."
         )
 
-    # Lê o conteúdo do arquivo em chunks para validar tamanho
     contents = await upload_file.read()
     file_size = len(contents)
 
@@ -92,7 +178,6 @@ async def save_uploaded_attachment(
             detail=f"O arquivo excede o limite máximo permitido de {format_bytes(MAX_FILE_SIZE_BYTES)}."
         )
 
-    # Valida se a transação existe (se fornecida)
     if transaction_id:
         trans = await db.get(Transaction, transaction_id)
         if not trans:
@@ -112,19 +197,19 @@ async def save_uploaded_attachment(
     year_str = now.strftime("%Y")
     month_str = now.strftime("%m")
 
-    # Diretório estruturado: data/attachments/{profile}/{YYYY}/{MM}/
-    folder_path = os.path.join(BASE_ATTACHMENT_DIR, profile.lower(), year_str, month_str)
+    # Diretório ativo configurado
+    base_dir = await get_storage_directory(db)
+    rel_subfolder = os.path.join(profile.lower(), year_str, month_str)
+    folder_path = os.path.join(base_dir, rel_subfolder)
     os.makedirs(folder_path, exist_ok=True)
 
     disk_filename = f"{attachment_id}_{clean_name}"
     abs_file_path = os.path.join(folder_path, disk_filename)
 
-    # Salva arquivo no disco local
     with open(abs_file_path, "wb") as f:
         f.write(contents)
 
-    # Caminho relativo para portabilidade
-    rel_file_path = os.path.relpath(abs_file_path, BASE_ATTACHMENT_DIR)
+    rel_file_path = os.path.join(rel_subfolder, disk_filename)
 
     attachment = Attachment(
         id=attachment_id,
@@ -134,7 +219,7 @@ async def save_uploaded_attachment(
         file_path=rel_file_path,
         file_size_bytes=file_size,
         mime_type=mime,
-        sync_status="PENDENTE",
+        sync_status="SINCRONIZADO",
         created_at=now.isoformat()
     )
 
@@ -144,11 +229,24 @@ async def save_uploaded_attachment(
 
     return attachment
 
-def get_absolute_file_path(attachment: Attachment) -> str:
-    """Retorna o caminho absoluto do arquivo no disco."""
-    if os.path.isabs(attachment.file_path):
+async def get_absolute_file_path(db: AsyncSession, attachment: Attachment) -> str:
+    """
+    Retorna o caminho absoluto do arquivo no disco, verificando primeiro no diretório ativo
+    e com fallback para o diretório padrão para máxima compatibilidade.
+    """
+    if os.path.isabs(attachment.file_path) and os.path.exists(attachment.file_path):
         return attachment.file_path
-    return os.path.join(BASE_ATTACHMENT_DIR, attachment.file_path)
+
+    active_dir = await get_storage_directory(db)
+    active_path = os.path.join(active_dir, attachment.file_path)
+    if os.path.exists(active_path):
+        return active_path
+
+    default_path = os.path.join(DEFAULT_ATTACHMENT_DIR, attachment.file_path)
+    if os.path.exists(default_path):
+        return default_path
+
+    return active_path
 
 async def delete_attachment(db: AsyncSession, attachment_id: str) -> bool:
     """Remove o anexo do banco e apaga o arquivo físico do disco."""
@@ -156,7 +254,7 @@ async def delete_attachment(db: AsyncSession, attachment_id: str) -> bool:
     if not att:
         return False
 
-    abs_path = get_absolute_file_path(att)
+    abs_path = await get_absolute_file_path(db, att)
     if os.path.exists(abs_path):
         try:
             os.remove(abs_path)
@@ -168,9 +266,7 @@ async def delete_attachment(db: AsyncSession, attachment_id: str) -> bool:
     return True
 
 async def get_storage_stats(db: AsyncSession, profile: Optional[str] = None) -> AttachmentStatsResponse:
-    """Calcula estatísticas de armazenamento e status de sincronização."""
-    from app.services.google_sheets_service import get_config_value, get_service_account_info
-    
+    """Calcula estatísticas de armazenamento e métricas do diretório local."""
     query = select(
         func.count(Attachment.id),
         func.coalesce(func.sum(Attachment.file_size_bytes), 0)
@@ -180,7 +276,6 @@ async def get_storage_stats(db: AsyncSession, profile: Optional[str] = None) -> 
 
     total_count, total_size = (await db.execute(query)).one()
 
-    # Contagem por status de sincronização
     status_query = select(Attachment.sync_status, func.count(Attachment.id))
     if profile:
         status_query = status_query.where(Attachment.profile == profile)
@@ -188,24 +283,23 @@ async def get_storage_stats(db: AsyncSession, profile: Optional[str] = None) -> 
     
     status_counts = dict((await db.execute(status_query)).all())
 
-    synced_count = status_counts.get("SINCRONIZADO", 0)
-    pending_count = status_counts.get("PENDENTE", 0)
-    error_count = status_counts.get("ERRO", 0)
-
-    raw_folder_id = await get_config_value(db, "google_drive_folder_id")
-    folder_name = await get_config_value(db, "google_drive_folder_name")
-    info, _ = await get_service_account_info(db)
-    folder_url = f"https://drive.google.com/drive/folders/{raw_folder_id}" if raw_folder_id else None
+    active_dir = await get_storage_directory(db)
+    is_custom = active_dir != DEFAULT_ATTACHMENT_DIR
+    is_writable = is_directory_writable(active_dir)
+    free_space = get_directory_free_space(active_dir)
 
     return AttachmentStatsResponse(
         total_count=total_count or 0,
         total_size_bytes=int(total_size or 0),
         formatted_total_size=format_bytes(int(total_size or 0)),
-        synced_count=synced_count,
-        pending_count=pending_count,
-        error_count=error_count,
-        drive_connected=info is not None,
-        drive_folder_id=raw_folder_id,
-        drive_folder_url=folder_url,
-        drive_folder_name=folder_name,
+        active_directory=active_dir,
+        default_directory=DEFAULT_ATTACHMENT_DIR,
+        is_custom_directory=is_custom,
+        is_writable=is_writable,
+        free_space_bytes=free_space,
+        formatted_free_space=format_bytes(free_space) if free_space is not None else None,
+        synced_count=status_counts.get("SINCRONIZADO", total_count or 0),
+        pending_count=status_counts.get("PENDENTE", 0),
+        error_count=status_counts.get("ERRO", 0),
     )
+

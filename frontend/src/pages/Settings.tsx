@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { 
   Category, Item, Account, AccountType, Contact, Debt, Budget, 
   User, SyncConfig, SyncLog, SyncTestResult, SyncResultResponse,
-  AttachmentStats, DriveSyncTriggerResponse, DriveFolderConfigResponse
+  AttachmentStats, StorageDirectoryConfigResponse
 } from "../types";
 import { formatCurrency } from "../utils/format";
 import { SyncSetupGuideModal } from "../components/SyncSetupGuideModal";
@@ -168,9 +168,10 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [exportingSync, setExportingSync] = useState(false);
   const [importingSync, setImportingSync] = useState(false);
   const [syncingFull, setSyncingFull] = useState(false);
-  const [syncingDrive, setSyncingDrive] = useState(false);
-  const [savingDriveFolder, setSavingDriveFolder] = useState(false);
-  const [driveFolderInput, setDriveFolderInput] = useState("");
+  const [customDirInput, setCustomDirInput] = useState("");
+  const [migrateFilesCheckbox, setMigrateFilesCheckbox] = useState(true);
+  const [savingCustomDir, setSavingCustomDir] = useState(false);
+  const [resettingCustomDir, setResettingCustomDir] = useState(false);
   const [attachmentStats, setAttachmentStats] = useState<AttachmentStats | null>(null);
   const [savingSyncConfig, setSavingSyncConfig] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: "success" | "error"; message: string; details?: string } | null>(null);
@@ -183,8 +184,10 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [newUsername, setNewUsername] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState<"ADMIN" | "USER">("USER");
   const [creatingUser, setCreatingUser] = useState(false);
   const [userFeedback, setUserFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // ==========================================
   // CARREGAMENTO DE DADOS CONFORME ABA ATIVA
@@ -248,8 +251,8 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
         setSyncLogs(logRes.data);
         if (attRes && attRes.data) {
           setAttachmentStats(attRes.data);
-          if (attRes.data.drive_folder_id) {
-            setDriveFolderInput(attRes.data.drive_folder_id);
+          if (attRes.data.active_directory) {
+            setCustomDirInput(attRes.data.active_directory);
           }
         }
         setLoadingSyncConfig(false);
@@ -867,68 +870,52 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
     }
   };
 
-  const handleSyncAllDrive = async () => {
-    setSyncingDrive(true);
-    setSyncFeedback(null);
-    try {
-      const res = await api.post<DriveSyncTriggerResponse>("/attachments/sync-drive");
-      setSyncFeedback({
-        type: res.data.success ? "success" : "error",
-        message: res.data.message,
-      });
-      loadData();
-      await refreshSyncStatus(true);
-    } catch (err: any) {
-      setSyncFeedback({
-        type: "error",
-        message: err.response?.data?.detail || "Erro ao sincronizar comprovantes com o Google Drive.",
-      });
-    } finally {
-      setSyncingDrive(false);
-    }
-  };
-
-  const handleSaveDriveFolder = async (e: React.FormEvent) => {
+  const handleSaveStorageDir = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!driveFolderInput.trim()) return;
+    if (!customDirInput.trim()) return;
 
-    setSavingDriveFolder(true);
+    setSavingCustomDir(true);
     setSyncFeedback(null);
     try {
-      const res = await api.post<DriveFolderConfigResponse>("/attachments/drive-folder", {
-        folder_id_or_url: driveFolderInput.trim(),
+      const res = await api.post<StorageDirectoryConfigResponse>("/attachments/storage-dir", {
+        directory_path: customDirInput.trim(),
+        migrate_existing: migrateFilesCheckbox,
       });
       setSyncFeedback({
         type: "success",
-        message: res.data.message || "Pasta do Google Drive configurada com sucesso!",
+        message: res.data.message || "Diretório de armazenamento configurado com sucesso!",
+        details: res.data.migrated_count > 0 ? `${res.data.migrated_count} comprovante(s) migrado(s) para o novo diretório.` : undefined,
       });
       loadData();
       await refreshSyncStatus(true);
     } catch (err: any) {
       setSyncFeedback({
         type: "error",
-        message: err.response?.data?.detail || "Erro ao configurar pasta do Google Drive.",
+        message: err.response?.data?.detail || "Erro ao configurar diretório de armazenamento.",
       });
     } finally {
-      setSavingDriveFolder(false);
+      setSavingCustomDir(false);
     }
   };
 
-  const handleResetDriveFolder = async () => {
-    if (!confirm("Deseja realmente desvincular a pasta personalizada do Google Drive?")) return;
+  const handleResetStorageDir = async () => {
+    if (!confirm("Deseja realmente restaurar o diretório de armazenamento para o padrão original do Wallet?")) return;
+    setResettingCustomDir(true);
     try {
-      await api.delete("/attachments/drive-folder");
-      setDriveFolderInput("");
+      const res = await api.post<StorageDirectoryConfigResponse>("/attachments/storage-dir/reset");
+      setCustomDirInput(res.data.active_directory);
       setSyncFeedback({
         type: "success",
-        message: "Configuração de pasta do Google Drive redefinida para o padrão.",
+        message: "Diretório de armazenamento restaurado para o padrão original.",
       });
       loadData();
     } catch (err: any) {
       setSyncFeedback({
         type: "error",
-        message: err.response?.data?.detail || "Erro ao redefinir pasta.",
+        message: err.response?.data?.detail || "Erro ao restaurar diretório padrão.",
       });
+    } finally {
+      setResettingCustomDir(false);
     }
   };
 
@@ -2586,38 +2573,57 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
               </div>
             </div>
 
-            {/* Seção de Backup de Comprovantes no Google Drive */}
+            {/* Seção de Armazenamento de Anexos & Comprovantes */}
             <div className="col-span-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-                    <Cloud className="w-5 h-5" />
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                    <HardDrive className="w-5 h-5" />
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      <span>Backup de Comprovantes no Google Drive</span>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                        Local-First
-                      </span>
+                      <span>Armazenamento de Anexos &amp; Comprovantes</span>
+                      {attachmentStats?.is_custom_directory ? (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800">
+                          Diretório Personalizado
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                          Diretório Padrão
+                        </span>
+                      )}
+                      {attachmentStats?.is_writable ? (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          <span>Gravável &amp; Ativo</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          <span>Sem permissão de escrita</span>
+                        </span>
+                      )}
                     </h3>
                     <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Os arquivos são salvos instantaneamente no disco local e sincronizados de forma segura no Google Drive da sua conta de serviço.
+                      Defina a pasta exata no computador/servidor (disco local, HD externo ou pasta sincronizada) para gravar e ler fotos de recibos e PDFs.
                     </p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleSyncAllDrive}
-                  disabled={syncingDrive || !syncConfig?.has_credentials}
-                  className="px-4 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-xl shadow-md shadow-sky-600/20 transition-all flex items-center gap-2"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${syncingDrive ? "animate-spin" : ""}`} />
-                  <span>Sincronizar Comprovantes com o Drive</span>
-                </button>
+                {attachmentStats?.is_custom_directory && (
+                  <button
+                    type="button"
+                    onClick={handleResetStorageDir}
+                    disabled={resettingCustomDir}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-all flex items-center gap-1.5"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${resettingCustomDir ? "animate-spin" : ""}`} />
+                    <span>Restaurar Diretório Padrão</span>
+                  </button>
+                )}
               </div>
 
-              {/* Métricas de Comprovantes */}
+              {/* Métricas de Armazenamento */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
                 <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-xl">
                   <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
@@ -2635,7 +2641,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                   <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
                     <span className="flex items-center gap-1.5 font-semibold">
                       <HardDrive className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>Armazenamento Local</span>
+                      <span>Espaço Usado</span>
                     </span>
                   </div>
                   <p className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
@@ -2646,102 +2652,80 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-xl">
                   <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
                     <span className="flex items-center gap-1.5 font-semibold">
-                      <Cloud className="w-3.5 h-3.5 text-sky-500" />
-                      <span>No Google Drive</span>
+                      <Database className="w-3.5 h-3.5 text-sky-500" />
+                      <span>Espaço Livre em Disco</span>
                     </span>
                   </div>
                   <p className="text-lg font-black font-mono text-sky-600 dark:text-sky-400">
-                    {attachmentStats?.synced_count || 0}
+                    {attachmentStats?.formatted_free_space || "Disponível"}
                   </p>
                 </div>
 
-                <div className={`p-3.5 rounded-xl border transition-all ${
-                  (attachmentStats?.pending_count || 0) > 0
-                    ? "bg-amber-50/80 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-100"
-                    : "bg-zinc-50 dark:bg-zinc-800/40 border-zinc-200/70 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
-                }`}>
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400">
-                      <AlertCircle className="w-3.5 h-3.5" />
-                      <span>Backup Pendente</span>
+                <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-xl">
+                  <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                    <span className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Status de Leitura</span>
                     </span>
                   </div>
-                  <p className="text-lg font-black font-mono text-amber-600 dark:text-amber-400">
-                    {attachmentStats?.pending_count || 0}
+                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                    Pronto &amp; Seguro
                   </p>
                 </div>
               </div>
 
-              {/* Configuração da Pasta do Google Drive */}
+              {/* Formulário de Configuração de Diretório Customizado */}
               <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FolderTree className="w-4 h-4 text-sky-500" />
+                    <FolderTree className="w-4 h-4 text-emerald-500" />
                     <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                      Pasta no seu Google Drive (Solução de Quota / Armazenamento)
+                      Caminho da Pasta de Armazenamento
                     </h4>
                   </div>
-                  {attachmentStats?.drive_folder_id && (
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={attachmentStats.drive_folder_url || `https://drive.google.com/drive/folders/${attachmentStats.drive_folder_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2.5 py-1 text-[11px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 border border-sky-200 dark:border-sky-800 rounded-lg transition-all flex items-center gap-1"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        <span>Abrir no Drive</span>
-                      </a>
-                      <button
-                        type="button"
-                        onClick={handleResetDriveFolder}
-                        className="px-2 py-1 text-[11px] font-semibold text-zinc-500 hover:text-rose-600 rounded-lg transition-all"
-                      >
-                        Desvincular
-                      </button>
-                    </div>
-                  )}
+                  <span className="text-[11px] text-zinc-400 font-mono">
+                    {attachmentStats?.active_directory}
+                  </span>
                 </div>
 
-                <form onSubmit={handleSaveDriveFolder} className="flex flex-col sm:flex-row items-stretch gap-2">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      placeholder="Cole o Link ou ID da pasta no seu Google Drive (ex: https://drive.google.com/drive/folders/1abc...)"
-                      value={driveFolderInput}
-                      onChange={(e) => setDriveFolderInput(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:border-sky-500 font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
-                    />
+                <form onSubmit={handleSaveStorageDir} className="space-y-3">
+                  <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: /home/usuario/meus_anexos ou D:\Wallet\Comprovantes"
+                        value={customDirInput}
+                        onChange={(e) => setCustomDirInput(e.target.value)}
+                        className="w-full px-3.5 py-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:border-emerald-500 font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={savingCustomDir || !customDirInput.trim()}
+                      className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 shrink-0"
+                    >
+                      {savingCustomDir ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      <span>Salvar e Aplicar Pasta</span>
+                    </button>
                   </div>
-                  <button
-                    type="submit"
-                    disabled={savingDriveFolder || !driveFolderInput.trim()}
-                    className="px-4 py-2 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 shrink-0"
-                  >
-                    {savingDriveFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                    <span>Salvar Pasta</span>
-                  </button>
-                </form>
 
-                {/* Status da Pasta */}
-                {attachmentStats?.drive_folder_id ? (
-                  <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    <span>
-                      Pasta Vinculada: <strong>{attachmentStats.drive_folder_name || "Pasta Google Drive"}</strong> (ID: <code>{attachmentStats.drive_folder_id}</code>)
+                  <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={migrateFilesCheckbox}
+                        onChange={(e) => setMigrateFilesCheckbox(e.target.checked)}
+                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-zinc-300 dark:border-zinc-700"
+                      />
+                      <span>Copiar comprovantes existentes automaticamente para a nova pasta</span>
+                    </label>
+
+                    <span className="text-[11px] text-zinc-400">
+                      Suporte: JPG, PNG, WEBP, PDF, HEIC até 15MB
                     </span>
                   </div>
-                ) : (
-                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl text-[11px] text-amber-800 dark:text-amber-300 space-y-1">
-                    <p className="font-bold flex items-center gap-1">
-                      <Info className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                      <span>Por que especificar uma pasta compartilhada?</span>
-                    </p>
-                    <p className="opacity-90">
-                      As contas de serviço (Service Accounts) possuem <strong>0 bytes de quota própria</strong> no Google Drive. Ao criar uma pasta no seu Google Drive pessoal (ex: <em>"Wallet Comprovantes"</em>), compartilhá-la com o e-mail da sua Service Account (<strong>{syncConfig?.service_account_email || "service account"}</strong>) como <strong>Editor</strong> e colar o link acima, os comprovantes consumirão o espaço do seu Drive e aparecerão diretamente na sua conta!
-                    </p>
-                  </div>
-                )}
+                </form>
               </div>
             </div>
           </div>

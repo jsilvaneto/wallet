@@ -224,29 +224,25 @@ export interface AttachmentStats {
   total_count: number;
   total_size_bytes: number;
   formatted_total_size: string;
+  active_directory: string;
+  default_directory: string;
+  is_custom_directory: boolean;
+  is_writable: boolean;
+  free_space_bytes?: number | null;
+  formatted_free_space?: string | null;
   synced_count: number;
   pending_count: number;
   error_count: number;
-  drive_connected: boolean;
-  drive_folder_id?: string | null;
-  drive_folder_url?: string | null;
-  drive_folder_name?: string | null;
 }
 
-export interface DriveFolderConfigResponse {
-  folder_id?: string | null;
-  folder_url?: string | null;
-  folder_name?: string | null;
-  is_valid: boolean;
+export interface StorageDirectoryConfigResponse {
+  active_directory: string;
+  default_directory: string;
+  is_custom: boolean;
+  is_writable: boolean;
+  free_space_bytes?: number | null;
+  formatted_free_space?: string | null;
+  migrated_count: number;
   message: string;
-}
-
-export interface DriveSyncTriggerResponse {
-  success: boolean;
-  message: string;
-  total_processed: number;
-  synced_count: number;
-  failed_count: number;
-  errors: string[];
 }
 

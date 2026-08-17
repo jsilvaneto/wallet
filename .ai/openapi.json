@@ -3097,7 +3097,7 @@
           "Anexos e Comprovantes"
         ],
         "summary": "Upload Attachment",
-        "description": "Realiza o upload imediato e seguro do comprovante para o disco local (< 50ms)\ne agenda em segundo plano o backup assíncrono para o Google Drive.",
+        "description": "Realiza o upload imediato e seguro do comprovante para o diretório de armazenamento configurado (< 50ms).",
         "operationId": "upload_attachment_api_v1_attachments_upload_post",
         "requestBody": {
           "content": {
@@ -3251,7 +3251,7 @@
           "Anexos e Comprovantes"
         ],
         "summary": "Get Attachment Statistics",
-        "description": "Retorna métricas de armazenamento local e status do Google Drive.",
+        "description": "Retorna métricas de armazenamento local e status do diretório.",
         "operationId": "get_attachment_statistics_api_v1_attachments_stats_get",
         "security": [
           {
@@ -3302,6 +3302,105 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/attachments/storage-dir": {
+      "get": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Get Storage Directory Info",
+        "description": "Retorna informações detalhadas do diretório de armazenamento ativo.",
+        "operationId": "get_storage_directory_info_api_v1_attachments_storage_dir_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageDirectoryConfigResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Configure Storage Directory",
+        "description": "Define um novo diretório de armazenamento e opcionalmente migra os comprovantes existentes.",
+        "operationId": "configure_storage_directory_api_v1_attachments_storage_dir_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorageDirectoryConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageDirectoryConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/attachments/storage-dir/reset": {
+      "post": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Reset Storage Directory Endpoint",
+        "description": "Restaura o diretório de armazenamento para o padrão original.",
+        "operationId": "reset_storage_directory_endpoint_api_v1_attachments_storage_dir_reset_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageDirectoryConfigResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
       }
     },
     "/api/v1/attachments/{attachment_id}": {
@@ -3356,7 +3455,7 @@
           "Anexos e Comprovantes"
         ],
         "summary": "Remove Attachment",
-        "description": "Exclui o anexo do banco, apaga o arquivo do disco local e agenda remoção no Google Drive.",
+        "description": "Exclui o anexo do banco e apaga o arquivo físico do disco.",
         "operationId": "remove_attachment_api_v1_attachments__attachment_id__delete",
         "security": [
           {
@@ -3402,7 +3501,7 @@
           "Anexos e Comprovantes"
         ],
         "summary": "Preview Attachment File",
-        "description": "Serve o arquivo binário localmente com headers inline para exibição direta no navegador\n(fotos, recibos e PDFs).",
+        "description": "Serve o arquivo binário com headers inline para exibição direta no navegador\n(fotos, recibos e PDFs).",
         "operationId": "preview_attachment_file_api_v1_attachments__attachment_id__file_get",
         "parameters": [
           {
@@ -3476,103 +3575,6 @@
             }
           }
         }
-      }
-    },
-    "/api/v1/attachments/sync-drive": {
-      "post": {
-        "tags": [
-          "Anexos e Comprovantes"
-        ],
-        "summary": "Trigger Drive Sync",
-        "description": "Dispara a sincronização/backup de todos os comprovantes pendentes para o Google Drive.",
-        "operationId": "trigger_drive_sync_api_v1_attachments_sync_drive_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DriveSyncTriggerResponse"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/attachments/drive-folder": {
-      "post": {
-        "tags": [
-          "Anexos e Comprovantes"
-        ],
-        "summary": "Configure Drive Folder",
-        "description": "Configura e valida a pasta compartilhada do Google Drive onde os comprovantes serão salvos.",
-        "operationId": "configure_drive_folder_api_v1_attachments_drive_folder_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DriveFolderConfigRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DriveFolderConfigResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
-      },
-      "delete": {
-        "tags": [
-          "Anexos e Comprovantes"
-        ],
-        "summary": "Reset Drive Folder",
-        "description": "Remove a pasta customizada do Google Drive e restaura o padrão automático.",
-        "operationId": "reset_drive_folder_api_v1_attachments_drive_folder_delete",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "OAuth2PasswordBearer": []
-          }
-        ]
       }
     },
     "/api/health": {
@@ -3895,6 +3897,48 @@
             "title": "Formatted Total Size",
             "default": "0 B"
           },
+          "active_directory": {
+            "type": "string",
+            "title": "Active Directory",
+            "default": ""
+          },
+          "default_directory": {
+            "type": "string",
+            "title": "Default Directory",
+            "default": ""
+          },
+          "is_custom_directory": {
+            "type": "boolean",
+            "title": "Is Custom Directory",
+            "default": false
+          },
+          "is_writable": {
+            "type": "boolean",
+            "title": "Is Writable",
+            "default": true
+          },
+          "free_space_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Space Bytes"
+          },
+          "formatted_free_space": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formatted Free Space"
+          },
           "synced_count": {
             "type": "integer",
             "title": "Synced Count",
@@ -3909,44 +3953,6 @@
             "type": "integer",
             "title": "Error Count",
             "default": 0
-          },
-          "drive_connected": {
-            "type": "boolean",
-            "title": "Drive Connected",
-            "default": false
-          },
-          "drive_folder_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Drive Folder Id"
-          },
-          "drive_folder_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Drive Folder Url"
-          },
-          "drive_folder_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Drive Folder Name"
           }
         },
         "type": "object",
@@ -4887,109 +4893,6 @@
         "type": "object",
         "title": "DebtUpdate"
       },
-      "DriveFolderConfigRequest": {
-        "properties": {
-          "folder_id_or_url": {
-            "type": "string",
-            "title": "Folder Id Or Url",
-            "description": "ID ou Link da pasta no Google Drive"
-          }
-        },
-        "type": "object",
-        "required": [
-          "folder_id_or_url"
-        ],
-        "title": "DriveFolderConfigRequest"
-      },
-      "DriveFolderConfigResponse": {
-        "properties": {
-          "folder_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Folder Id"
-          },
-          "folder_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Folder Url"
-          },
-          "folder_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Folder Name"
-          },
-          "is_valid": {
-            "type": "boolean",
-            "title": "Is Valid",
-            "default": false
-          },
-          "message": {
-            "type": "string",
-            "title": "Message",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "title": "DriveFolderConfigResponse"
-      },
-      "DriveSyncTriggerResponse": {
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "title": "Success"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          },
-          "total_processed": {
-            "type": "integer",
-            "title": "Total Processed",
-            "default": 0
-          },
-          "synced_count": {
-            "type": "integer",
-            "title": "Synced Count",
-            "default": 0
-          },
-          "failed_count": {
-            "type": "integer",
-            "title": "Failed Count",
-            "default": 0
-          },
-          "errors": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Errors"
-          }
-        },
-        "type": "object",
-        "required": [
-          "success",
-          "message"
-        ],
-        "title": "DriveSyncTriggerResponse"
-      },
       "GoalCreate": {
         "properties": {
           "title": {
@@ -5720,6 +5623,86 @@
         },
         "type": "object",
         "title": "ScheduleUpdate"
+      },
+      "StorageDirectoryConfigRequest": {
+        "properties": {
+          "directory_path": {
+            "type": "string",
+            "title": "Directory Path",
+            "description": "Caminho absoluto do diretório onde os anexos serão gravados e lidos"
+          },
+          "migrate_existing": {
+            "type": "boolean",
+            "title": "Migrate Existing",
+            "description": "Se verdadeiro, copia os arquivos existentes do diretório antigo para o novo",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "directory_path"
+        ],
+        "title": "StorageDirectoryConfigRequest"
+      },
+      "StorageDirectoryConfigResponse": {
+        "properties": {
+          "active_directory": {
+            "type": "string",
+            "title": "Active Directory"
+          },
+          "default_directory": {
+            "type": "string",
+            "title": "Default Directory"
+          },
+          "is_custom": {
+            "type": "boolean",
+            "title": "Is Custom"
+          },
+          "is_writable": {
+            "type": "boolean",
+            "title": "Is Writable"
+          },
+          "free_space_bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Space Bytes"
+          },
+          "formatted_free_space": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Formatted Free Space"
+          },
+          "migrated_count": {
+            "type": "integer",
+            "title": "Migrated Count",
+            "default": 0
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "active_directory",
+          "default_directory",
+          "is_custom",
+          "is_writable",
+          "message"
+        ],
+        "title": "StorageDirectoryConfigResponse"
       },
       "SyncConfigResponse": {
         "properties": {
