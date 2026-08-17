@@ -29,6 +29,7 @@ export type SettingsTab =
   | "DIVIDAS" 
   | "ORCAMENTOS" 
   | "SYNC" 
+  | "ANEXOS" 
   | "USUARIOS" 
   | "APARENCIA";
 
@@ -190,6 +191,11 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // ==========================================
+  // ESTADO DE NAVEGAÇÃO DA SIDEBAR
+  // ==========================================
+  const [tabSearch, setTabSearch] = useState("");
+
+  // ==========================================
   // CARREGAMENTO DE DADOS CONFORME ABA ATIVA
   // ==========================================
   const loadData = async () => {
@@ -239,24 +245,27 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       } else if (activeTab === "SYNC") {
         setLoadingSyncConfig(true);
         setLoadingSyncLogs(true);
-        const [cfgRes, logRes, attRes] = await Promise.all([
+        const [cfgRes, logRes] = await Promise.all([
           api.get<SyncConfig>("/sync/config"),
           api.get<SyncLog[]>("/sync/logs"),
-          api.get<AttachmentStats>("/attachments/stats", { params: { profile } }).catch(() => ({ data: null })),
         ]);
         setSyncConfig(cfgRes.data);
         if (cfgRes.data.spreadsheet_id) {
           setSpreadsheetId(cfgRes.data.spreadsheet_id);
         }
         setSyncLogs(logRes.data);
-        if (attRes && attRes.data) {
+        setLoadingSyncConfig(false);
+        setLoadingSyncLogs(false);
+      } else if (activeTab === "ANEXOS") {
+        try {
+          const attRes = await api.get<AttachmentStats>("/attachments/stats", { params: { profile } });
           setAttachmentStats(attRes.data);
           if (attRes.data.active_directory) {
             setCustomDirInput(attRes.data.active_directory);
           }
+        } catch (err) {
+          console.error("Erro ao carregar estatísticas de armazenamento:", err);
         }
-        setLoadingSyncConfig(false);
-        setLoadingSyncLogs(false);
       }
     } catch (err) {
       console.error("Erro ao carregar dados em Configurações:", err);
@@ -971,18 +980,63 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
-  // Configuração das 9 Abas de Configurações
-  const SETTINGS_TABS = [
-    { id: "CATEGORIAS", label: "Categorias", icon: FolderTree },
-    { id: "ITENS", label: "Itens", icon: Package },
-    { id: "CONTAS", label: "Contas & Carteiras", icon: Landmark },
-    { id: "CONTATOS", label: "Contatos", icon: Users },
-    { id: "DIVIDAS", label: "Dívidas", icon: Scale },
-    { id: "ORCAMENTOS", label: "Orçamentos", icon: PiggyBank },
-    { id: "SYNC", label: "Sincronização Nuvem", icon: Cloud },
-    { id: "USUARIOS", label: "Usuários", icon: ShieldCheck },
-    { id: "APARENCIA", label: "Aparência", icon: Palette },
-  ] as const;
+  // Configuração das 10 Abas Agrupadas por Domínio
+  interface SettingsTabItem {
+    id: SettingsTab;
+    label: string;
+    shortDescription: string;
+    icon: React.ComponentType<{ className?: string }>;
+  }
+
+  interface SettingsGroup {
+    id: string;
+    title: string;
+    tabs: SettingsTabItem[];
+  }
+
+  const SETTINGS_GROUPS: SettingsGroup[] = [
+    {
+      id: "financeiro",
+      title: "Cadastros Financeiros",
+      tabs: [
+        { id: "CATEGORIAS", label: "Categorias", shortDescription: "Classificação & essencialidade", icon: FolderTree },
+        { id: "ITENS", label: "Itens Rápidos", shortDescription: "Valores padrão sugeridos", icon: Package },
+        { id: "CONTAS", label: "Contas & Carteiras", shortDescription: "Bancos, caixas e cartões", icon: Landmark },
+        { id: "CONTATOS", label: "Contatos", shortDescription: "Clientes e fornecedores", icon: Users },
+        { id: "DIVIDAS", label: "Dívidas & Passivos", shortDescription: "Controle e amortização", icon: Scale },
+        { id: "ORCAMENTOS", label: "Orçamentos & Metas", shortDescription: "Tetos e limites mensais", icon: PiggyBank },
+      ],
+    },
+    {
+      id: "integracao",
+      title: "Dados & Arquivos",
+      tabs: [
+        { id: "SYNC", label: "Sincronização Nuvem", shortDescription: "Espelho Google Sheets", icon: Cloud },
+        { id: "ANEXOS", label: "Comprovantes & Anexos", shortDescription: "Armazenamento no disco", icon: HardDrive },
+      ],
+    },
+    {
+      id: "sistema",
+      title: "Sistema & Preferências",
+      tabs: [
+        { id: "USUARIOS", label: "Gestão de Usuários", shortDescription: "Acesso e permissões", icon: ShieldCheck },
+        { id: "APARENCIA", label: "Aparência & Temas", shortDescription: "Cores e modo escuro", icon: Palette },
+      ],
+    },
+  ];
+
+  const filteredGroups = useMemo(() => {
+    if (!tabSearch.trim()) return SETTINGS_GROUPS;
+    const q = tabSearch.toLowerCase();
+    return SETTINGS_GROUPS.map((group) => ({
+      ...group,
+      tabs: group.tabs.filter(
+        (t) =>
+          t.label.toLowerCase().includes(q) ||
+          t.shortDescription.toLowerCase().includes(q)
+      ),
+    })).filter((group) => group.tabs.length > 0);
+  }, [tabSearch]);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -991,7 +1045,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
         <div>
           <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
             <SettingsIcon className="w-5 h-5 text-emerald-500" />
-            <span>Configurações & Cadastros</span>
+            <span>Configurações &amp; Cadastros</span>
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             Painel unificado de cadastros mestres, metas orçamentárias, sincronização e preferências ({profile})
@@ -1007,29 +1061,104 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
         </div>
       </div>
 
-      {/* Barra de Navegação das 9 Abas */}
-      <div className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-2xl p-1.5 shadow-sm overflow-x-auto">
-        <div className="flex items-center gap-1.5 min-w-max">
-          {SETTINGS_TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as SettingsTab)}
-                className={`flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap ${
-                  isActive
-                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                    : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </div>
+      {/* Seletor Mobile / Telas Pequenas (< 1024px) */}
+      <div className="block lg:hidden bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3.5 shadow-sm space-y-1.5">
+        <label className="block text-[11px] font-bold text-zinc-500 uppercase tracking-wider">
+          Selecione a Configuração
+        </label>
+        <select
+          value={activeTab}
+          onChange={(e) => setActiveTab(e.target.value as SettingsTab)}
+          className="w-full px-3.5 py-2.5 text-xs font-bold bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emerald-500"
+        >
+          {SETTINGS_GROUPS.map((group) => (
+            <optgroup key={group.id} label={group.title}>
+              {group.tabs.map((tab) => (
+                <option key={tab.id} value={tab.id}>
+                  {tab.label} — {tab.shortDescription}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
       </div>
+
+      {/* Grid Principal: Sidebar Fixa (Desktop) + Conteúdo Ativo */}
+      <div className="grid grid-cols-1 lg:grid-cols-[270px_1fr] items-start gap-6">
+        {/* Sidebar Desktop */}
+        <aside className="hidden lg:block bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 shadow-sm space-y-4 sticky top-6">
+          {/* Campo de Busca Rápida */}
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar aba ou ajuste..."
+              value={tabSearch}
+              onChange={(e) => setTabSearch(e.target.value)}
+              className="w-full pl-8 pr-7 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 transition-all"
+            />
+            {tabSearch && (
+              <button
+                type="button"
+                onClick={() => setTabSearch("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Lista de Grupos e Abas */}
+          <nav className="space-y-4 max-h-[calc(100vh-210px)] overflow-y-auto pr-1">
+            {filteredGroups.map((group) => (
+              <div key={group.id} className="space-y-1">
+                <h4 className="px-2.5 text-[10px] font-extrabold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                  {group.title}
+                </h4>
+                <div className="space-y-0.5">
+                  {group.tabs.map((tab) => {
+                    const Icon = tab.icon;
+                    const isActive = activeTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`w-full text-left flex items-center justify-between px-3 py-2 rounded-xl transition-all ${
+                          isActive
+                            ? "bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/20"
+                            : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-zinc-100"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Icon className={`w-4 h-4 shrink-0 ${isActive ? "text-white" : "text-zinc-400"}`} />
+                          <div className="min-w-0">
+                            <p className="text-xs truncate">{tab.label}</p>
+                            <p className={`text-[10px] truncate font-normal ${isActive ? "text-emerald-100" : "text-zinc-400"}`}>
+                              {tab.shortDescription}
+                            </p>
+                          </div>
+                        </div>
+                        {isActive && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white shrink-0 ml-1.5" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {filteredGroups.length === 0 && (
+              <div className="p-4 text-center text-xs text-zinc-400">
+                Nenhuma configuração encontrada para "{tabSearch}".
+              </div>
+            )}
+          </nav>
+        </aside>
+
+        {/* Conteúdo da Aba Ativa */}
+        <main className="min-w-0">
 
       {/* ========================================== */}
       {/* ABA 1: CATEGORIAS                          */}
@@ -2572,160 +2701,217 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
 
-            {/* Seção de Armazenamento de Anexos & Comprovantes */}
-            <div className="col-span-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                    <HardDrive className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                      <span>Armazenamento de Anexos &amp; Comprovantes</span>
-                      {attachmentStats?.is_custom_directory ? (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800">
-                          Diretório Personalizado
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-                          Diretório Padrão
-                        </span>
-                      )}
-                      {attachmentStats?.is_writable ? (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>Gravável &amp; Ativo</span>
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1">
-                          <AlertCircle className="w-3 h-3" />
-                          <span>Sem permissão de escrita</span>
-                        </span>
-                      )}
-                    </h3>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                      Defina a pasta exata no computador/servidor (disco local, HD externo ou pasta sincronizada) para gravar e ler fotos de recibos e PDFs.
-                    </p>
-                  </div>
+      {/* ========================================== */}
+      {/* ABA 8: ARMAZENAMENTO & COMPROVANTES        */}
+      {/* ========================================== */}
+      {activeTab === "ANEXOS" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Header da Aba de Armazenamento */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-sm shrink-0">
+                  <HardDrive className="w-6 h-6" />
                 </div>
-
-                {attachmentStats?.is_custom_directory && (
-                  <button
-                    type="button"
-                    onClick={handleResetStorageDir}
-                    disabled={resettingCustomDir}
-                    className="px-3.5 py-1.5 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-all flex items-center gap-1.5"
-                  >
-                    <RefreshCw className={`w-3 h-3 ${resettingCustomDir ? "animate-spin" : ""}`} />
-                    <span>Restaurar Diretório Padrão</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Métricas de Armazenamento */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-xl">
-                  <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-                    <span className="flex items-center gap-1.5 font-semibold">
-                      <Paperclip className="w-3.5 h-3.5 text-zinc-400" />
-                      <span>Total de Arquivos</span>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 flex flex-wrap items-center gap-2">
+                    <span>Armazenamento de Anexos &amp; Comprovantes</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                      Local-First
                     </span>
-                  </div>
-                  <p className="text-lg font-black font-mono text-zinc-900 dark:text-zinc-100">
-                    {attachmentStats?.total_count || 0}
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-xl">
-                  <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-                    <span className="flex items-center gap-1.5 font-semibold">
-                      <HardDrive className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>Espaço Usado</span>
-                    </span>
-                  </div>
-                  <p className="text-lg font-black font-mono text-emerald-600 dark:text-emerald-400">
-                    {attachmentStats?.formatted_total_size || "0 B"}
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-xl">
-                  <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-                    <span className="flex items-center gap-1.5 font-semibold">
-                      <Database className="w-3.5 h-3.5 text-sky-500" />
-                      <span>Espaço Livre em Disco</span>
-                    </span>
-                  </div>
-                  <p className="text-lg font-black font-mono text-sky-600 dark:text-sky-400">
-                    {attachmentStats?.formatted_free_space || "Disponível"}
-                  </p>
-                </div>
-
-                <div className="p-3.5 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-xl">
-                  <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
-                    <span className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Status de Leitura</span>
-                    </span>
-                  </div>
-                  <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">
-                    Pronto &amp; Seguro
+                    {attachmentStats?.is_custom_directory ? (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800">
+                        Diretório Personalizado
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                        Diretório Padrão
+                      </span>
+                    )}
+                    {attachmentStats?.is_writable ? (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>Gravável &amp; Ativo</span>
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        <span>Sem permissão de escrita</span>
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Defina e gerencie o diretório do computador onde ficam salvos os recibos, fotos e PDFs anexados aos lançamentos ({profile}).
                   </p>
                 </div>
               </div>
 
-              {/* Formulário de Configuração de Diretório Customizado */}
-              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FolderTree className="w-4 h-4 text-emerald-500" />
-                    <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
-                      Caminho da Pasta de Armazenamento
-                    </h4>
-                  </div>
-                  <span className="text-[11px] text-zinc-400 font-mono">
-                    {attachmentStats?.active_directory}
+              {attachmentStats?.is_custom_directory && (
+                <button
+                  type="button"
+                  onClick={handleResetStorageDir}
+                  disabled={resettingCustomDir}
+                  className="px-4 py-2 text-xs font-semibold text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${resettingCustomDir ? "animate-spin" : ""}`} />
+                  <span>Restaurar Diretório Padrão</span>
+                </button>
+              )}
+            </div>
+
+            {/* Métricas de Armazenamento */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-2xl">
+                <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <Paperclip className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Total de Arquivos</span>
                   </span>
                 </div>
+                <p className="text-xl font-black font-mono text-zinc-900 dark:text-zinc-100">
+                  {attachmentStats?.total_count || 0}
+                </p>
+                <p className="text-[10px] text-zinc-400 mt-0.5">Comprovantes cadastrados</p>
+              </div>
 
-                <form onSubmit={handleSaveStorageDir} className="space-y-3">
-                  <div className="flex flex-col sm:flex-row items-stretch gap-2">
-                    <div className="flex-1 relative">
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ex: /home/usuario/meus_anexos ou D:\Wallet\Comprovantes"
-                        value={customDirInput}
-                        onChange={(e) => setCustomDirInput(e.target.value)}
-                        className="w-full px-3.5 py-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:border-emerald-500 font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={savingCustomDir || !customDirInput.trim()}
-                      className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 shrink-0"
-                    >
-                      {savingCustomDir ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                      <span>Salvar e Aplicar Pasta</span>
-                    </button>
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-2xl">
+                <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <HardDrive className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Espaço Ocupado</span>
+                  </span>
+                </div>
+                <p className="text-xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  {attachmentStats?.formatted_total_size || "0 B"}
+                </p>
+                <p className="text-[10px] text-zinc-400 mt-0.5">Em disco no Wallet</p>
+              </div>
+
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-2xl">
+                <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                  <span className="flex items-center gap-1.5 font-semibold">
+                    <Database className="w-3.5 h-3.5 text-sky-500" />
+                    <span>Espaço Livre em Disco</span>
+                  </span>
+                </div>
+                <p className="text-xl font-black font-mono text-sky-600 dark:text-sky-400">
+                  {attachmentStats?.formatted_free_space || "Disponível"}
+                </p>
+                <p className="text-[10px] text-zinc-400 mt-0.5">Na partição atual</p>
+              </div>
+
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 rounded-2xl">
+                <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                  <span className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Status do Sistema</span>
+                  </span>
+                </div>
+                <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                  Pronto &amp; Seguro
+                </p>
+                <p className="text-[10px] text-zinc-400 mt-0.5">Leitura instantânea (&lt; 50ms)</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Card Principal de Configuração de Diretório */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div className="flex items-center gap-2">
+                <FolderTree className="w-4 h-4 text-emerald-500" />
+                <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Definir Pasta / Diretório de Armazenamento
+                </h4>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400 font-mono">
+                <span className="font-sans font-semibold text-zinc-400">Diretório Atual:</span>
+                <span className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 rounded-lg">
+                  {attachmentStats?.active_directory || customDirInput}
+                </span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveStorageDir} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                  Caminho Completo da Pasta (Absoluto)
+                </label>
+                <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: /home/usuario/meus_anexos ou D:\Wallet\Comprovantes ou /mnt/backup/wallet"
+                      value={customDirInput}
+                      onChange={(e) => setCustomDirInput(e.target.value)}
+                      className="w-full px-4 py-2.5 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:border-emerald-500 font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 shadow-inner"
+                    />
                   </div>
+                  <button
+                    type="submit"
+                    disabled={savingCustomDir || !customDirInput.trim()}
+                    className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 shrink-0"
+                  >
+                    {savingCustomDir ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                    <span>Salvar e Aplicar Pasta</span>
+                  </button>
+                </div>
+              </div>
 
-                  <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={migrateFilesCheckbox}
-                        onChange={(e) => setMigrateFilesCheckbox(e.target.checked)}
-                        className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-zinc-300 dark:border-zinc-700"
-                      />
-                      <span>Copiar comprovantes existentes automaticamente para a nova pasta</span>
-                    </label>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/40 rounded-xl border border-zinc-200/70 dark:border-zinc-800">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={migrateFilesCheckbox}
+                    onChange={(e) => setMigrateFilesCheckbox(e.target.checked)}
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-zinc-300 dark:border-zinc-700"
+                  />
+                  <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                    Copiar comprovantes existentes automaticamente para a nova pasta ao salvar
+                  </span>
+                </label>
 
-                    <span className="text-[11px] text-zinc-400">
-                      Suporte: JPG, PNG, WEBP, PDF, HEIC até 15MB
-                    </span>
-                  </div>
-                </form>
+                <span className="text-[11px] text-zinc-400">
+                  Formatos: JPG, PNG, WEBP, HEIC, PDF até 15MB
+                </span>
+              </div>
+            </form>
+
+            {/* Informações e Recomendações de Armazenamento */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+              <div className="p-3.5 bg-zinc-50/70 dark:bg-zinc-800/30 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
+                <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                  <FolderTree className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Estrutura Organizada</span>
+                </p>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  Os arquivos são particionados automaticamente em <code>{'{perfil}/{ano}/{mes}/'}</code> para facilitar auditorias e backups externos.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-zinc-50/70 dark:bg-zinc-800/30 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
+                <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                  <HardDrive className="w-3.5 h-3.5 text-sky-500" />
+                  <span>Drives &amp; Nuvem Local</span>
+                </p>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  Você pode apontar para pastas sincronizadas pelo app do Google Drive Desktop, OneDrive, Dropbox ou HDs externos.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-zinc-50/70 dark:bg-zinc-800/30 border border-zinc-200/60 dark:border-zinc-800 rounded-xl space-y-1">
+                <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Segurança &amp; Fallback</span>
+                </p>
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                  O Wallet valida permissões de gravação antes de alterar e mantém fallback transparente caso arquivos antigos ainda estejam no local original.
+                </p>
               </div>
             </div>
           </div>
@@ -2733,7 +2919,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       )}
 
       {/* ========================================== */}
-      {/* ABA 8: GESTÃO DE USUÁRIOS                  */}
+      {/* ABA 9: GESTÃO DE USUÁRIOS                  */}
       {/* ========================================== */}
       {activeTab === "USUARIOS" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
@@ -3580,6 +3766,8 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
           </div>
         </div>
       )}
+        </main>
+      </div>
 
       {/* Modal Interativo com Guia Passo a Passo Completo */}
       <SyncSetupGuideModal

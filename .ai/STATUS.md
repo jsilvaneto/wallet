@@ -32,7 +32,7 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
 
 - [x] **Navegação & Painel de Configurações Unificado**:
   - [x] Barra superior com 3 seções principais: **Dashboard**, **Lançamentos** e **Configurações**.
-  - [x] Painel de **Configurações & Cadastros** com 9 abas integradas:
+  - [x] Painel de **Configurações & Cadastros** com 10 abas integradas:
     - `Categorias` (Gestão de categorias planas com classificação de essencialidade/natureza)
     - `Itens` (Cadastro de itens rápidos com valores sugeridos para lançamentos)
     - `Contas & Carteiras` (Contas correntes, poupanças, investimentos e caixas)
@@ -40,6 +40,7 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - `Dívidas & Passivos` (Controle de passivos com barra de amortização progressiva)
     - `Orçamentos & Metas` (Tetos mensais por categoria com alertas de consumo normal, atenção e estourado)
     - `Sincronização Nuvem` (Configuração e espelhamento em 8 abas no Google Sheets)
+    - `Comprovantes & Anexos` (Gestão de diretório físico local/rede, migração e métricas de armazenamento)
     - `Gestão de Usuários` (Cadastro seguro de novos usuários e controle de acesso)
     - `Aparência & Temas` (Alternância de tema claro/escuro global e tema da tela de login)
   - [x] **Ordenação Alfabética Obrigatória (A a Z)** aplicada a todas as listagens e menus suspensos (Categorias, Itens, Contas, Contatos, Dívidas, Orçamentos e Usuários).
