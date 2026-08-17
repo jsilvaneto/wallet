@@ -61,8 +61,9 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - [x] Endpoint `GET /api/v1/sync/status` calculando pendências de envio (`pending_send`), recebimento da fila (`pending_receive`) e total.
     - [x] Botão dinâmico no cabeçalho com badges visuais (`↑ Envio`, `↓ Recebimento`), indicador pulsante de atenção e estado de sincronização.
     - [x] Menu / Popover interativo com detalhamento de dados locais vs. fila móvel, horário da última sincronização e atalhos rápidos (*Sincronizar Tudo*, *Apenas Enviar*, *Apenas Receber*).
-    - [x] Painel de status em tempo real com cartões de envio/recebimento na aba **Configurações > Sincronização Nuvem**.
     - [x] Atualização automática após criação, liquidação, edição e exclusão de transações.
+    - [x] **Desacoplamento de Pendências de Planilha vs. Google Drive**: Ajuste para que falhas de quota ou pendências de comprovantes no Drive não bloqueiem o status da Planilha Google, mantendo o botão em estado `Atualizado (0 pendências)` quando o espelho de 8 abas estiver 100% sincronizado.
+    - [x] **Limpeza Resiliente da Fila Mobile**: Garantia de limpeza das linhas processadas/duplicadas em `Fila_Mobile` para evitar itens presos indefinidamente.
   - [x] Gerenciamento web das configurações na aba **Configurações > Sincronização Nuvem**.
   - [x] Upload/edição de `credentials.json` (Service Account) e ID da planilha salvos no banco local.
   - [x] Espelhamento automático de **8 abas integradas**:
@@ -98,6 +99,13 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - [x] Modal e lightbox interativo [AttachmentViewerModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/AttachmentViewerModal.tsx) com zoom, rotação, visualizador embutido de PDF, download direto e exclusão.
     - [x] Área de upload no modal de lançamentos [TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx) com miniaturas dos comprovantes carregados antes de salvar.
     - [x] Indicador de clipe 📎 com contagem na tabela de lançamentos [Transactions.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/pages/Transactions.tsx) e abertura instantânea do visualizador.
+
+- [x] **Otimização de Espaço & Layout para Monitores Full HD (1920x1080) e Ultrawide**:
+  - [x] Expansão do contêiner global (`max-w-[1780px] w-full mx-auto px-4 sm:px-6 lg:px-8 xl:px-10`) no cabeçalho [Header.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/Header.tsx) e [App.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/App.tsx), eliminando espaços mortos laterais.
+  - [x] Dashboard com cards de KPI em proporções balanceadas e maiores despesas por categoria distribuídas em grid responsivo de 2 colunas (`grid grid-cols-1 xl:grid-cols-2`).
+  - [x] Tabela de Lançamentos com padding executivo (`py-3.5 px-4 xl:px-6`), cards KPI ampliados e toolbar de períodos e filtros alinhados sem quebras de linha.
+  - [x] Painel de Configurações & Cadastros com sidebar ajustada (`lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]`) e listagens em 2 a 3 colunas responsivas para Categorias, Itens, Contas, Contatos, Dívidas, Orçamentos e Gestão de Usuários.
+  - [x] Modais de Lançamentos ([TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx)) e Visualizador de Anexos ([AttachmentViewerModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/AttachmentViewerModal.tsx)) ampliados para telas de alta resolução.
 
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.

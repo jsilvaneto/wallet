@@ -372,11 +372,16 @@ async def process_mobile_queue(db: AsyncSession, service, spreadsheet_id: str) -
 
     if imported_count > 0:
         await db.commit()
-        # Limpa as linhas processadas da Fila_Mobile (mantendo a linha de cabeçalho A1:O1)
-        service.spreadsheets().values().clear(
-            spreadsheetId=spreadsheet_id,
-            range="Fila_Mobile!A2:O"
-        ).execute()
+
+    # Se havia linhas na fila e foram avaliadas/processadas, limpa a Fila_Mobile para evitar linhas fantasmas presas
+    if rows and (imported_count > 0 or not errors):
+        try:
+            service.spreadsheets().values().clear(
+                spreadsheetId=spreadsheet_id,
+                range="Fila_Mobile!A2:O"
+            ).execute()
+        except Exception as e:
+            errors.append(f"Aviso ao limpar Fila_Mobile: {str(e)}")
 
     return (imported_count, errors)
 
@@ -532,7 +537,7 @@ async def export_sqlite_to_sheets(db: AsyncSession, service, spreadsheet_id: str
             trans.due_date,
             trans.payment_date or "",
             trans.status,
-            trans.sync_status,
+            "SINCRONIZADO",
             trans.notes or "",
             trans.created_at,
             trans.updated_at
@@ -637,13 +642,14 @@ async def check_sync_pending_status(db: AsyncSession, check_remote: bool = True)
         debt_cnt = (await db.execute(select(func.count(Debt.id)))).scalar() or 0
         bud_cnt = (await db.execute(select(func.count(Budget.id)))).scalar() or 0
 
-    # Comprovantes com backup pendente no Drive
+    # Comprovantes com backup pendente no Drive (mantido em details para auditoria)
     pending_att_cnt = (await db.execute(
         select(func.count(Attachment.id)).where(Attachment.sync_status.in_(["PENDENTE", "ERRO"]))
     )).scalar() or 0
 
     master_changes = cat_cnt + item_cnt + acc_cnt + con_cnt + debt_cnt + bud_cnt
-    pending_send = pending_trans_count + master_changes + pending_att_cnt
+    # O total para enviar para o Google Sheets corresponde estritamente às alterações de planilhas (transações e cadastros):
+    pending_send = pending_trans_count + master_changes
 
     # 5. Pendências de Recebimento na Fila Mobile (Google Sheets)
     pending_receive = 0
