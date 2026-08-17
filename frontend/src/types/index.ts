@@ -228,7 +228,17 @@ export interface AttachmentStats {
   pending_count: number;
   error_count: number;
   drive_connected: boolean;
+  drive_folder_id?: string | null;
+  drive_folder_url?: string | null;
   drive_folder_name?: string | null;
+}
+
+export interface DriveFolderConfigResponse {
+  folder_id?: string | null;
+  folder_url?: string | null;
+  folder_name?: string | null;
+  is_valid: boolean;
+  message: string;
 }
 
 export interface DriveSyncTriggerResponse {

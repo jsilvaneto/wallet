@@ -42,7 +42,19 @@ class AttachmentStatsResponse(BaseModel):
     pending_count: int = 0
     error_count: int = 0
     drive_connected: bool = False
+    drive_folder_id: Optional[str] = None
+    drive_folder_url: Optional[str] = None
     drive_folder_name: Optional[str] = None
+
+class DriveFolderConfigRequest(BaseModel):
+    folder_id_or_url: str = Field(..., description="ID ou Link da pasta no Google Drive")
+
+class DriveFolderConfigResponse(BaseModel):
+    folder_id: Optional[str] = None
+    folder_url: Optional[str] = None
+    folder_name: Optional[str] = None
+    is_valid: bool = False
+    message: str = ""
 
 class DriveSyncTriggerResponse(BaseModel):
     success: bool
@@ -51,3 +63,4 @@ class DriveSyncTriggerResponse(BaseModel):
     synced_count: int = 0
     failed_count: int = 0
     errors: list[str] = Field(default_factory=list)
+

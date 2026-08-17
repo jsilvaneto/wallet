@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { 
   Category, Item, Account, AccountType, Contact, Debt, Budget, 
   User, SyncConfig, SyncLog, SyncTestResult, SyncResultResponse,
-  AttachmentStats, DriveSyncTriggerResponse
+  AttachmentStats, DriveSyncTriggerResponse, DriveFolderConfigResponse
 } from "../types";
 import { formatCurrency } from "../utils/format";
 import { SyncSetupGuideModal } from "../components/SyncSetupGuideModal";
@@ -169,6 +169,8 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [importingSync, setImportingSync] = useState(false);
   const [syncingFull, setSyncingFull] = useState(false);
   const [syncingDrive, setSyncingDrive] = useState(false);
+  const [savingDriveFolder, setSavingDriveFolder] = useState(false);
+  const [driveFolderInput, setDriveFolderInput] = useState("");
   const [attachmentStats, setAttachmentStats] = useState<AttachmentStats | null>(null);
   const [savingSyncConfig, setSavingSyncConfig] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: "success" | "error"; message: string; details?: string } | null>(null);
@@ -246,6 +248,9 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
         setSyncLogs(logRes.data);
         if (attRes && attRes.data) {
           setAttachmentStats(attRes.data);
+          if (attRes.data.drive_folder_id) {
+            setDriveFolderInput(attRes.data.drive_folder_id);
+          }
         }
         setLoadingSyncConfig(false);
         setLoadingSyncLogs(false);
@@ -880,6 +885,50 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       });
     } finally {
       setSyncingDrive(false);
+    }
+  };
+
+  const handleSaveDriveFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!driveFolderInput.trim()) return;
+
+    setSavingDriveFolder(true);
+    setSyncFeedback(null);
+    try {
+      const res = await api.post<DriveFolderConfigResponse>("/attachments/drive-folder", {
+        folder_id_or_url: driveFolderInput.trim(),
+      });
+      setSyncFeedback({
+        type: "success",
+        message: res.data.message || "Pasta do Google Drive configurada com sucesso!",
+      });
+      loadData();
+      await refreshSyncStatus(true);
+    } catch (err: any) {
+      setSyncFeedback({
+        type: "error",
+        message: err.response?.data?.detail || "Erro ao configurar pasta do Google Drive.",
+      });
+    } finally {
+      setSavingDriveFolder(false);
+    }
+  };
+
+  const handleResetDriveFolder = async () => {
+    if (!confirm("Deseja realmente desvincular a pasta personalizada do Google Drive?")) return;
+    try {
+      await api.delete("/attachments/drive-folder");
+      setDriveFolderInput("");
+      setSyncFeedback({
+        type: "success",
+        message: "Configuração de pasta do Google Drive redefinida para o padrão.",
+      });
+      loadData();
+    } catch (err: any) {
+      setSyncFeedback({
+        type: "error",
+        message: err.response?.data?.detail || "Erro ao redefinir pasta.",
+      });
     }
   };
 
@@ -2623,17 +2672,76 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 </div>
               </div>
 
-              {/* Informações da Estrutura de Pastas */}
-              <div className="p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-xl border border-zinc-200/60 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <FolderTree className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span>
-                    Pasta no Google Drive: <strong className="text-zinc-800 dark:text-zinc-200">Wallet - Comprovantes / {profile}</strong>
-                  </span>
+              {/* Configuração da Pasta do Google Drive */}
+              <div className="p-4 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <FolderTree className="w-4 h-4 text-sky-500" />
+                    <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                      Pasta no seu Google Drive (Solução de Quota / Armazenamento)
+                    </h4>
+                  </div>
+                  {attachmentStats?.drive_folder_id && (
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={attachmentStats.drive_folder_url || `https://drive.google.com/drive/folders/${attachmentStats.drive_folder_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1 text-[11px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 border border-sky-200 dark:border-sky-800 rounded-lg transition-all flex items-center gap-1"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Abrir no Drive</span>
+                      </a>
+                      <button
+                        type="button"
+                        onClick={handleResetDriveFolder}
+                        className="px-2 py-1 text-[11px] font-semibold text-zinc-500 hover:text-rose-600 rounded-lg transition-all"
+                      >
+                        Desvincular
+                      </button>
+                    </div>
+                  )}
                 </div>
-                <span className="text-[11px] text-zinc-400">
-                  Tipos suportados: Fotos (JPG, PNG, WEBP) e Documentos (PDF) até 15MB
-                </span>
+
+                <form onSubmit={handleSaveDriveFolder} className="flex flex-col sm:flex-row items-stretch gap-2">
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      placeholder="Cole o Link ou ID da pasta no seu Google Drive (ex: https://drive.google.com/drive/folders/1abc...)"
+                      value={driveFolderInput}
+                      onChange={(e) => setDriveFolderInput(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:border-sky-500 font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={savingDriveFolder || !driveFolderInput.trim()}
+                    className="px-4 py-2 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1.5 shrink-0"
+                  >
+                    {savingDriveFolder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                    <span>Salvar Pasta</span>
+                  </button>
+                </form>
+
+                {/* Status da Pasta */}
+                {attachmentStats?.drive_folder_id ? (
+                  <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300 font-medium">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <span>
+                      Pasta Vinculada: <strong>{attachmentStats.drive_folder_name || "Pasta Google Drive"}</strong> (ID: <code>{attachmentStats.drive_folder_id}</code>)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-xl text-[11px] text-amber-800 dark:text-amber-300 space-y-1">
+                    <p className="font-bold flex items-center gap-1">
+                      <Info className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                      <span>Por que especificar uma pasta compartilhada?</span>
+                    </p>
+                    <p className="opacity-90">
+                      As contas de serviço (Service Accounts) possuem <strong>0 bytes de quota própria</strong> no Google Drive. Ao criar uma pasta no seu Google Drive pessoal (ex: <em>"Wallet Comprovantes"</em>), compartilhá-la com o e-mail da sua Service Account (<strong>{syncConfig?.service_account_email || "service account"}</strong>) como <strong>Editor</strong> e colar o link acima, os comprovantes consumirão o espaço do seu Drive e aparecerão diretamente na sua conta!
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

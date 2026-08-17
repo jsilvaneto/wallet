@@ -331,6 +331,22 @@ export const SyncSetupGuideModal: React.FC<SyncSetupGuideModalProps> = ({
                     </p>
                   </div>
                 </div>
+
+                {/* Subpasso Pasta do Google Drive */}
+                <div className="flex items-start gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-700/60 bg-sky-50/50 dark:bg-sky-950/20 -mx-4 px-4 py-3 rounded-xl">
+                  <span className="w-5 h-5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-600 font-bold flex items-center justify-center shrink-0 mt-0.5">5</span>
+                  <div className="flex-1">
+                    <p className="font-semibold text-sky-900 dark:text-sky-200">Criar e Compartilhar a Pasta de Comprovantes no Drive (Essencial)</p>
+                    <p className="text-zinc-600 dark:text-zinc-400 mt-0.5">
+                      Para evitar o erro de <em>"armazenamento esgotado"</em> (pois Service Accounts possuem 0 bytes de quota própria):
+                    </p>
+                    <ul className="list-disc list-inside mt-1.5 space-y-1 text-zinc-600 dark:text-zinc-400">
+                      <li>Acesse o seu <strong>Google Drive</strong> e crie uma pasta (ex: <em>"Wallet Comprovantes"</em>).</li>
+                      <li>Clique em <strong>Compartilhar</strong> na pasta, adicione o e-mail da Service Account e selecione <strong>Editor</strong>.</li>
+                      <li>Copie o link ou ID da pasta para colar no Wallet no Passo 4.</li>
+                    </ul>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -346,7 +362,7 @@ export const SyncSetupGuideModal: React.FC<SyncSetupGuideModalProps> = ({
               </div>
 
               <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                Agora é só colar o ID da planilha e o arquivo JSON no formulário do Wallet para ativar o fluxo completo.
+                Agora é só colar as configurações no formulário do Wallet para ativar o fluxo completo.
               </p>
 
               <div className="space-y-3 bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 text-xs">
@@ -363,9 +379,9 @@ export const SyncSetupGuideModal: React.FC<SyncSetupGuideModalProps> = ({
                 <div className="flex items-start gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-700/60">
                   <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 font-bold flex items-center justify-center shrink-0 mt-0.5">2</span>
                   <div>
-                    <p className="font-semibold text-zinc-800 dark:text-zinc-200">Clique em "Testar Conexão"</p>
+                    <p className="font-semibold text-zinc-800 dark:text-zinc-200">Cole o Link da Pasta do Google Drive</p>
                     <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      O Wallet fará um ping de teste no Google Sheets para confirmar que a Service Account tem permissão de escrita.
+                      No card <em>Backup de Comprovantes no Google Drive</em>, cole o link da pasta criada no Passo 3 e clique em <strong>Salvar Pasta</strong>.
                     </p>
                   </div>
                 </div>
@@ -373,9 +389,9 @@ export const SyncSetupGuideModal: React.FC<SyncSetupGuideModalProps> = ({
                 <div className="flex items-start gap-3 pt-2 border-t border-zinc-200 dark:border-zinc-700/60">
                   <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 font-bold flex items-center justify-center shrink-0 mt-0.5">3</span>
                   <div>
-                    <p className="font-semibold text-zinc-800 dark:text-zinc-200">Clique em "Sincronização Completa (Bidirecional)"</p>
+                    <p className="font-semibold text-zinc-800 dark:text-zinc-200">Clique em "Testar Conexão" &amp; "Sincronização Completa"</p>
                     <p className="text-zinc-500 dark:text-zinc-400 mt-0.5">
-                      O sistema criará automaticamente as 8 abas espelho (<code>Transacoes</code>, <code>Categorias</code>, <code>Itens</code>, <code>Contas</code>, <code>Contatos</code>, <code>Dividas</code>, <code>Orcamentos</code>, <code>Fila_Mobile</code>) e enviará todos os dados existentes no SQLite!
+                      O Wallet criará automaticamente todas as 8 abas espelho e subpastas (<code>PESSOAL</code> / <code>EMPRESA</code>) na sua pasta do Google Drive!
                     </p>
                   </div>
                 </div>

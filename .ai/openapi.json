@@ -3505,6 +3505,76 @@
         ]
       }
     },
+    "/api/v1/attachments/drive-folder": {
+      "post": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Configure Drive Folder",
+        "description": "Configura e valida a pasta compartilhada do Google Drive onde os comprovantes serão salvos.",
+        "operationId": "configure_drive_folder_api_v1_attachments_drive_folder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriveFolderConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriveFolderConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Reset Drive Folder",
+        "description": "Remove a pasta customizada do Google Drive e restaura o padrão automático.",
+        "operationId": "reset_drive_folder_api_v1_attachments_drive_folder_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -3844,6 +3914,28 @@
             "type": "boolean",
             "title": "Drive Connected",
             "default": false
+          },
+          "drive_folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drive Folder Id"
+          },
+          "drive_folder_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drive Folder Url"
           },
           "drive_folder_name": {
             "anyOf": [
@@ -4794,6 +4886,69 @@
         },
         "type": "object",
         "title": "DebtUpdate"
+      },
+      "DriveFolderConfigRequest": {
+        "properties": {
+          "folder_id_or_url": {
+            "type": "string",
+            "title": "Folder Id Or Url",
+            "description": "ID ou Link da pasta no Google Drive"
+          }
+        },
+        "type": "object",
+        "required": [
+          "folder_id_or_url"
+        ],
+        "title": "DriveFolderConfigRequest"
+      },
+      "DriveFolderConfigResponse": {
+        "properties": {
+          "folder_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Id"
+          },
+          "folder_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Url"
+          },
+          "folder_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Folder Name"
+          },
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid",
+            "default": false
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "DriveFolderConfigResponse"
       },
       "DriveSyncTriggerResponse": {
         "properties": {

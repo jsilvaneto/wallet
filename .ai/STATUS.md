@@ -85,8 +85,10 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - [x] Suporte completo a fotos (JPG, PNG, WEBP) e documentos fiscais/recibos em PDF até 15MB.
     - [x] Resposta de upload ultrarrápida (< 50ms) com desacoplamento de I/O em rede.
   - [x] **Backup Assíncrono no Google Drive**:
-    - [x] Integração via Google Drive API v3 utilizando as credenciais da Service Account.
-    - [x] Estrutura automática de pastas no Drive: `Wallet - Comprovantes / {PESSOAL | EMPRESA}`.
+    - [x] Suporte completo a **Pasta Compartilhada Customizada do Google Drive** para contornar limitação de quota zero em Service Accounts:
+      - [x] Parser inteligente de links e IDs de pastas do Google Drive (`folders/...`).
+      - [x] Endpoints `POST /api/v1/attachments/drive-folder` e `DELETE /api/v1/attachments/drive-folder`.
+      - [x] Formulário dedicado em **Configurações > Sincronização Nuvem** com validação em tempo real e botão de abertura direta no Drive.
     - [x] Sincronização em segundo plano via `BackgroundTasks` com links de visualização (`webViewLink`) gravados no SQLite.
     - [x] Sincronização em lote integrada ao botão geral de sincronização e acionável sob demanda na aba **Sincronização Nuvem**.
     - [x] Tratamento gracioso e resiliente caso a Drive API esteja indisponível ou pendente de ativação no console Google Cloud.

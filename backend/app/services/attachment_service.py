@@ -169,6 +169,8 @@ async def delete_attachment(db: AsyncSession, attachment_id: str) -> bool:
 
 async def get_storage_stats(db: AsyncSession, profile: Optional[str] = None) -> AttachmentStatsResponse:
     """Calcula estatísticas de armazenamento e status de sincronização."""
+    from app.services.google_sheets_service import get_config_value, get_service_account_info
+    
     query = select(
         func.count(Attachment.id),
         func.coalesce(func.sum(Attachment.file_size_bytes), 0)
@@ -190,6 +192,11 @@ async def get_storage_stats(db: AsyncSession, profile: Optional[str] = None) -> 
     pending_count = status_counts.get("PENDENTE", 0)
     error_count = status_counts.get("ERRO", 0)
 
+    raw_folder_id = await get_config_value(db, "google_drive_folder_id")
+    folder_name = await get_config_value(db, "google_drive_folder_name")
+    info, _ = await get_service_account_info(db)
+    folder_url = f"https://drive.google.com/drive/folders/{raw_folder_id}" if raw_folder_id else None
+
     return AttachmentStatsResponse(
         total_count=total_count or 0,
         total_size_bytes=int(total_size or 0),
@@ -197,4 +204,8 @@ async def get_storage_stats(db: AsyncSession, profile: Optional[str] = None) -> 
         synced_count=synced_count,
         pending_count=pending_count,
         error_count=error_count,
+        drive_connected=info is not None,
+        drive_folder_id=raw_folder_id,
+        drive_folder_url=folder_url,
+        drive_folder_name=folder_name,
     )

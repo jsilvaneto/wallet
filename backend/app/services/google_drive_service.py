@@ -30,6 +30,25 @@ async def get_drive_service(db: AsyncSession):
     creds = service_account.Credentials.from_service_account_info(info, scopes=DRIVE_SCOPES)
     return build("drive", "v3", credentials=creds)
 
+def extract_drive_folder_id(raw_input: Optional[str]) -> Optional[str]:
+    """Extrai o ID limpo da pasta do Google Drive a partir de uma URL ou ID direto."""
+    if not raw_input:
+        return None
+    cleaned = raw_input.strip()
+    if not cleaned:
+        return None
+    import re
+    # Trata URL: https://drive.google.com/drive/folders/1aBcDeFgHiJkLmNoPqRsTuVwXyZ
+    match = re.search(r"folders/([a-zA-Z0-9_-]+)", cleaned)
+    if match:
+        return match.group(1)
+    # Trata URL: https://drive.google.com/drive/u/0/folders/1aBcDeFgHiJkLmNoPqRsTuVwXyZ
+    match_id = re.search(r"[?&]id=([a-zA-Z0-9_-]+)", cleaned)
+    if match_id:
+        return match_id.group(1)
+    # Se já for o ID direto
+    return cleaned
+
 def find_or_create_subfolder(service, folder_name: str, parent_id: Optional[str] = None) -> str:
     """Busca ou cria uma pasta no Google Drive."""
     query = f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
@@ -39,7 +58,9 @@ def find_or_create_subfolder(service, folder_name: str, parent_id: Optional[str]
     results = service.files().list(
         q=query,
         spaces='drive',
-        fields='files(id, name)'
+        fields='files(id, name)',
+        supportsAllDrives=True,
+        includeItemsFromAllDrives=True
     ).execute()
     
     files = results.get('files', [])
@@ -54,7 +75,11 @@ def find_or_create_subfolder(service, folder_name: str, parent_id: Optional[str]
     if parent_id:
         file_metadata['parents'] = [parent_id]
 
-    folder = service.files().create(body=file_metadata, fields='id').execute()
+    folder = service.files().create(
+        body=file_metadata, 
+        fields='id',
+        supportsAllDrives=True
+    ).execute()
     return folder.get('id')
 
 async def get_or_create_drive_profile_folder(service, db: AsyncSession, profile: str) -> Tuple[str, str]:
@@ -62,20 +87,49 @@ async def get_or_create_drive_profile_folder(service, db: AsyncSession, profile:
     Retorna (profile_folder_id, root_folder_id).
     Se o usuário configurou um ID de pasta customizado em SystemConfig, utiliza como raiz.
     """
-    custom_root_id = await get_config_value(db, "google_drive_folder_id")
+    raw_custom_id = await get_config_value(db, "google_drive_folder_id")
+    custom_root_id = extract_drive_folder_id(raw_custom_id)
     
-    if custom_root_id and custom_root_id.strip():
-        root_folder_id = custom_root_id.strip()
+    if custom_root_id:
+        root_folder_id = custom_root_id
     else:
         root_folder_id = find_or_create_subfolder(service, ROOT_FOLDER_NAME)
-        # Salva o ID da pasta raiz para consultas rápidas
         await set_config_value(db, "google_drive_root_folder_id", root_folder_id)
 
-    # Cria subpasta para isolamento de perfil (PESSOAL / EMPRESA)
+    # Tenta criar ou encontrar subpasta para isolamento de perfil (PESSOAL / EMPRESA)
     subfolder_name = "PESSOAL" if profile == "PESSOAL" else "EMPRESA"
-    profile_folder_id = find_or_create_subfolder(service, subfolder_name, parent_id=root_folder_id)
+    try:
+        profile_folder_id = find_or_create_subfolder(service, subfolder_name, parent_id=root_folder_id)
+    except Exception:
+        # Fallback: se não tiver permissão para subpasta, salva diretamente na pasta raiz configurada
+        profile_folder_id = root_folder_id
 
     return profile_folder_id, root_folder_id
+
+async def validate_and_set_drive_folder(db: AsyncSession, folder_input: str) -> Tuple[bool, str, Optional[str], Optional[str]]:
+    """Valida o acesso à pasta informada e salva no banco de dados."""
+    clean_id = extract_drive_folder_id(folder_input)
+    if not clean_id:
+        return False, "Informe um ID ou Link válido de pasta do Google Drive.", None, None
+
+    try:
+        service = await get_drive_service(db)
+        folder = service.files().get(
+            fileId=clean_id,
+            fields='id, name, mimeType',
+            supportsAllDrives=True
+        ).execute()
+
+        folder_name = folder.get('name', 'Pasta Google Drive')
+        await set_config_value(db, "google_drive_folder_id", clean_id)
+        await set_config_value(db, "google_drive_folder_name", folder_name)
+
+        folder_url = f"https://drive.google.com/drive/folders/{clean_id}"
+        return True, f"Pasta '{folder_name}' configurada com sucesso!", clean_id, folder_url
+
+    except Exception as e:
+        err_msg = format_drive_error(e)
+        return False, f"Não foi possível acessar a pasta. Verifique se compartilhou a pasta com a Service Account como Editor. Detalhes: {err_msg}", None, None
 
 def format_drive_error(e: Exception) -> str:
     err_str = str(e)
@@ -84,10 +138,14 @@ def format_drive_error(e: Exception) -> str:
         match = re.search(r"https://console\.developers\.google\.com/apis/api/drive\.googleapis\.com/overview\?project=\d+", err_str)
         link = match.group(0) if match else "https://console.cloud.google.com/apis/library/drive.googleapis.com"
         return f"A Google Drive API não está ativada no seu projeto do Google Cloud. Ative acessando: {link}"
-    elif "storage quota" in err_str.lower():
-        return "Espaço de armazenamento esgotado na conta Google Drive."
+    elif "storage quota" in err_str.lower() or "quota" in err_str.lower():
+        return (
+            "Espaço esgotado na Service Account. No Google Drive, a conta de serviço não tem armazenamento próprio: "
+            "crie uma pasta no seu Google Drive (ex: 'Wallet Comprovantes'), compartilhe-a com o e-mail da Service Account "
+            "como Editor e informe o ID ou link da pasta nas Configurações > Sincronização Nuvem."
+        )
     elif "insufficient permissions" in err_str.lower() or "403" in err_str:
-        return f"Permissão negada no Google Drive: {err_str}"
+        return f"Permissão negada no Google Drive. Verifique se a pasta foi compartilhada como Editor: {err_str}"
     return f"Erro no backup para Google Drive: {err_str}"
 
 async def upload_attachment_to_drive(db: AsyncSession, attachment_id: str) -> Optional[Attachment]:
@@ -123,7 +181,8 @@ async def upload_attachment_to_drive(db: AsyncSession, attachment_id: str) -> Op
         drive_file = service.files().create(
             body=file_metadata,
             media_body=media,
-            fields='id, webViewLink, webContentLink'
+            fields='id, webViewLink, webContentLink',
+            supportsAllDrives=True
         ).execute()
 
         att.drive_file_id = drive_file.get('id')

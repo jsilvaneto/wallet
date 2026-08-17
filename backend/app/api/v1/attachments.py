@@ -12,6 +12,8 @@ from app.schemas.attachment import (
     AttachmentResponse,
     AttachmentStatsResponse,
     DriveSyncTriggerResponse,
+    DriveFolderConfigRequest,
+    DriveFolderConfigResponse,
     ProfileType,
     SyncStatusType
 )
@@ -220,3 +222,39 @@ async def trigger_drive_sync(
 ):
     """Dispara a sincronização/backup de todos os comprovantes pendentes para o Google Drive."""
     return await sync_all_pending_attachments(db)
+
+@router.post("/drive-folder", response_model=DriveFolderConfigResponse)
+async def configure_drive_folder(
+    payload: DriveFolderConfigRequest,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Configura e valida a pasta compartilhada do Google Drive onde os comprovantes serão salvos."""
+    from app.services.google_drive_service import validate_and_set_drive_folder
+    valid, message, folder_id, folder_url = await validate_and_set_drive_folder(db, payload.folder_id_or_url)
+    
+    if not valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=message
+        )
+
+    folder_name = await get_config_value(db, "google_drive_folder_name")
+    return DriveFolderConfigResponse(
+        folder_id=folder_id,
+        folder_url=folder_url,
+        folder_name=folder_name,
+        is_valid=True,
+        message=message
+    )
+
+@router.delete("/drive-folder")
+async def reset_drive_folder(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Remove a pasta customizada do Google Drive e restaura o padrão automático."""
+    from app.services.google_sheets_service import set_config_value
+    await set_config_value(db, "google_drive_folder_id", "")
+    await set_config_value(db, "google_drive_folder_name", "")
+    return {"success": True, "message": "Configuração de pasta do Google Drive redefinida para o padrão."}
