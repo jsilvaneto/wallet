@@ -10,7 +10,7 @@ import {
   Filter, AlertCircle, Search, X, Calendar, 
   ChevronLeft, ChevronRight, Clock, DollarSign, 
   Landmark, Tag, Users, CheckCircle2, RotateCcw, AlertTriangle, 
-  Layers, Wallet, PiggyBank, CircleDollarSign, CreditCard, Paperclip, FileText
+  Layers, Wallet, PiggyBank, CircleDollarSign, CreditCard, Paperclip, FileText, Pencil
 } from "lucide-react";
 
 type PeriodPreset = 
@@ -52,6 +52,7 @@ export const Transactions: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("TODAS");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   // Helper de formatação de data ISO local YYYY-MM-DD
   const formatISO = (d: Date): string => {
@@ -336,7 +337,10 @@ export const Transactions: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setEditingTransaction(null);
+            setIsModalOpen(true);
+          }}
           className="flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md shadow-emerald-600/20 transition-all active:scale-95"
         >
           <Plus className="w-4 h-4" />
@@ -865,6 +869,18 @@ export const Transactions: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => {
+                              setEditingTransaction(t);
+                              setIsModalOpen(true);
+                            }}
+                            title="Editar Lançamento"
+                            className="p-1.5 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition-all"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
                               setSelectedTransactionForAttachments(t);
                               setIsAttachmentModalOpen(true);
                             }}
@@ -897,10 +913,14 @@ export const Transactions: React.FC = () => {
         )}
       </div>
 
-      {/* New Transaction Modal */}
+      {/* Transaction Modal (Criar / Editar) */}
       <TransactionModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        transactionToEdit={editingTransaction}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTransaction(null);
+        }}
         onSuccess={() => {
           fetchData();
           refreshSyncStatus(false);

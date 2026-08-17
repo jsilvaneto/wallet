@@ -26,6 +26,7 @@ class TransactionCreate(TransactionBase):
     attachment_ids: Optional[List[str]] = Field(default=None, description="IDs dos anexos previamente carregados para vincular")
 
 class TransactionUpdate(BaseModel):
+    type: Optional[TransactionType] = None
     account_id: Optional[str] = None
     category_id: Optional[str] = None
     item_id: Optional[str] = None
@@ -37,6 +38,7 @@ class TransactionUpdate(BaseModel):
     payment_date: Optional[str] = None
     status: Optional[TransactionStatus] = None
     notes: Optional[str] = None
+    attachment_ids: Optional[List[str]] = Field(default=None, description="IDs dos novos comprovantes para vincular")
 
 class TransactionResponse(TransactionBase):
     id: str

@@ -55,6 +55,10 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - [x] Input de vencimento no modal de lançamentos com máscara progressiva `dd/mm/aaaa`, validação estrita de calendário e seletor nativo de calendário integrado.
     - [x] Exibição formatada em `DD/MM/AAAA` na tabela de lançamentos.
   - [x] Lançamentos Únicos, Parcelados (em N vezes com badges `1/12`) e Recorrentes mensais.
+  - [x] **Edição Completa de Lançamentos Cadastrados**:
+    - [x] Botão de edição (`Pencil`) na coluna de ações da tabela de lançamentos.
+    - [x] Modal unificado [TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx) com detecção de modo criação vs. edição, pré-carregamento total de campos, alteração de status (Pendente / Liquidado com data de quitação) e gestão em tempo real de comprovantes.
+    - [x] Endpoint `PUT /api/v1/transactions/{id}` atualizado com suporte atômico a tipo, anexos e atualização de `sync_status = "PENDENTE"`.
 
 - [x] **Sincronização Nuvem com Google Sheets (Espelho Integral & Base do App Mobile)**:
   - [x] **Detecção e Indicador Inteligente de Alterações Pendentes**:

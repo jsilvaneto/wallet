@@ -1,28 +1,39 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Category, Contact, Item, Account, Attachment } from "../types";
+import { Category, Contact, Item, Account, Attachment, Transaction } from "../types";
 import { formatCurrency, getTodayBR, maskDateBR, parseDateBRToISO, formatDateToBR } from "../utils/format";
 import { 
   X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, 
-  Package, Sparkles, Landmark, Paperclip, Upload, Image as ImageIcon, 
-  CheckCircle2, Loader2, Trash2 
+  Package, Landmark, Paperclip, Upload, Image as ImageIcon, 
+  CheckCircle2, Loader2, Pencil, Clock, Check
 } from "lucide-react";
 
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  transactionToEdit?: Transaction | null;
 }
 
 type Mode = "UNICO" | "PARCELADO" | "RECORRENTE";
 
-export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, onSuccess }) => {
+export const TransactionModal: React.FC<TransactionModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSuccess,
+  transactionToEdit 
+}) => {
   const { profile } = useApp();
+  const isEditing = !!transactionToEdit;
+
   const datePickerRef = useRef<HTMLInputElement>(null);
+  const paymentDatePickerRef = useRef<HTMLInputElement>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
+
   const [mode, setMode] = useState<Mode>("UNICO");
   const [type, setType] = useState<"DESPESA" | "RECEITA">("DESPESA");
+  const [status, setStatus] = useState<"PENDENTE" | "CONCLUIDO">("PENDENTE");
   const [itemId, setItemId] = useState("");
   const [description, setDescription] = useState("");
   const [amountStr, setAmountStr] = useState("");
@@ -30,25 +41,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const [accountId, setAccountId] = useState("");
   const [contactId, setContactId] = useState("");
   const [dueDateStr, setDueDateStr] = useState<string>(getTodayBR());
+  const [paymentDateStr, setPaymentDateStr] = useState<string>("");
   const [installments, setInstallments] = useState("2");
   const [dueDay, setDueDay] = useState(String(new Date().getDate()));
   const [notes, setNotes] = useState("");
   const [uploadedAttachments, setUploadedAttachments] = useState<Attachment[]>([]);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
-
-  const handleOpenDatePicker = () => {
-    if (datePickerRef.current) {
-      if (typeof datePickerRef.current.showPicker === "function") {
-        try {
-          datePickerRef.current.showPicker();
-        } catch {
-          datePickerRef.current.focus();
-        }
-      } else {
-        datePickerRef.current.focus();
-      }
-    }
-  };
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -57,11 +55,25 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const handleOpenDatePicker = (ref: React.RefObject<HTMLInputElement | null>) => {
+    if (ref.current) {
+      if (typeof ref.current.showPicker === "function") {
+        try {
+          ref.current.showPicker();
+        } catch {
+          ref.current.focus();
+        }
+      } else {
+        ref.current.focus();
+      }
+    }
+  };
+
+  // Carrega dados e dependências ao abrir o modal
   useEffect(() => {
     if (!isOpen) return;
     setError(null);
-    setDueDateStr(getTodayBR());
-    setUploadedAttachments([]);
+
     const loadDependencies = async () => {
       try {
         const [catRes, conRes, itemRes, accRes] = await Promise.all([
@@ -74,17 +86,50 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
         setContacts(conRes.data);
         setItems(itemRes.data);
         setAccounts(accRes.data);
-        if (catRes.data.length > 0) {
-          setCategoryId(catRes.data[0].id);
-        } else {
-          setCategoryId("");
+
+        // Se estiver criando, define a primeira categoria se houver
+        if (!transactionToEdit) {
+          if (catRes.data.length > 0 && !categoryId) {
+            setCategoryId(catRes.data[0].id);
+          }
         }
       } catch (err) {
         console.error("Erro ao carregar dependências:", err);
       }
     };
+
     loadDependencies();
-  }, [isOpen, profile, type]);
+
+    if (transactionToEdit) {
+      // Modo Edição: Pré-carrega todos os campos do lançamento existente
+      setType(transactionToEdit.type);
+      setMode("UNICO");
+      setDescription(transactionToEdit.description || "");
+      setAmountStr((transactionToEdit.amount_cents / 100).toFixed(2).replace(".", ","));
+      setCategoryId(transactionToEdit.category_id || "");
+      setItemId(transactionToEdit.item_id || "");
+      setAccountId(transactionToEdit.account_id || "");
+      setContactId(transactionToEdit.contact_id || "");
+      setDueDateStr(formatDateToBR(transactionToEdit.due_date));
+      setStatus(transactionToEdit.status === "CONCLUIDO" ? "CONCLUIDO" : "PENDENTE");
+      setPaymentDateStr(transactionToEdit.payment_date ? formatDateToBR(transactionToEdit.payment_date) : "");
+      setNotes(transactionToEdit.notes || "");
+      setUploadedAttachments(transactionToEdit.attachments || []);
+    } else {
+      // Modo Criação: Reseta para valores padrão
+      setDueDateStr(getTodayBR());
+      setPaymentDateStr("");
+      setStatus("PENDENTE");
+      setMode("UNICO");
+      setDescription("");
+      setAmountStr("");
+      setItemId("");
+      setAccountId("");
+      setContactId("");
+      setNotes("");
+      setUploadedAttachments([]);
+    }
+  }, [isOpen, profile, type, transactionToEdit]);
 
   if (!isOpen) return null;
 
@@ -173,10 +218,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
       return;
     }
 
+    const isoPaymentDate = status === "CONCLUIDO" 
+      ? (paymentDateStr ? parseDateBRToISO(paymentDateStr) : isoDueDate) 
+      : null;
+
     try {
-      if (mode === "UNICO") {
-        await api.post("/transactions", {
-          profile,
+      if (isEditing && transactionToEdit) {
+        // Modo Edição: Executa PUT
+        await api.put(`/transactions/${transactionToEdit.id}`, {
           type,
           description,
           amount_cents: amountCents,
@@ -185,40 +234,51 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           account_id: accountId || null,
           contact_id: contactId || null,
           due_date: isoDueDate,
+          status,
+          payment_date: isoPaymentDate,
           notes: notes || null,
-          status: "PENDENTE",
           attachment_ids: uploadedAttachments.map((a) => a.id),
         });
       } else {
-        await api.post("/schedules", {
-          profile,
-          type,
-          description,
-          amount_cents: amountCents,
-          category_id: categoryId,
-          item_id: itemId || null,
-          account_id: accountId || null,
-          contact_id: contactId || null,
-          schedule_type: mode === "PARCELADO" ? "PARCELADA" : "RECORRENTE_CONTINUA",
-          frequency: "MENSAL",
-          total_installments: mode === "PARCELADO" ? parseInt(installments, 10) : null,
-          start_date: isoDueDate,
-          due_day: parseInt(dueDay, 10),
-        });
+        // Modo Criação: Executa POST
+        if (mode === "UNICO") {
+          await api.post("/transactions", {
+            profile,
+            type,
+            description,
+            amount_cents: amountCents,
+            category_id: categoryId,
+            item_id: itemId || null,
+            account_id: accountId || null,
+            contact_id: contactId || null,
+            due_date: isoDueDate,
+            notes: notes || null,
+            status: "PENDENTE",
+            attachment_ids: uploadedAttachments.map((a) => a.id),
+          });
+        } else {
+          await api.post("/schedules", {
+            profile,
+            type,
+            description,
+            amount_cents: amountCents,
+            category_id: categoryId,
+            item_id: itemId || null,
+            account_id: accountId || null,
+            contact_id: contactId || null,
+            schedule_type: mode === "PARCELADO" ? "PARCELADA" : "RECORRENTE_CONTINUA",
+            frequency: "MENSAL",
+            total_installments: mode === "PARCELADO" ? parseInt(installments, 10) : null,
+            start_date: isoDueDate,
+            due_day: parseInt(dueDay, 10),
+          });
+        }
       }
 
-      // Reset form
-      setItemId("");
-      setDescription("");
-      setAmountStr("");
-      setAccountId("");
-      setDueDateStr(getTodayBR());
-      setUploadedAttachments([]);
-      setNotes("");
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Falha ao salvar lançamento.");
+      setError(err.response?.data?.detail || "Falha ao salvar alterações no lançamento.");
     } finally {
       setLoading(false);
     }
@@ -230,13 +290,22 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
         
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
-          <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-emerald-500" />
-            <span>Novo Lançamento</span>
-          </h2>
+          <div className="flex items-center gap-2.5">
+            <div className={`p-2 rounded-xl ${isEditing ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400" : "bg-zinc-100 dark:bg-zinc-800 text-emerald-500"}`}>
+              {isEditing ? <Pencil className="w-5 h-5" /> : <DollarSign className="w-5 h-5" />}
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100 leading-tight">
+                {isEditing ? "Editar Lançamento" : "Novo Lançamento"}
+              </h2>
+              <p className="text-[11px] text-zinc-400">
+                {isEditing ? "Atualize os dados e comprovantes do lançamento selecionado" : `Cadastre uma nova receita ou despesa no perfil ${profile}`}
+              </p>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all"
           >
             <X className="w-5 h-5" />
           </button>
@@ -276,23 +345,63 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             </button>
           </div>
 
-          {/* Mode Selector */}
-          <div className="grid grid-cols-3 gap-2">
-            {(["UNICO", "PARCELADO", "RECORRENTE"] as Mode[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                className={`py-2 text-xs font-semibold rounded-lg border transition-all ${
-                  mode === m
-                    ? "border-zinc-900 dark:border-zinc-100 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm"
-                    : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                }`}
-              >
-                {m === "UNICO" ? "Único" : m === "PARCELADO" ? "Parcelado" : "Recorrente"}
-              </button>
-            ))}
-          </div>
+          {/* Status Switcher (Apenas no Modo Edição) */}
+          {isEditing && (
+            <div className="space-y-1.5 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800">
+              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                Status da Transação
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStatus("PENDENTE")}
+                  className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all flex items-center justify-center gap-2 ${
+                    status === "PENDENTE"
+                      ? "bg-amber-500 text-white border-amber-600 shadow-sm"
+                      : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/60"
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Pendente</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStatus("CONCLUIDO");
+                    if (!paymentDateStr) setPaymentDateStr(dueDateStr || getTodayBR());
+                  }}
+                  className={`py-2 px-3 text-xs font-bold rounded-lg border transition-all flex items-center justify-center gap-2 ${
+                    status === "CONCLUIDO"
+                      ? "bg-emerald-600 text-white border-emerald-700 shadow-sm"
+                      : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/60"
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Liquidado / Concluído</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Mode Selector (Apenas em Modo de Criação) */}
+          {!isEditing && (
+            <div className="grid grid-cols-3 gap-2">
+              {(["UNICO", "PARCELADO", "RECORRENTE"] as Mode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setMode(m)}
+                  className={`py-2 text-xs font-semibold rounded-lg border transition-all ${
+                    mode === m
+                      ? "border-zinc-900 dark:border-zinc-100 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm"
+                      : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                  }`}
+                >
+                  {m === "UNICO" ? "Único" : m === "PARCELADO" ? "Parcelado" : "Recorrente"}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Item Selector (Preenchimento Rápido) */}
           {items.length > 0 && (
@@ -300,7 +409,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
                   <Package className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Item do Lançamento</span>
+                  <span>Item do Catálogo</span>
                 </label>
                 {itemId && (
                   <button
@@ -308,7 +417,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                     onClick={() => setItemId("")}
                     className="text-[10px] text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 underline"
                   >
-                    Limpar item
+                    Desvincular item
                   </button>
                 )}
               </div>
@@ -317,7 +426,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                 onChange={(e) => handleItemSelect(e.target.value)}
                 className="w-full px-3 py-2 text-xs bg-white dark:bg-zinc-800 border border-emerald-200 dark:border-emerald-800/80 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-zinc-900 dark:text-zinc-100"
               >
-                <option value="">[Selecione um Item ou preencha manualmente]</option>
+                <option value="">[Preenchimento manual ou selecione um item]</option>
                 {[...categories]
                   .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
                   .map((cat) => {
@@ -401,12 +510,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
                   maxLength={10}
                   className="w-full pl-3.5 pr-10 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
                 />
-                {/* Botão de calendário com acionamento nativo confiável */}
                 <button 
                   type="button"
-                  onClick={handleOpenDatePicker}
+                  onClick={() => handleOpenDatePicker(datePickerRef)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-all flex items-center justify-center cursor-pointer"
-                  title="Abrir calendário para escolher data"
+                  title="Abrir calendário para escolher data de vencimento"
                 >
                   <Calendar className="w-4 h-4 pointer-events-none" />
                 </button>
@@ -432,8 +540,52 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             </div>
           </div>
 
+          {/* Payment Date (Quando Liquidado) */}
+          {status === "CONCLUIDO" && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Data de Pagamento / Liquidação</span>
+                </label>
+                <span className="text-[10px] text-zinc-400 font-mono">dd/mm/aaaa</span>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="dd/mm/aaaa"
+                  value={paymentDateStr}
+                  onChange={(e) => setPaymentDateStr(maskDateBR(e.target.value))}
+                  maxLength={10}
+                  className="w-full pl-3.5 pr-10 py-2 text-sm bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
+                />
+                <button 
+                  type="button"
+                  onClick={() => handleOpenDatePicker(paymentDatePickerRef)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-md transition-all flex items-center justify-center cursor-pointer"
+                  title="Abrir calendário para escolher data de pagamento"
+                >
+                  <Calendar className="w-4 h-4 pointer-events-none" />
+                </button>
+                <input
+                  ref={paymentDatePickerRef}
+                  type="date"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  value={parseDateBRToISO(paymentDateStr) || ""}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setPaymentDateStr(formatDateToBR(e.target.value));
+                    }
+                  }}
+                  className="absolute opacity-0 pointer-events-none w-0 h-0 bottom-0 right-0 overflow-hidden"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Installment Controls */}
-          {mode === "PARCELADO" && (
+          {!isEditing && mode === "PARCELADO" && (
             <div className="grid grid-cols-2 gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/40 rounded-xl border border-zinc-200 dark:border-zinc-800">
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
@@ -466,7 +618,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           )}
 
           {/* Recurrent Controls */}
-          {mode === "RECORRENTE" && (
+          {!isEditing && mode === "RECORRENTE" && (
             <div className="p-3 bg-zinc-50 dark:bg-zinc-800/40 rounded-xl border border-zinc-200 dark:border-zinc-800">
               <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
                 Dia Fixo de Vencimento todo Mês (1 a 31)
@@ -567,7 +719,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             />
           </div>
 
-          {/* Comprovantes & Anexos (Opcional) */}
+          {/* Comprovantes & Anexos */}
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
@@ -654,9 +806,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50"
+              className="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all disabled:opacity-50 flex items-center gap-1.5"
             >
-              {loading ? "Salvando..." : "Salvar Lançamento"}
+              {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              <span>{isEditing ? (loading ? "Salvando Alterações..." : "Salvar Alterações") : (loading ? "Salvando..." : "Salvar Lançamento")}</span>
             </button>
           </div>
         </form>

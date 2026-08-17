@@ -170,14 +170,45 @@ async def update_transaction(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transação não encontrada")
     
     update_data = trans_in.model_dump(exclude_unset=True)
+    attachment_ids = update_data.pop("attachment_ids", None)
+
+    old_status = trans.status
     for field, value in update_data.items():
         setattr(trans, field, value)
     
+    # Se alterou para CONCLUIDO e não tinha data de quitação, define hoje
+    if trans.status == "CONCLUIDO" and not trans.payment_date:
+        trans.payment_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    elif trans.status == "PENDENTE" and "payment_date" not in update_data:
+        trans.payment_date = None
+
+    # Abatimento em dívida se acabou de ser marcada como CONCLUIDO
+    if old_status != "CONCLUIDO" and trans.status == "CONCLUIDO" and trans.debt_id:
+        debt_query = select(Debt).where(Debt.id == trans.debt_id)
+        debt_res = await db.execute(debt_query)
+        debt = debt_res.scalar_one_or_none()
+        if debt:
+            debt.remaining_amount_cents = max(0, debt.remaining_amount_cents - trans.amount_cents)
+            if debt.remaining_amount_cents == 0:
+                debt.status = "QUITADA"
+
     trans.sync_status = "PENDENTE"
     trans.updated_at = datetime.now(timezone.utc).isoformat()
+
+    # Vincula novos anexos adicionados durante a edição
+    if attachment_ids:
+        await db.execute(
+            update(Attachment)
+            .where(Attachment.id.in_(attachment_ids))
+            .values(transaction_id=trans.id)
+        )
+
     await db.commit()
-    await db.refresh(trans)
-    return enrich_transaction_response(trans)
+    
+    # Recarrega com anexos atualizados
+    reload_query = select(Transaction).options(selectinload(Transaction.attachments)).where(Transaction.id == trans.id)
+    reloaded = (await db.execute(reload_query)).scalar_one()
+    return enrich_transaction_response(reloaded)
 
 @router.delete("/{trans_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_transaction(

@@ -6500,6 +6500,21 @@
       },
       "TransactionUpdate": {
         "properties": {
+          "type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "RECEITA",
+                  "DESPESA"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
           "account_id": {
             "anyOf": [
               {
@@ -6628,6 +6643,21 @@
               }
             ],
             "title": "Notes"
+          },
+          "attachment_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Ids",
+            "description": "IDs dos novos comprovantes para vincular"
           }
         },
         "type": "object",
