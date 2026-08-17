@@ -7,6 +7,7 @@ import {
   AttachmentStats, DriveSyncTriggerResponse
 } from "../types";
 import { formatCurrency } from "../utils/format";
+import { SyncSetupGuideModal } from "../components/SyncSetupGuideModal";
 import { 
   Settings as SettingsIcon, Palette, Users, Cloud, 
   Sun, Moon, Eye, EyeOff, UserPlus, Trash2, ShieldCheck, 
@@ -17,7 +18,7 @@ import {
   Plus, Pencil, X, Loader2, Search, DollarSign, Calendar,
   Building2, Landmark, PiggyBank, Percent, ChevronLeft, ChevronRight,
   Info, Coins, Wallet, CircleDollarSign, ArrowUp, ArrowDown,
-  HardDrive, Paperclip
+  HardDrive, Paperclip, BookOpen
 } from "lucide-react";
 
 export type SettingsTab = 
@@ -2176,6 +2177,36 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       {/* ========================================== */}
       {activeTab === "SYNC" && (
         <div className="space-y-6 animate-fade-in">
+          
+          {/* Banner Interativo com Todas as Informações e Passo a Passo */}
+          <div className="bg-gradient-to-r from-emerald-900/40 via-teal-900/30 to-zinc-900 border border-emerald-500/30 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+              <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+                  <span>Como Configurar a Sincronização Nuvem?</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Tutorial Completo
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Veja tudo o que é necessário: criar a Service Account, ativar APIs do Sheets e Drive, compartilhar a planilha e testar a conexão.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowGuide(true)}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-md shadow-emerald-900/30 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Ver Informações Necessárias</span>
+            </button>
+          </div>
+
           {/* Feedback Alertas */}
           {syncFeedback && (() => {
             const urlMatch = (syncFeedback.message + " " + (syncFeedback.details || "")).match(/https:\/\/[^\s]+/);
@@ -2265,10 +2296,21 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Formulário de Configuração */}
             <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                <Key className="w-4 h-4 text-emerald-500" />
-                <span>Credenciais do Google Sheets</span>
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  <Key className="w-4 h-4 text-emerald-500" />
+                  <span>Credenciais do Google Sheets & Drive</span>
+                </h3>
+
+                <button
+                  type="button"
+                  onClick={() => setShowGuide(true)}
+                  className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  <span>Ver Passo a Passo</span>
+                </button>
+              </div>
 
               <form onSubmit={handleSaveSyncConfig} className="space-y-4">
                 <div>
@@ -3446,6 +3488,13 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
           </div>
         </div>
       )}
+
+      {/* Modal Interativo com Guia Passo a Passo Completo */}
+      <SyncSetupGuideModal
+        isOpen={showGuide}
+        onClose={() => setShowGuide(false)}
+        serviceAccountEmail={syncConfig?.service_account_email}
+      />
     </div>
   );
 };
