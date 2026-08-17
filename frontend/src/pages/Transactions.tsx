@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
 import { Transaction, Category, Contact, Account } from "../types";
-import { formatCurrency } from "../utils/format";
+import { formatCurrency, formatDateToBR } from "../utils/format";
 import { TransactionModal } from "../components/TransactionModal";
 import { 
   Plus, Check, Trash2, ArrowUpRight, ArrowDownRight, 
@@ -754,7 +754,7 @@ export const Transactions: React.FC = () => {
                       {/* Due Date */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="font-mono font-semibold text-zinc-800 dark:text-zinc-200">
-                          {t.due_date}
+                          {formatDateToBR(t.due_date)}
                         </div>
                         {isOverdue && (
                           <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-0.5">

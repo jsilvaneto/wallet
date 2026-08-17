@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
 import { Category, Contact, Item, Account } from "../types";
+import { formatCurrency, getTodayBR, maskDateBR, parseDateBRToISO, formatDateToBR } from "../utils/format";
 import { X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, Package, Sparkles, Landmark } from "lucide-react";
 
 interface TransactionModalProps {
@@ -22,7 +23,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
   const [categoryId, setCategoryId] = useState("");
   const [accountId, setAccountId] = useState("");
   const [contactId, setContactId] = useState("");
-  const [dueDate, setDueDate] = useState(new Date().toISOString().split("T")[0]);
+  const [dueDateStr, setDueDateStr] = useState<string>(getTodayBR());
   const [installments, setInstallments] = useState("2");
   const [dueDay, setDueDay] = useState(String(new Date().getDate()));
   const [notes, setNotes] = useState("");
@@ -36,6 +37,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
 
   useEffect(() => {
     if (!isOpen) return;
+    setError(null);
+    setDueDateStr(getTodayBR());
     const loadDependencies = async () => {
       try {
         const [catRes, conRes, itemRes, accRes] = await Promise.all([
@@ -104,6 +107,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
 
     const amountCents = Math.round(amountFloat * 100);
 
+    const isoDueDate = parseDateBRToISO(dueDateStr);
+    if (!isoDueDate) {
+      setError("Informe uma data de vencimento válida no formato dd/mm/aaaa.");
+      setLoading(false);
+      return;
+    }
+
     try {
       if (mode === "UNICO") {
         await api.post("/transactions", {
@@ -115,7 +125,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           item_id: itemId || null,
           account_id: accountId || null,
           contact_id: contactId || null,
-          due_date: dueDate,
+          due_date: isoDueDate,
           notes: notes || null,
           status: "PENDENTE",
         });
@@ -132,7 +142,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
           schedule_type: mode === "PARCELADO" ? "PARCELADA" : "RECORRENTE_CONTINUA",
           frequency: "MENSAL",
           total_installments: mode === "PARCELADO" ? parseInt(installments, 10) : null,
-          start_date: dueDate,
+          start_date: isoDueDate,
           due_day: parseInt(dueDay, 10),
         });
       }
@@ -142,6 +152,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
       setDescription("");
       setAmountStr("");
       setAccountId("");
+      setDueDateStr(getTodayBR());
       setNotes("");
       onSuccess();
       onClose();
@@ -302,17 +313,57 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onCl
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" />
-                <span>{mode === "UNICO" ? "Vencimento" : "1º Vencimento"}</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-zinc-900 dark:text-zinc-100"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>{mode === "UNICO" ? "Vencimento" : "1º Vencimento"}</span>
+                </label>
+                <span className="text-[10px] text-zinc-400 font-mono">dd/mm/aaaa</span>
+              </div>
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  placeholder="dd/mm/aaaa"
+                  value={dueDateStr}
+                  onChange={(e) => {
+                    const masked = maskDateBR(e.target.value);
+                    setDueDateStr(masked);
+                    const parsedIso = parseDateBRToISO(masked);
+                    if (parsedIso) {
+                      const dayNum = parseInt(masked.split("/")[0], 10);
+                      if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
+                        setDueDay(String(dayNum));
+                      }
+                    }
+                  }}
+                  maxLength={10}
+                  className="w-full pl-3.5 pr-10 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
+                />
+                {/* Seletor nativo de calendário integrado */}
+                <label 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-emerald-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md cursor-pointer transition-all"
+                  title="Abrir calendário para escolher data"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <input
+                    type="date"
+                    tabIndex={-1}
+                    value={parseDateBRToISO(dueDateStr) || ""}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        const br = formatDateToBR(e.target.value);
+                        setDueDateStr(br);
+                        const dayNum = parseInt(br.split("/")[0], 10);
+                        if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= 31) {
+                          setDueDay(String(dayNum));
+                        }
+                      }
+                    }}
+                    className="sr-only"
+                  />
+                </label>
+              </div>
             </div>
           </div>
 

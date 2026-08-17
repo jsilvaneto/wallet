@@ -50,6 +50,9 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] **Atalhos Inteligentes & Alerta de Contas Atrasadas**: Banner dinâmico com valor pendente e filtro em 1 clique para todas as contas vencidas na história.
   - [x] **Busca Textual Global Instantânea**: Filtragem live por descrição, categoria, conta bancária, contato, valor e anotações.
   - [x] **Filtros Multi-Critério**: Status (`Todos`, `Abertas`, `Liquidadas`, `Atrasadas`), Tipo (`Despesas`, `Receitas`), Conta/Carteira e Categoria com ordenação A-Z e botão para limpar filtros.
+  - [x] **Entrada e Exibição de Datas em Formato Brasileiro (`DD/MM/AAAA`)**:
+    - [x] Input de vencimento no modal de lançamentos com máscara progressiva `dd/mm/aaaa`, validação estrita de calendário e seletor nativo de calendário integrado.
+    - [x] Exibição formatada em `DD/MM/AAAA` na tabela de lançamentos.
   - [x] Lançamentos Únicos, Parcelados (em N vezes com badges `1/12`) e Recorrentes mensais.
 
 - [x] **Sincronização Nuvem com Google Sheets (Espelho Integral & Base do App Mobile)**:
