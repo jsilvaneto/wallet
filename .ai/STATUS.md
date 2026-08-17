@@ -53,6 +53,12 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Lançamentos Únicos, Parcelados (em N vezes com badges `1/12`) e Recorrentes mensais.
 
 - [x] **Sincronização Nuvem com Google Sheets (Espelho Integral & Base do App Mobile)**:
+  - [x] **Detecção e Indicador Inteligente de Alterações Pendentes**:
+    - [x] Endpoint `GET /api/v1/sync/status` calculando pendências de envio (`pending_send`), recebimento da fila (`pending_receive`) e total.
+    - [x] Botão dinâmico no cabeçalho com badges visuais (`↑ Envio`, `↓ Recebimento`), indicador pulsante de atenção e estado de sincronização.
+    - [x] Menu / Popover interativo com detalhamento de dados locais vs. fila móvel, horário da última sincronização e atalhos rápidos (*Sincronizar Tudo*, *Apenas Enviar*, *Apenas Receber*).
+    - [x] Painel de status em tempo real com cartões de envio/recebimento na aba **Configurações > Sincronização Nuvem**.
+    - [x] Atualização automática após criação, liquidação, edição e exclusão de transações.
   - [x] Gerenciamento web das configurações na aba **Configurações > Sincronização Nuvem**.
   - [x] Upload/edição de `credentials.json` (Service Account) e ID da planilha salvos no banco local.
   - [x] Espelhamento automático de **8 abas integradas**:

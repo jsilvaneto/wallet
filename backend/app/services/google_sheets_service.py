@@ -5,7 +5,7 @@ from typing import List, Dict, Any, Tuple, Optional
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import aliased
 
 from app.core.config import settings
@@ -13,6 +13,7 @@ from app.models import (
     Transaction, Category, Item, Contact, Account, 
     Debt, Budget, SystemConfig, SyncLog
 )
+from app.schemas.sync import SyncStatusResponse, SyncPendingDetails
 
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
@@ -588,3 +589,98 @@ async def export_sqlite_to_sheets(db: AsyncSession, service, spreadsheet_id: str
     total_exported = sum(entity_counts.values())
 
     return (total_exported, entity_counts)
+
+
+async def check_sync_pending_status(db: AsyncSession, check_remote: bool = True) -> SyncStatusResponse:
+    """
+    Calcula as pendências de envio (SQLite -> Planilha) e de recebimento (Fila_Mobile -> SQLite).
+    Retorna métricas consolidadas e detalhadas para alimentar o indicador visual da interface.
+    """
+    spreadsheet_id = await get_effective_spreadsheet_id(db)
+    info, source = await get_service_account_info(db)
+    has_credentials = info is not None
+    service_account_email = info.get("client_email") if info else None
+    spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit" if spreadsheet_id else None
+    is_configured = bool(has_credentials and spreadsheet_id)
+
+    # 1. Busca último log geral de sync
+    last_sync_query = select(SyncLog).order_by(SyncLog.created_at.desc()).limit(1)
+    last_sync_res = await db.execute(last_sync_query)
+    last_sync_log = last_sync_res.scalar_one_or_none()
+
+    # 2. Busca último export bem sucedido
+    last_export_query = select(SyncLog).where(
+        SyncLog.action.in_(["EXPORT", "FULL"]),
+        SyncLog.status == "SUCESSO"
+    ).order_by(SyncLog.created_at.desc()).limit(1)
+    last_export_res = await db.execute(last_export_query)
+    last_export_log = last_export_res.scalar_one_or_none()
+    last_export_time = last_export_log.created_at if last_export_log else None
+
+    # 3. Transações pendentes de envio
+    pending_trans_query = select(func.count(Transaction.id)).where(Transaction.sync_status == "PENDENTE")
+    pending_trans_count = (await db.execute(pending_trans_query)).scalar() or 0
+
+    # 4. Alterações em tabelas mestras
+    if last_export_time:
+        cat_cnt = (await db.execute(select(func.count(Category.id)).where(Category.created_at > last_export_time))).scalar() or 0
+        item_cnt = (await db.execute(select(func.count(Item.id)).where(Item.created_at > last_export_time))).scalar() or 0
+        acc_cnt = (await db.execute(select(func.count(Account.id)).where(Account.created_at > last_export_time))).scalar() or 0
+        con_cnt = (await db.execute(select(func.count(Contact.id)).where(Contact.created_at > last_export_time))).scalar() or 0
+        debt_cnt = (await db.execute(select(func.count(Debt.id)).where(Debt.created_at > last_export_time))).scalar() or 0
+        bud_cnt = (await db.execute(select(func.count(Budget.id)).where(Budget.created_at > last_export_time))).scalar() or 0
+    else:
+        cat_cnt = (await db.execute(select(func.count(Category.id)))).scalar() or 0
+        item_cnt = (await db.execute(select(func.count(Item.id)))).scalar() or 0
+        acc_cnt = (await db.execute(select(func.count(Account.id)))).scalar() or 0
+        con_cnt = (await db.execute(select(func.count(Contact.id)))).scalar() or 0
+        debt_cnt = (await db.execute(select(func.count(Debt.id)))).scalar() or 0
+        bud_cnt = (await db.execute(select(func.count(Budget.id)))).scalar() or 0
+
+    master_changes = cat_cnt + item_cnt + acc_cnt + con_cnt + debt_cnt + bud_cnt
+    pending_send = pending_trans_count + master_changes
+
+    # 5. Pendências de Recebimento na Fila Mobile (Google Sheets)
+    pending_receive = 0
+    if is_configured and check_remote:
+        try:
+            service = await get_sheets_service(db)
+            res = service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range="Fila_Mobile!A2:E"
+            ).execute()
+            rows = res.get("values", [])
+            # Conta linhas com dados válidos (não vazias)
+            pending_receive = len([r for r in rows if any(str(c).strip() for c in r)])
+        except Exception:
+            # Fallback silencioso em caso de instabilidade na API do Google
+            pending_receive = 0
+
+    total_pending = pending_send + pending_receive
+    has_pending = total_pending > 0
+
+    return SyncStatusResponse(
+        is_configured=is_configured,
+        has_credentials=has_credentials,
+        spreadsheet_id=spreadsheet_id,
+        spreadsheet_url=spreadsheet_url,
+        service_account_email=service_account_email,
+        pending_send=pending_send,
+        pending_receive=pending_receive,
+        total_pending=total_pending,
+        has_pending=has_pending,
+        last_sync_at=last_sync_log.created_at if last_sync_log else None,
+        last_sync_status=last_sync_log.status if last_sync_log else None,
+        last_action=last_sync_log.action if last_sync_log else None,
+        details=SyncPendingDetails(
+            pending_transactions=pending_trans_count,
+            pending_categories=cat_cnt,
+            pending_items=item_cnt,
+            pending_accounts=acc_cnt,
+            pending_contacts=con_cnt,
+            pending_debts=debt_cnt,
+            pending_budgets=bud_cnt,
+            queue_rows=pending_receive,
+        )
+    )
+

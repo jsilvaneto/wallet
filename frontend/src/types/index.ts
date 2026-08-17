@@ -170,4 +170,29 @@ export interface SyncResultResponse {
   errors?: string[];
 }
 
+export interface SyncPendingDetails {
+  pending_transactions: number;
+  pending_categories: number;
+  pending_items: number;
+  pending_accounts: number;
+  pending_contacts: number;
+  pending_debts: number;
+  pending_budgets: number;
+  queue_rows: number;
+}
 
+export interface SyncStatus {
+  is_configured: boolean;
+  has_credentials: boolean;
+  spreadsheet_id?: string | null;
+  spreadsheet_url?: string | null;
+  service_account_email?: string | null;
+  pending_send: number;
+  pending_receive: number;
+  total_pending: number;
+  has_pending: boolean;
+  last_sync_at?: string | null;
+  last_sync_status?: string | null;
+  last_action?: string | null;
+  details?: SyncPendingDetails | null;
+}

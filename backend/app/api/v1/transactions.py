@@ -97,6 +97,7 @@ async def complete_transaction(
     if trans.status != "CONCLUIDO":
         trans.status = "CONCLUIDO"
         trans.payment_date = payment_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        trans.sync_status = "PENDENTE"
         
         # Abatimento em dívida
         if trans.debt_id:
@@ -130,6 +131,8 @@ async def update_transaction(
     for field, value in update_data.items():
         setattr(trans, field, value)
     
+    trans.sync_status = "PENDENTE"
+    trans.updated_at = datetime.now(timezone.utc).isoformat()
     await db.commit()
     await db.refresh(trans)
     return trans

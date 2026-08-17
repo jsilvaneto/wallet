@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { ProfileType } from "../types";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { ProfileType, SyncStatus } from "../types";
+import { api } from "../api/client";
 
 interface AppContextType {
   profile: ProfileType;
@@ -12,6 +13,10 @@ interface AppContextType {
   setLoginTheme: (theme: "dark" | "light") => void;
   token: string | null;
   setToken: (t: string | null) => void;
+  syncStatus: SyncStatus | null;
+  refreshSyncStatus: (checkRemote?: boolean) => Promise<void>;
+  isSyncing: boolean;
+  triggerSync: (action?: "full" | "export" | "import") => Promise<{ success: boolean; message: string }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -36,6 +41,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.getItem("wallet_hide_values") === "true"
   );
   const [token, setTokenState] = useState<string | null>(getValidToken());
+  const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+
+  const refreshSyncStatus = useCallback(async (checkRemote: boolean = true) => {
+    if (!token) return;
+    try {
+      const res = await api.get<SyncStatus>("/sync/status", {
+        params: { check_remote: checkRemote },
+      });
+      setSyncStatus(res.data);
+    } catch (err) {
+      console.error("Erro ao obter status de sincronização:", err);
+    }
+  }, [token]);
+
+  const triggerSync = useCallback(async (action: "full" | "export" | "import" = "full") => {
+    setIsSyncing(true);
+    try {
+      const endpoint = action === "export" ? "/sync/export" : action === "import" ? "/sync/import" : "/sync/full";
+      const res = await api.post(endpoint);
+      await refreshSyncStatus(true);
+      return {
+        success: true,
+        message: res.data.message || "Sincronização concluída com sucesso!",
+      };
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || "Erro ao executar sincronização.";
+      await refreshSyncStatus(false);
+      return { success: false, message: msg };
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [refreshSyncStatus]);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -66,6 +104,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     localStorage.setItem("wallet_hide_values", hideValues ? "true" : "false");
   }, [hideValues]);
 
+  // Polling periódico do status de sincronização
+  useEffect(() => {
+    if (!token) {
+      setSyncStatus(null);
+      return;
+    }
+
+    refreshSyncStatus(true);
+    const interval = setInterval(() => {
+      refreshSyncStatus(true);
+    }, 30000);
+
+    const onFocus = () => {
+      refreshSyncStatus(true);
+    };
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [token, refreshSyncStatus]);
+
   const setLoginTheme = (theme: "dark" | "light") => {
     setLoginThemeState(theme);
     localStorage.setItem("wallet_login_theme", theme);
@@ -78,6 +139,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       localStorage.removeItem("wallet_token");
       setTokenState(null);
+      setSyncStatus(null);
     }
   };
 
@@ -97,6 +159,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setLoginTheme,
         token,
         setToken,
+        syncStatus,
+        refreshSyncStatus,
+        isSyncing,
+        triggerSync,
       }}
     >
       {children}

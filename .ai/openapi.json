@@ -2644,6 +2644,57 @@
         }
       }
     },
+    "/api/v1/sync/status": {
+      "get": {
+        "tags": [
+          "Sincronização Nuvem"
+        ],
+        "summary": "Get Sync Pending Status",
+        "description": "Retorna o status em tempo real de alterações pendentes para enviar e receber.",
+        "operationId": "get_sync_pending_status_api_v1_sync_status_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "check_remote",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Consultar Google Sheets para verificar a Fila_Mobile",
+              "default": true,
+              "title": "Check Remote"
+            },
+            "description": "Consultar Google Sheets para verificar a Fila_Mobile"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncStatusResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sync/config": {
       "get": {
         "tags": [
@@ -4932,6 +4983,52 @@
         ],
         "title": "SyncLogResponse"
       },
+      "SyncPendingDetails": {
+        "properties": {
+          "pending_transactions": {
+            "type": "integer",
+            "title": "Pending Transactions",
+            "default": 0
+          },
+          "pending_categories": {
+            "type": "integer",
+            "title": "Pending Categories",
+            "default": 0
+          },
+          "pending_items": {
+            "type": "integer",
+            "title": "Pending Items",
+            "default": 0
+          },
+          "pending_accounts": {
+            "type": "integer",
+            "title": "Pending Accounts",
+            "default": 0
+          },
+          "pending_contacts": {
+            "type": "integer",
+            "title": "Pending Contacts",
+            "default": 0
+          },
+          "pending_debts": {
+            "type": "integer",
+            "title": "Pending Debts",
+            "default": 0
+          },
+          "pending_budgets": {
+            "type": "integer",
+            "title": "Pending Budgets",
+            "default": 0
+          },
+          "queue_rows": {
+            "type": "integer",
+            "title": "Queue Rows",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "SyncPendingDetails"
+      },
       "SyncResultResponse": {
         "properties": {
           "success": {
@@ -4975,6 +5072,118 @@
           "message"
         ],
         "title": "SyncResultResponse"
+      },
+      "SyncStatusResponse": {
+        "properties": {
+          "is_configured": {
+            "type": "boolean",
+            "title": "Is Configured",
+            "default": false
+          },
+          "has_credentials": {
+            "type": "boolean",
+            "title": "Has Credentials",
+            "default": false
+          },
+          "spreadsheet_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spreadsheet Id"
+          },
+          "spreadsheet_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spreadsheet Url"
+          },
+          "service_account_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Account Email"
+          },
+          "pending_send": {
+            "type": "integer",
+            "title": "Pending Send",
+            "default": 0
+          },
+          "pending_receive": {
+            "type": "integer",
+            "title": "Pending Receive",
+            "default": 0
+          },
+          "total_pending": {
+            "type": "integer",
+            "title": "Total Pending",
+            "default": 0
+          },
+          "has_pending": {
+            "type": "boolean",
+            "title": "Has Pending",
+            "default": false
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At"
+          },
+          "last_sync_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync Status"
+          },
+          "last_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Action"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SyncPendingDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "SyncStatusResponse"
       },
       "SyncTestResponse": {
         "properties": {

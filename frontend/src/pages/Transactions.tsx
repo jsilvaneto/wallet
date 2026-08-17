@@ -25,7 +25,7 @@ type StatusFilterOption = "TODOS" | "PENDENTE" | "CONCLUIDO" | "ATRASADAS";
 type TypeFilterOption = "TODOS" | "DESPESA" | "RECEITA";
 
 export const Transactions: React.FC = () => {
-  const { profile, hideValues } = useApp();
+  const { profile, hideValues, refreshSyncStatus } = useApp();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Record<string, Category>>({});
   const [contacts, setContacts] = useState<Record<string, Contact>>({});
@@ -187,6 +187,7 @@ export const Transactions: React.FC = () => {
     try {
       await api.patch(`/transactions/${id}/complete`);
       fetchData();
+      refreshSyncStatus(false);
     } catch (err) {
       console.error("Erro ao liquidar transação:", err);
     }
@@ -198,6 +199,7 @@ export const Transactions: React.FC = () => {
     try {
       await api.delete(`/transactions/${id}`);
       fetchData();
+      refreshSyncStatus(false);
     } catch (err) {
       console.error("Erro ao excluir:", err);
     }
@@ -858,7 +860,10 @@ export const Transactions: React.FC = () => {
       <TransactionModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={fetchData}
+        onSuccess={() => {
+          fetchData();
+          refreshSyncStatus(false);
+        }}
       />
     </div>
   );

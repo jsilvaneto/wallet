@@ -1,6 +1,6 @@
 import json
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
 
@@ -13,6 +13,7 @@ from app.schemas.sync import (
     SyncTriggerRequest,
     SyncResultResponse,
     SyncLogResponse,
+    SyncStatusResponse,
 )
 from app.services.google_sheets_service import (
     get_config_value,
@@ -25,10 +26,20 @@ from app.services.google_sheets_service import (
     process_mobile_queue,
     export_sqlite_to_sheets,
     record_sync_log,
+    check_sync_pending_status,
 )
 from app.api.v1.deps import get_current_user
 
 router = APIRouter(prefix="/sync", tags=["Sincronização Nuvem"])
+
+@router.get("/status", response_model=SyncStatusResponse)
+async def get_sync_pending_status(
+    check_remote: bool = Query(True, description="Consultar Google Sheets para verificar a Fila_Mobile"),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Retorna o status em tempo real de alterações pendentes para enviar e receber."""
+    return await check_sync_pending_status(db, check_remote=check_remote)
 
 @router.get("/config", response_model=SyncConfigResponse)
 async def get_sync_configuration(
