@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Transaction, Category, Contact, Account } from "../types";
+import { Transaction, Category, Contact, Account, AttachmentType, ATTACHMENT_TYPES } from "../types";
 import { formatCurrency, formatDateToBR } from "../utils/format";
 import { TransactionModal } from "../components/TransactionModal";
 import { AttachmentViewerModal } from "../components/AttachmentViewerModal";
@@ -831,21 +831,33 @@ export const Transactions: React.FC = () => {
                                 </span>
                               )}
 
-                              {/* Badge de Comprovantes */}
-                              {t.attachments && t.attachments.length > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedTransactionForAttachments(t);
-                                    setIsAttachmentModalOpen(true);
-                                  }}
-                                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all cursor-pointer"
-                                  title={`${t.attachments.length} comprovante(s) anexado(s) - Clique para visualizar`}
-                                >
-                                  <Paperclip className="w-3 h-3" />
-                                  <span>{t.attachments.length}</span>
-                                </button>
-                              )}
+                              {/* Badge de Comprovantes / Anexos com Tooltip Discriminado */}
+                              {t.attachments && t.attachments.length > 0 && (() => {
+                                const count = t.attachments.length;
+                                const typeCounts: Record<string, number> = {};
+                                t.attachments.forEach((att) => {
+                                  const tKey = att.attachment_type || "COMPROVANTE";
+                                  typeCounts[tKey] = (typeCounts[tKey] || 0) + 1;
+                                });
+                                const breakdownStr = Object.entries(typeCounts)
+                                  .map(([k, c]) => `${c} ${ATTACHMENT_TYPES[k as AttachmentType]?.shortLabel || k}`)
+                                  .join(", ");
+                                
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedTransactionForAttachments(t);
+                                      setIsAttachmentModalOpen(true);
+                                    }}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-all cursor-pointer"
+                                    title={`${count} anexo(s) (${breakdownStr}) - Clique para visualizar`}
+                                  >
+                                    <Paperclip className="w-3 h-3" />
+                                    <span>{count}</span>
+                                  </button>
+                                );
+                              })()}
                             </div>
 
                             {t.notes && (

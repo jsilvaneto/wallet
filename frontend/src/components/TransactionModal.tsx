@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Category, Contact, Item, Account, Attachment, Transaction } from "../types";
+import { Category, Contact, Item, Account, Attachment, Transaction, AttachmentType, ATTACHMENT_TYPES } from "../types";
 import { formatCurrency, getTodayBR, maskDateBR, parseDateBRToISO, formatDateToBR } from "../utils/format";
 import { 
   X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, 
   Package, Landmark, Paperclip, Upload, Image as ImageIcon, 
-  CheckCircle2, Loader2, Pencil, Clock, Check
+  CheckCircle2, Loader2, Pencil, Clock, Check, ChevronDown
 } from "lucide-react";
 
 interface TransactionModalProps {
@@ -46,6 +46,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [dueDay, setDueDay] = useState(String(new Date().getDate()));
   const [notes, setNotes] = useState("");
   const [uploadedAttachments, setUploadedAttachments] = useState<Attachment[]>([]);
+  const [selectedUploadType, setSelectedUploadType] = useState<AttachmentType>("COMPROVANTE");
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -145,6 +146,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("profile", profile);
+      formData.append("attachment_type", selectedUploadType);
 
       try {
         const res = await api.post<Attachment>("/attachments/upload", formData, {
@@ -158,6 +160,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
     setIsUploadingAttachment(false);
     if (attachmentInputRef.current) attachmentInputRef.current.value = "";
+  };
+
+  const handleUpdateAttachmentType = async (attachmentId: string, newType: AttachmentType) => {
+    try {
+      const res = await api.patch<Attachment>(`/attachments/${attachmentId}`, {
+        attachment_type: newType,
+      });
+      setUploadedAttachments((prev) =>
+        prev.map((a) => (a.id === attachmentId ? res.data : a))
+      );
+    } catch (err: any) {
+      console.error("Erro ao atualizar tipo de anexo:", err);
+    }
   };
 
   const handleRemoveAttachment = async (attachmentId: string) => {
@@ -720,13 +735,46 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
 
           {/* Comprovantes & Anexos */}
-          <div className="space-y-2 pt-1">
+          <div className="space-y-2.5 pt-1">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
                 <Paperclip className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                <span>Comprovantes & Recibos (Opcional)</span>
+                <span>Documentos & Comprovantes (Opcional)</span>
               </label>
               <span className="text-[10px] text-zinc-400">JPG, PNG, WEBP ou PDF</span>
+            </div>
+
+            {/* Seletor rápido do tipo do anexo antes do upload */}
+            <div className="p-2 bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700/80 rounded-xl space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">
+                  Tipo do documento a anexar:
+                </span>
+                <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                  {ATTACHMENT_TYPES[selectedUploadType]?.shortLabel}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1">
+                {(Object.keys(ATTACHMENT_TYPES) as AttachmentType[]).map((typeKey) => {
+                  const cfg = ATTACHMENT_TYPES[typeKey];
+                  const isSelected = selectedUploadType === typeKey;
+                  return (
+                    <button
+                      key={typeKey}
+                      type="button"
+                      onClick={() => setSelectedUploadType(typeKey)}
+                      className={`px-2 py-1.5 text-[11px] font-semibold rounded-lg border transition-all text-center truncate ${
+                        isSelected
+                          ? `${cfg.badgeClass} border shadow-xs font-bold ring-1 ring-emerald-500/30`
+                          : "bg-white dark:bg-zinc-800/80 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/60"
+                      }`}
+                      title={cfg.description}
+                    >
+                      {cfg.shortLabel}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <input
@@ -748,45 +796,71 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               {isUploadingAttachment ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
-                  <span>Carregando comprovante...</span>
+                  <span>Carregando {ATTACHMENT_TYPES[selectedUploadType]?.shortLabel.toLowerCase()}...</span>
                 </>
               ) : (
                 <>
                   <Upload className="w-4 h-4 text-emerald-500" />
-                  <span>Clique para anexar foto de recibo, PIX ou PDF</span>
+                  <span>
+                    Clique para anexar arquivo como <strong>{ATTACHMENT_TYPES[selectedUploadType]?.shortLabel}</strong>
+                  </span>
                 </>
               )}
             </button>
 
             {/* Lista de Comprovantes Carregados */}
             {uploadedAttachments.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+              <div className="space-y-2 pt-1">
                 {uploadedAttachments.map((att) => {
                   const isPdf = att.mime_type === "application/pdf" || att.file_name.toLowerCase().endsWith(".pdf");
+                  const currentTypeKey = (att.attachment_type || "COMPROVANTE") as AttachmentType;
+                  const typeCfg = ATTACHMENT_TYPES[currentTypeKey] || ATTACHMENT_TYPES.COMPROVANTE;
+
                   return (
                     <div
                       key={att.id}
-                      className="flex items-center justify-between p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 text-xs"
+                      className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/80 text-xs"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        {isPdf ? (
-                          <FileText className="w-4 h-4 text-rose-500 shrink-0" />
-                        ) : (
-                          <ImageIcon className="w-4 h-4 text-emerald-500 shrink-0" />
-                        )}
-                        <div className="min-w-0">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="p-1.5 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shrink-0">
+                          {isPdf ? (
+                            <FileText className="w-4 h-4 text-rose-500" />
+                          ) : (
+                            <ImageIcon className="w-4 h-4 text-emerald-500" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
                           <p className="font-semibold text-zinc-800 dark:text-zinc-200 truncate">{att.file_name}</p>
-                          <p className="text-[10px] text-zinc-400">{att.formatted_size || "Carregado"}</p>
+                          <p className="text-[10px] text-zinc-400 font-mono">{att.formatted_size || "Carregado"}</p>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveAttachment(att.id)}
-                        className="p-1 text-zinc-400 hover:text-rose-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
-                        title="Remover anexo"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+
+                      {/* Seletor do Tipo de Anexo individual */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="relative">
+                          <select
+                            value={currentTypeKey}
+                            onChange={(e) => handleUpdateAttachmentType(att.id, e.target.value as AttachmentType)}
+                            className={`text-[11px] font-bold py-1 pl-2.5 pr-6 rounded-lg border appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500 ${typeCfg.badgeClass}`}
+                          >
+                            {(Object.keys(ATTACHMENT_TYPES) as AttachmentType[]).map((key) => (
+                              <option key={key} value={key} className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
+                                {ATTACHMENT_TYPES[key].shortLabel}
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="w-3 h-3 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttachment(att.id)}
+                          className="p-1 text-zinc-400 hover:text-rose-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md transition-colors"
+                          title="Remover anexo"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

@@ -98,6 +98,12 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - [x] Fallback inteligente para o diretório padrão original caso algum arquivo antigo não tenha sido migrado.
     - [x] Suporte completo a fotos (JPG, PNG, WEBP, HEIC) e documentos fiscais/recibos em PDF até 15MB.
     - [x] Resposta de upload e leitura ultrarrápida (< 50ms).
+  - [x] **Tipificação de Anexos (Comprovante, Nota Fiscal, Fatura, Recibo, Contrato, Outro)**:
+    - [x] Campo `attachment_type` no modelo `Attachment` com `CheckConstraint` e índice dedicado.
+    - [x] Migração dinâmica no startup com `ALTER TABLE attachments ADD COLUMN attachment_type`.
+    - [x] Endpoints `POST /upload` e `GET /attachments` com suporte a filtro por tipo e `PATCH /attachments/{id}` para edição imediata.
+    - [x] Seletor rápido de tipo de documento no modal de lançamentos [TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx) e visualizador [AttachmentViewerModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/AttachmentViewerModal.tsx).
+    - [x] Badges visuais coloridos e tooltips com detalhamento de tipos na tabela de lançamentos [Transactions.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/pages/Transactions.tsx).
   - [x] **Interface do Usuário (Frontend)**:
     - [x] Painel de **Armazenamento de Anexos & Comprovantes** na aba **Configurações > Sincronização Nuvem**:
       - [x] Indicador de diretório ativo com badge de gravação (`✓ Gravável & Ativo`).

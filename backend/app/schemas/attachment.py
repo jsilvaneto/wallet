@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 ProfileType = Literal["PESSOAL", "EMPRESA"]
 SyncStatusType = Literal["PENDENTE", "SINCRONIZADO", "ERRO", "LOCAL_ONLY"]
+AttachmentType = Literal["COMPROVANTE", "NOTA_FISCAL", "FATURA", "RECIBO", "CONTRATO", "OUTRO"]
 
 class AttachmentBase(BaseModel):
     profile: ProfileType
@@ -10,6 +11,11 @@ class AttachmentBase(BaseModel):
     file_name: str
     file_size_bytes: int
     mime_type: str
+    attachment_type: AttachmentType = "COMPROVANTE"
+
+class AttachmentUpdate(BaseModel):
+    attachment_type: Optional[AttachmentType] = None
+    file_name: Optional[str] = None
 
 class AttachmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -21,6 +27,7 @@ class AttachmentResponse(BaseModel):
     file_path: str
     file_size_bytes: int
     mime_type: str
+    attachment_type: AttachmentType = "COMPROVANTE"
     drive_file_id: Optional[str] = None
     drive_web_view_link: Optional[str] = None
     drive_folder_id: Optional[str] = None

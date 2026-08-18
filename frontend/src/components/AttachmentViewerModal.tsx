@@ -1,11 +1,11 @@
 import React, { useState, useRef } from "react";
-import { Attachment } from "../types";
+import { Attachment, AttachmentType, ATTACHMENT_TYPES } from "../types";
 import { api } from "../api/client";
 import { 
   X, Download, ExternalLink, Trash2, Cloud, HardDrive, 
   FileText, Image as ImageIcon, Plus, RefreshCw, ZoomIn, 
   ZoomOut, RotateCw, AlertCircle, CheckCircle2, ChevronLeft, ChevronRight,
-  ShieldCheck, Loader2
+  ShieldCheck, Loader2, ChevronDown, Tag
 } from "lucide-react";
 
 interface AttachmentViewerModalProps {
@@ -30,9 +30,11 @@ export const AttachmentViewerModal: React.FC<AttachmentViewerModalProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+  const [uploadType, setUploadType] = useState<AttachmentType>("COMPROVANTE");
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSyncingDrive, setIsSyncingDrive] = useState(false);
+  const [isUpdatingType, setIsUpdatingType] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +50,9 @@ export const AttachmentViewerModal: React.FC<AttachmentViewerModalProps> = ({
     currentAttachment.mime_type === "application/pdf" ||
     currentAttachment.file_name.toLowerCase().endsWith(".pdf")
   );
+
+  const currentTypeKey = (currentAttachment?.attachment_type || "COMPROVANTE") as AttachmentType;
+  const currentTypeCfg = ATTACHMENT_TYPES[currentTypeKey] || ATTACHMENT_TYPES.COMPROVANTE;
 
   const handleNext = () => {
     if (currentIndex < attachments.length - 1) {
@@ -80,6 +85,7 @@ export const AttachmentViewerModal: React.FC<AttachmentViewerModalProps> = ({
     const formData = new FormData();
     formData.append("file", file);
     formData.append("profile", profile);
+    formData.append("attachment_type", uploadType);
     if (transactionId) {
       formData.append("transaction_id", transactionId);
     }
@@ -88,13 +94,32 @@ export const AttachmentViewerModal: React.FC<AttachmentViewerModalProps> = ({
       await api.post("/attachments/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setActionSuccess("Comprovante anexado com sucesso!");
+      setActionSuccess(`${ATTACHMENT_TYPES[uploadType]?.shortLabel} anexado com sucesso!`);
       onAttachmentsChanged();
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err: any) {
       setActionError(err.response?.data?.detail || "Erro ao fazer upload do comprovante.");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleUpdateCurrentAttachmentType = async (newType: AttachmentType) => {
+    if (!currentAttachment) return;
+    setIsUpdatingType(true);
+    setActionError(null);
+    setActionSuccess(null);
+    try {
+      await api.patch(`/attachments/${currentAttachment.id}`, {
+        attachment_type: newType,
+      });
+      currentAttachment.attachment_type = newType;
+      setActionSuccess(`Tipo alterado para "${ATTACHMENT_TYPES[newType]?.shortLabel}"!`);
+      onAttachmentsChanged();
+    } catch (err: any) {
+      setActionError(err.response?.data?.detail || "Erro ao atualizar tipo do anexo.");
+    } finally {
+      setIsUpdatingType(false);
     }
   };
 
@@ -138,15 +163,38 @@ export const AttachmentViewerModal: React.FC<AttachmentViewerModalProps> = ({
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-6xl 2xl:max-w-7xl h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         
         {/* Header do Visualizador */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/50">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-zinc-100 dark:border-zinc-800 shrink-0 bg-zinc-50/50 dark:bg-zinc-900/50">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
               {isPdf ? <FileText className="w-5 h-5" /> : <ImageIcon className="w-5 h-5" />}
             </div>
-            <div className="min-w-0">
-              <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                {currentAttachment ? currentAttachment.file_name : transactionTitle}
-              </h2>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                  {currentAttachment ? currentAttachment.file_name : transactionTitle}
+                </h2>
+
+                {/* Seletor Interativo do Tipo do Anexo Ativo */}
+                {currentAttachment && (
+                  <div className="relative inline-flex items-center">
+                    <select
+                      value={currentTypeKey}
+                      onChange={(e) => handleUpdateCurrentAttachmentType(e.target.value as AttachmentType)}
+                      disabled={isUpdatingType}
+                      className={`text-[11px] font-bold py-0.5 pl-2 pr-5 rounded-md border appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 ${currentTypeCfg.badgeClass}`}
+                      title="Alterar tipo do anexo"
+                    >
+                      {(Object.keys(ATTACHMENT_TYPES) as AttachmentType[]).map((key) => (
+                        <option key={key} value={key} className="bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-medium">
+                          {ATTACHMENT_TYPES[key].shortLabel}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3 h-3 absolute right-1 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+                  </div>
+                )}
+              </div>
+
               <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
                 {transactionTitle} {currentAttachment?.formatted_size ? `• ${currentAttachment.formatted_size}` : ""}
               </p>
@@ -154,6 +202,22 @@ export const AttachmentViewerModal: React.FC<AttachmentViewerModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {/* Seletor rápido de tipo para novo anexo */}
+            <div className="hidden sm:flex items-center gap-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl p-1 text-[11px]">
+              <span className="px-1.5 text-zinc-400 font-medium">Novo como:</span>
+              <select
+                value={uploadType}
+                onChange={(e) => setUploadType(e.target.value as AttachmentType)}
+                className="bg-transparent text-zinc-700 dark:text-zinc-200 font-semibold focus:outline-none cursor-pointer"
+              >
+                {(Object.keys(ATTACHMENT_TYPES) as AttachmentType[]).map((k) => (
+                  <option key={k} value={k} className="bg-white dark:bg-zinc-800">
+                    {ATTACHMENT_TYPES[k].shortLabel}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Input oculto para adicionar novo comprovante */}
             <input
               type="file"

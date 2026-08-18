@@ -9,14 +9,20 @@ from app.core.security import get_password_hash
 from app.api.v1 import api_router
 
 async def migrate_database_schema():
-    """Garante que colunas novas como 'nature' existam na tabela categories."""
+    """Garante que colunas novas como 'nature' e 'attachment_type' existam no banco SQLite."""
     async with engine.begin() as conn:
         try:
-            # Verifica colunas da tabela categories
+            # 1. Verifica colunas da tabela categories
             res = await conn.execute(text("PRAGMA table_info(categories)"))
             columns = [row[1] for row in res.fetchall()]
             if "nature" not in columns:
                 await conn.execute(text("ALTER TABLE categories ADD COLUMN nature VARCHAR(20) DEFAULT 'NENHUM' NOT NULL"))
+
+            # 2. Verifica colunas da tabela attachments
+            res_att = await conn.execute(text("PRAGMA table_info(attachments)"))
+            att_columns = [row[1] for row in res_att.fetchall()]
+            if att_columns and "attachment_type" not in att_columns:
+                await conn.execute(text("ALTER TABLE attachments ADD COLUMN attachment_type VARCHAR(30) DEFAULT 'COMPROVANTE' NOT NULL"))
         except Exception as e:
             print("Aviso na migração SQLite:", e)
 

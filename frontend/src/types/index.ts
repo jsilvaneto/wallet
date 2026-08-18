@@ -200,6 +200,109 @@ export interface SyncStatus {
   details?: SyncPendingDetails | null;
 }
 
+export type AttachmentType = 
+  | "COMPROVANTE" 
+  | "NOTA_FISCAL" 
+  | "FATURA" 
+  | "RECIBO" 
+  | "CONTRATO" 
+  | "OUTRO";
+
+export interface AttachmentTypeConfig {
+  value: AttachmentType;
+  label: string;
+  shortLabel: string;
+  badgeClass: string;
+  badgeBgLight: string;
+  badgeBgDark: string;
+  badgeTextLight: string;
+  badgeTextDark: string;
+  borderLight: string;
+  borderDark: string;
+  description: string;
+}
+
+export const ATTACHMENT_TYPES: Record<AttachmentType, AttachmentTypeConfig> = {
+  COMPROVANTE: {
+    value: "COMPROVANTE",
+    label: "Comprovante de Pagamento / PIX",
+    shortLabel: "Comprovante",
+    badgeClass: "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800",
+    badgeBgLight: "bg-emerald-50",
+    badgeBgDark: "dark:bg-emerald-950/50",
+    badgeTextLight: "text-emerald-700",
+    badgeTextDark: "dark:text-emerald-300",
+    borderLight: "border-emerald-200",
+    borderDark: "dark:border-emerald-800",
+    description: "Comprovante bancário, PIX, TED ou depósito",
+  },
+  NOTA_FISCAL: {
+    value: "NOTA_FISCAL",
+    label: "Nota Fiscal / Cupom Fiscal",
+    shortLabel: "Nota Fiscal",
+    badgeClass: "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800",
+    badgeBgLight: "bg-purple-50",
+    badgeBgDark: "dark:bg-purple-950/50",
+    badgeTextLight: "text-purple-700",
+    badgeTextDark: "dark:text-purple-300",
+    borderLight: "border-purple-200",
+    borderDark: "dark:border-purple-800",
+    description: "DANFE, NF-e, NFS-e, NFC-e ou cupom",
+  },
+  FATURA: {
+    value: "FATURA",
+    label: "Fatura / Boleto Bancário",
+    shortLabel: "Fatura / Boleto",
+    badgeClass: "bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800",
+    badgeBgLight: "bg-sky-50",
+    badgeBgDark: "dark:bg-sky-950/50",
+    badgeTextLight: "text-sky-700",
+    badgeTextDark: "dark:text-sky-300",
+    borderLight: "border-sky-200",
+    borderDark: "dark:border-sky-800",
+    description: "Fatura de cartão, boleto, conta de consumo",
+  },
+  RECIBO: {
+    value: "RECIBO",
+    label: "Recibo de Prestação / Quitação",
+    shortLabel: "Recibo",
+    badgeClass: "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+    badgeBgLight: "bg-amber-50",
+    badgeBgDark: "dark:bg-amber-950/50",
+    badgeTextLight: "text-amber-700",
+    badgeTextDark: "dark:text-amber-300",
+    borderLight: "border-amber-200",
+    borderDark: "dark:border-amber-800",
+    description: "Recibo assinado, RPA ou quitação manual",
+  },
+  CONTRATO: {
+    value: "CONTRATO",
+    label: "Contrato / Proposta / Termo",
+    shortLabel: "Contrato",
+    badgeClass: "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800",
+    badgeBgLight: "bg-indigo-50",
+    badgeBgDark: "dark:bg-indigo-950/50",
+    badgeTextLight: "text-indigo-700",
+    badgeTextDark: "dark:text-indigo-300",
+    borderLight: "border-indigo-200",
+    borderDark: "dark:border-indigo-800",
+    description: "Contrato de serviço, locação ou proposta",
+  },
+  OUTRO: {
+    value: "OUTRO",
+    label: "Outro Documento",
+    shortLabel: "Outro",
+    badgeClass: "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700",
+    badgeBgLight: "bg-zinc-100",
+    badgeBgDark: "dark:bg-zinc-800",
+    badgeTextLight: "text-zinc-700",
+    badgeTextDark: "dark:text-zinc-300",
+    borderLight: "border-zinc-200",
+    borderDark: "dark:border-zinc-700",
+    description: "Documento complementar genérico",
+  },
+};
+
 export interface Attachment {
   id: string;
   profile: ProfileType;
@@ -208,6 +311,7 @@ export interface Attachment {
   file_path: string;
   file_size_bytes: number;
   mime_type: string;
+  attachment_type: AttachmentType;
   drive_file_id?: string | null;
   drive_web_view_link?: string | null;
   drive_folder_id?: string | null;

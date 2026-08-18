@@ -10,11 +10,13 @@ from app.models import User, Attachment, Transaction
 from app.api.v1.deps import get_current_user
 from app.schemas.attachment import (
     AttachmentResponse,
+    AttachmentUpdate,
     AttachmentStatsResponse,
     StorageDirectoryConfigRequest,
     StorageDirectoryConfigResponse,
     ProfileType,
-    SyncStatusType
+    SyncStatusType,
+    AttachmentType
 )
 from app.services.attachment_service import (
     save_uploaded_attachment,
@@ -38,6 +40,7 @@ async def upload_attachment(
     file: UploadFile = File(...),
     profile: ProfileType = Form(...),
     transaction_id: Optional[str] = Form(None),
+    attachment_type: AttachmentType = Form("COMPROVANTE"),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user)
 ):
@@ -48,7 +51,8 @@ async def upload_attachment(
         db=db,
         upload_file=file,
         profile=profile,
-        transaction_id=transaction_id
+        transaction_id=transaction_id,
+        attachment_type=attachment_type
     )
 
     return enrich_attachment_schema(attachment)
@@ -58,17 +62,20 @@ async def list_attachments(
     profile: Optional[ProfileType] = Query(None, description="Filtrar por PESSOAL ou EMPRESA"),
     transaction_id: Optional[str] = Query(None, description="Filtrar por lançamento"),
     sync_status: Optional[SyncStatusType] = Query(None, description="Filtrar por status de sincronização"),
+    attachment_type: Optional[AttachmentType] = Query(None, description="Filtrar por tipo de anexo"),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user)
 ):
     """Lista todos os anexos cadastrados com opções de filtro e URLs formatadas."""
     query = select(Attachment)
-    if profile:
+    if isinstance(profile, str) and profile:
         query = query.where(Attachment.profile == profile)
-    if transaction_id:
+    if isinstance(transaction_id, str) and transaction_id:
         query = query.where(Attachment.transaction_id == transaction_id)
-    if sync_status:
+    if isinstance(sync_status, str) and sync_status:
         query = query.where(Attachment.sync_status == sync_status)
+    if isinstance(attachment_type, str) and attachment_type:
+        query = query.where(Attachment.attachment_type == attachment_type)
 
     query = query.order_by(Attachment.created_at.desc())
     attachments = (await db.execute(query)).scalars().all()
@@ -175,6 +182,31 @@ async def get_attachment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Comprovante não encontrado."
         )
+    return enrich_attachment_schema(att)
+
+@router.patch("/{attachment_id}", response_model=AttachmentResponse)
+async def update_attachment(
+    attachment_id: str,
+    payload: AttachmentUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Atualiza metadados do anexo, como o tipo de anexo ou nome de exibição."""
+    att = await db.get(Attachment, attachment_id)
+    if not att:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Comprovante não encontrado."
+        )
+
+    if payload.attachment_type is not None:
+        att.attachment_type = payload.attachment_type
+    if payload.file_name is not None and payload.file_name.strip():
+        att.file_name = payload.file_name.strip()
+
+    await db.commit()
+    await db.refresh(att)
+
     return enrich_attachment_schema(att)
 
 @router.get("/{attachment_id}/file")

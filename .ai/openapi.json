@@ -3329,6 +3329,32 @@
               "title": "Sync Status"
             },
             "description": "Filtrar por status de sincronização"
+          },
+          {
+            "name": "attachment_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "COMPROVANTE",
+                    "NOTA_FISCAL",
+                    "FATURA",
+                    "RECIBO",
+                    "CONTRATO",
+                    "OUTRO"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar por tipo de anexo",
+              "title": "Attachment Type"
+            },
+            "description": "Filtrar por tipo de anexo"
           }
         ],
         "responses": {
@@ -3541,6 +3567,62 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Anexos e Comprovantes"
+        ],
+        "summary": "Update Attachment",
+        "description": "Atualiza metadados do anexo, como o tipo de anexo ou nome de exibição.",
+        "operationId": "update_attachment_api_v1_attachments__attachment_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "attachment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Attachment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachmentUpdate"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -3878,6 +3960,19 @@
             "type": "string",
             "title": "Mime Type"
           },
+          "attachment_type": {
+            "type": "string",
+            "enum": [
+              "COMPROVANTE",
+              "NOTA_FISCAL",
+              "FATURA",
+              "RECIBO",
+              "CONTRATO",
+              "OUTRO"
+            ],
+            "title": "Attachment Type",
+            "default": "COMPROVANTE"
+          },
           "drive_file_id": {
             "anyOf": [
               {
@@ -4072,6 +4167,42 @@
         "type": "object",
         "title": "AttachmentStatsResponse"
       },
+      "AttachmentUpdate": {
+        "properties": {
+          "attachment_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "COMPROVANTE",
+                  "NOTA_FISCAL",
+                  "FATURA",
+                  "RECIBO",
+                  "CONTRATO",
+                  "OUTRO"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attachment Type"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          }
+        },
+        "type": "object",
+        "title": "AttachmentUpdate"
+      },
       "Body_login_api_v1_auth_login_post": {
         "properties": {
           "grant_type": {
@@ -4156,6 +4287,19 @@
               }
             ],
             "title": "Transaction Id"
+          },
+          "attachment_type": {
+            "type": "string",
+            "enum": [
+              "COMPROVANTE",
+              "NOTA_FISCAL",
+              "FATURA",
+              "RECIBO",
+              "CONTRATO",
+              "OUTRO"
+            ],
+            "title": "Attachment Type",
+            "default": "COMPROVANTE"
           }
         },
         "type": "object",

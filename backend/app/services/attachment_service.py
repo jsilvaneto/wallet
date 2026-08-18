@@ -141,7 +141,8 @@ async def save_uploaded_attachment(
     db: AsyncSession,
     upload_file: UploadFile,
     profile: str,
-    transaction_id: Optional[str] = None
+    transaction_id: Optional[str] = None,
+    attachment_type: str = "COMPROVANTE"
 ) -> Attachment:
     """
     Valida e salva o arquivo fisicamente no diretório de armazenamento ativo,
@@ -152,6 +153,11 @@ async def save_uploaded_attachment(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Perfil inválido. Deve ser 'PESSOAL' ou 'EMPRESA'."
         )
+
+    valid_types = ("COMPROVANTE", "NOTA_FISCAL", "FATURA", "RECIBO", "CONTRATO", "OUTRO")
+    clean_type = attachment_type.upper() if attachment_type else "COMPROVANTE"
+    if clean_type not in valid_types:
+        clean_type = "COMPROVANTE"
 
     orig_name = upload_file.filename or "comprovante.jpg"
     _, ext = os.path.splitext(orig_name.lower())
@@ -219,6 +225,7 @@ async def save_uploaded_attachment(
         file_path=rel_file_path,
         file_size_bytes=file_size,
         mime_type=mime,
+        attachment_type=clean_type,
         sync_status="SINCRONIZADO",
         created_at=now.isoformat()
     )

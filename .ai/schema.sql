@@ -196,6 +196,7 @@ CREATE TABLE attachments (
 	file_path VARCHAR(500) NOT NULL, 
 	file_size_bytes INTEGER NOT NULL, 
 	mime_type VARCHAR(100) NOT NULL, 
+	attachment_type VARCHAR(30) NOT NULL, 
 	drive_file_id VARCHAR(100), 
 	drive_web_view_link TEXT, 
 	drive_folder_id VARCHAR(100), 
@@ -206,6 +207,7 @@ CREATE TABLE attachments (
 	PRIMARY KEY (id), 
 	CONSTRAINT chk_attachment_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
 	CONSTRAINT chk_attachment_sync_status CHECK (sync_status IN ('PENDENTE', 'SINCRONIZADO', 'ERRO', 'LOCAL_ONLY')), 
+	CONSTRAINT chk_attachment_type CHECK (attachment_type IN ('COMPROVANTE', 'NOTA_FISCAL', 'FATURA', 'RECIBO', 'CONTRATO', 'OUTRO')), 
 	FOREIGN KEY(transaction_id) REFERENCES transactions (id) ON DELETE CASCADE
 );
 
@@ -219,6 +221,8 @@ CREATE INDEX idx_trans_status ON transactions (status);
 
 CREATE INDEX idx_attachment_sync ON attachments (sync_status);
 
-CREATE INDEX idx_attachment_transaction ON attachments (transaction_id);
-
 CREATE INDEX idx_attachment_profile ON attachments (profile);
+
+CREATE INDEX idx_attachment_type ON attachments (attachment_type);
+
+CREATE INDEX idx_attachment_transaction ON attachments (transaction_id);

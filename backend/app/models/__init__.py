@@ -255,6 +255,7 @@ class Attachment(Base):
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
     file_size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    attachment_type: Mapped[str] = mapped_column(String(30), default="COMPROVANTE", nullable=False) # COMPROVANTE, NOTA_FISCAL, FATURA, RECIBO, CONTRATO, OUTRO
     
     drive_file_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     drive_web_view_link: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -270,8 +271,10 @@ class Attachment(Base):
     __table_args__ = (
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_attachment_profile"),
         CheckConstraint("sync_status IN ('PENDENTE', 'SINCRONIZADO', 'ERRO', 'LOCAL_ONLY')", name="chk_attachment_sync_status"),
+        CheckConstraint("attachment_type IN ('COMPROVANTE', 'NOTA_FISCAL', 'FATURA', 'RECIBO', 'CONTRATO', 'OUTRO')", name="chk_attachment_type"),
         Index("idx_attachment_profile", "profile"),
         Index("idx_attachment_transaction", "transaction_id"),
+        Index("idx_attachment_type", "attachment_type"),
         Index("idx_attachment_sync", "sync_status"),
     )
 
