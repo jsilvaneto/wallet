@@ -189,14 +189,14 @@ export const Transactions: React.FC = () => {
     setNavDate(new Date());
   };
 
-  // Liquidação de transação
-  const handleComplete = async (id: string) => {
+  // Liquidação ou reabertura de transação (alternância de status)
+  const handleToggleStatus = async (t: Transaction) => {
     try {
-      await api.patch(`/transactions/${id}/complete`);
+      await api.patch(`/transactions/${t.id}/toggle-status`);
       fetchData();
       refreshSyncStatus(false);
     } catch (err) {
-      console.error("Erro ao liquidar transação:", err);
+      console.error("Erro ao alternar status da transação:", err);
     }
   };
 
@@ -711,7 +711,7 @@ export const Transactions: React.FC = () => {
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/50 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   <th className="py-3.5 px-3 xl:px-4 w-12 text-center">Status</th>
-                  <th className="py-3.5 px-4 xl:px-6">Vencimento</th>
+                  <th className="py-3.5 px-4 xl:px-6">Vencimento / Liquidação</th>
                   <th className="py-3.5 px-4 xl:px-6">Descrição</th>
                   <th className="py-3.5 px-4 xl:px-6">Categoria</th>
                   <th className="py-3.5 px-4 xl:px-6">Conta / Carteira</th>
@@ -743,38 +743,63 @@ export const Transactions: React.FC = () => {
                         isOverdue ? "bg-rose-50/30 dark:bg-rose-950/10" : ""
                       }`}
                     >
-                      {/* Status / Checkbox */}
+                      {/* Status / Checkbox com Alternância e Desmarcação */}
                       <td className="py-3.5 px-3 xl:px-4 text-center">
                         <button
-                          onClick={() => !isCompleted && handleComplete(t.id)}
-                          title={isCompleted ? "Liquidada" : "Clique para liquidar"}
-                          disabled={isCompleted}
-                          className={`p-1.5 rounded-lg border transition-all ${
+                          type="button"
+                          onClick={() => handleToggleStatus(t)}
+                          title={
                             isCompleted
-                              ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 cursor-default"
+                              ? `${t.type === "RECEITA" ? "Recebido" : "Pago"} em ${t.payment_date ? formatDateToBR(t.payment_date) : formatDateToBR(t.due_date)} • Clique para desmarcar e reabrir`
+                              : `Pendente • Clique para marcar como ${t.type === "RECEITA" ? "Recebido" : "Pago"}`
+                          }
+                          className={`p-1.5 rounded-lg border transition-all cursor-pointer group ${
+                            isCompleted
+                              ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-600 dark:text-emerald-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:border-rose-400 hover:text-rose-600"
                               : isOverdue
-                              ? "border-rose-400 text-rose-500 hover:border-emerald-600 hover:text-emerald-600 hover:scale-105"
-                              : "border-zinc-300 dark:border-zinc-700 text-zinc-400 hover:border-emerald-600 hover:text-emerald-600 hover:scale-105"
+                              ? "border-rose-400 text-rose-500 hover:border-emerald-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:scale-105"
+                              : "border-zinc-300 dark:border-zinc-700 text-zinc-400 hover:border-emerald-600 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:scale-105"
                           }`}
                         >
-                          <Check className="w-3.5 h-3.5" />
+                          {isCompleted ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 group-hover:hidden" />
+                              <RotateCcw className="w-3.5 h-3.5 hidden group-hover:block" />
+                            </>
+                          ) : (
+                            <Check className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100" />
+                          )}
                         </button>
                       </td>
 
-                      {/* Due Date */}
+                      {/* Due Date & Action Date */}
                       <td className="py-3.5 px-4 xl:px-6 whitespace-nowrap">
-                        <div className="font-mono font-semibold text-zinc-800 dark:text-zinc-200">
-                          {formatDateToBR(t.due_date)}
-                        </div>
-                        {isOverdue && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-0.5">
-                            <AlertCircle className="w-3 h-3" /> Atrasado ({daysDiff}d)
-                          </span>
-                        )}
-                        {isDueToday && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-0.5">
-                            <Clock className="w-3 h-3" /> Vence Hoje
-                          </span>
+                        {isCompleted ? (
+                          <div>
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                              <span>{t.type === "RECEITA" ? "Recebido:" : "Pago:"} {t.payment_date ? formatDateToBR(t.payment_date) : formatDateToBR(t.due_date)}</span>
+                            </div>
+                            <span className="text-[10px] text-zinc-400 font-mono mt-0.5 block">
+                              Venc: {formatDateToBR(t.due_date)}
+                            </span>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="font-mono font-semibold text-zinc-800 dark:text-zinc-200">
+                              {formatDateToBR(t.due_date)}
+                            </div>
+                            {isOverdue && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-600 dark:text-rose-400 mt-0.5">
+                                <AlertCircle className="w-3 h-3" /> Atrasado ({daysDiff}d)
+                              </span>
+                            )}
+                            {isDueToday && (
+                              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+                                <Clock className="w-3 h-3" /> Vence Hoje
+                              </span>
+                            )}
+                          </div>
                         )}
                       </td>
 

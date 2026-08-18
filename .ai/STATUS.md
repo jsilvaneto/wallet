@@ -59,6 +59,10 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - [x] Botão de edição (`Pencil`) na coluna de ações da tabela de lançamentos.
     - [x] Modal unificado [TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx) com detecção de modo criação vs. edição, pré-carregamento total de campos, alteração de status (Pendente / Liquidado com data de quitação) e gestão em tempo real de comprovantes.
     - [x] Endpoint `PUT /api/v1/transactions/{id}` atualizado com suporte atômico a tipo, anexos e atualização de `sync_status = "PENDENTE"`.
+  - [x] **Liquidação, Apresentação da Data de Ação & Desmarcação de Transações**:
+    - [x] **Apresentação Visual da Data de Ação**: Ao marcar como recebido ou pago, a tabela de lançamentos exibe com destaque a data efetiva da ação (`Recebido: DD/MM/AAAA` ou `Pago: DD/MM/AAAA`) com badge e ícone `CheckCircle2`, mantendo a data de vencimento informada abaixo.
+    - [x] **Desmarcação em 1 Clique (Toggle / Reabrir)**: Botão de status interativo na tabela permitindo desmarcar qualquer recebimento ou pagamento e retornar para `PENDENTE` instantaneamente, com restauração automática de saldo devedor em dívidas vinculadas.
+    - [x] **Endpoints Backend**: `PATCH /api/v1/transactions/{id}/uncomplete` e `PATCH /api/v1/transactions/{id}/toggle-status` com suporte a recarga atômica de relacionamentos e concorrência assíncrona.
 
 - [x] **Sincronização Nuvem com Google Sheets (Espelho Integral & Base do App Mobile)**:
   - [x] **Detecção e Indicador Inteligente de Alterações Pendentes**:

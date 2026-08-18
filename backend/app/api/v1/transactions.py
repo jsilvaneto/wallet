@@ -125,7 +125,7 @@ async def get_transaction(
 @router.patch("/{trans_id}/complete", response_model=TransactionResponse)
 async def complete_transaction(
     trans_id: str,
-    payment_date: Optional[str] = Query(None, description="Data de pagamento (YYYY-MM-DD), padrão hoje"),
+    payment_date: Optional[str] = Query(default=None, description="Data de pagamento (YYYY-MM-DD), padrão hoje"),
     db: AsyncSession = Depends(get_db),
     _: User = Depends(get_current_user)
 ):
@@ -136,10 +136,13 @@ async def complete_transaction(
     if not trans:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transação não encontrada")
     
+    clean_payment_date = payment_date if isinstance(payment_date, str) and payment_date.strip() else None
+
     if trans.status != "CONCLUIDO":
         trans.status = "CONCLUIDO"
-        trans.payment_date = payment_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        trans.payment_date = clean_payment_date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
         trans.sync_status = "PENDENTE"
+        trans.updated_at = datetime.now(timezone.utc).isoformat()
         
         # Abatimento em dívida
         if trans.debt_id:
@@ -152,9 +155,66 @@ async def complete_transaction(
                     debt.status = "QUITADA"
                     
         await db.commit()
-        await db.refresh(trans)
         
-    return enrich_transaction_response(trans)
+    reload_query = select(Transaction).options(selectinload(Transaction.attachments)).where(Transaction.id == trans.id)
+    reloaded = (await db.execute(reload_query)).scalar_one()
+    return enrich_transaction_response(reloaded)
+
+@router.patch("/{trans_id}/uncomplete", response_model=TransactionResponse)
+async def uncomplete_transaction(
+    trans_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Desmarca uma transação liquidada, retornando para PENDENTE e restaurando saldos de dívida se houver."""
+    query = select(Transaction).options(selectinload(Transaction.attachments)).where(Transaction.id == trans_id)
+    result = await db.execute(query)
+    trans = result.scalar_one_or_none()
+    if not trans:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transação não encontrada")
+    
+    if trans.status == "CONCLUIDO":
+        trans.status = "PENDENTE"
+        trans.payment_date = None
+        trans.sync_status = "PENDENTE"
+        trans.updated_at = datetime.now(timezone.utc).isoformat()
+        
+        # Restaura saldo de dívida
+        if trans.debt_id:
+            debt_query = select(Debt).where(Debt.id == trans.debt_id)
+            debt_res = await db.execute(debt_query)
+            debt = debt_res.scalar_one_or_none()
+            if debt:
+                debt.remaining_amount_cents = min(debt.total_amount_cents, debt.remaining_amount_cents + trans.amount_cents)
+                if debt.status == "QUITADA" and debt.remaining_amount_cents > 0:
+                    debt.status = "ATIVA"
+                    
+        await db.commit()
+        
+    reload_query = select(Transaction).options(selectinload(Transaction.attachments)).where(Transaction.id == trans.id)
+    reloaded = (await db.execute(reload_query)).scalar_one()
+    return enrich_transaction_response(reloaded)
+
+@router.patch("/{trans_id}/toggle-status", response_model=TransactionResponse)
+async def toggle_transaction_status(
+    trans_id: str,
+    payment_date: Optional[str] = Query(default=None, description="Data de pagamento (YYYY-MM-DD), padrão hoje"),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Alterna o status da transação entre CONCLUIDO e PENDENTE."""
+    query = select(Transaction).options(selectinload(Transaction.attachments)).where(Transaction.id == trans_id)
+    result = await db.execute(query)
+    trans = result.scalar_one_or_none()
+    if not trans:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transação não encontrada")
+    
+    clean_payment_date = payment_date if isinstance(payment_date, str) and payment_date.strip() else None
+
+    if trans.status == "CONCLUIDO":
+        return await uncomplete_transaction(trans_id=trans_id, db=db, _=_)
+    else:
+        return await complete_transaction(trans_id=trans_id, payment_date=clean_payment_date, db=db, _=_)
 
 @router.put("/{trans_id}", response_model=TransactionResponse)
 async def update_transaction(

@@ -2189,6 +2189,120 @@
         }
       }
     },
+    "/api/v1/transactions/{trans_id}/uncomplete": {
+      "patch": {
+        "tags": [
+          "Transações e Fluxo"
+        ],
+        "summary": "Uncomplete Transaction",
+        "description": "Desmarca uma transação liquidada, retornando para PENDENTE e restaurando saldos de dívida se houver.",
+        "operationId": "uncomplete_transaction_api_v1_transactions__trans_id__uncomplete_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trans_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trans Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/transactions/{trans_id}/toggle-status": {
+      "patch": {
+        "tags": [
+          "Transações e Fluxo"
+        ],
+        "summary": "Toggle Transaction Status",
+        "description": "Alterna o status da transação entre CONCLUIDO e PENDENTE.",
+        "operationId": "toggle_transaction_status_api_v1_transactions__trans_id__toggle_status_patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "trans_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trans Id"
+            }
+          },
+          {
+            "name": "payment_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Data de pagamento (YYYY-MM-DD), padrão hoje",
+              "title": "Payment Date"
+            },
+            "description": "Data de pagamento (YYYY-MM-DD), padrão hoje"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/budgets": {
       "get": {
         "tags": [
