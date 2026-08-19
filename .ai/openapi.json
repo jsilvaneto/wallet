@@ -5084,6 +5084,58 @@
         ]
       }
     },
+    "/api/v1/system/stats": {
+      "get": {
+        "tags": [
+          "Sistema & Backups"
+        ],
+        "summary": "Get System Statistics",
+        "description": "Retorna métricas de saúde, tamanho do banco de dados e armazenamento em disco.",
+        "operationId": "get_system_statistics_api_v1_system_stats_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemStatsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/backup": {
+      "get": {
+        "tags": [
+          "Sistema & Backups"
+        ],
+        "summary": "Download System Backup",
+        "description": "Gera e faz o download de um arquivo .ZIP consolidado contendo o banco de dados\nSQLite (wallet.db), todos os anexos e comprovantes em disco e o manifesto do sistema.",
+        "operationId": "download_system_backup_api_v1_system_backup_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -9481,6 +9533,95 @@
         },
         "type": "object",
         "title": "SyncTriggerRequest"
+      },
+      "SystemStatsResponse": {
+        "properties": {
+          "database_size_bytes": {
+            "type": "integer",
+            "title": "Database Size Bytes"
+          },
+          "database_size_formatted": {
+            "type": "string",
+            "title": "Database Size Formatted"
+          },
+          "total_transactions": {
+            "type": "integer",
+            "title": "Total Transactions"
+          },
+          "total_accounts": {
+            "type": "integer",
+            "title": "Total Accounts"
+          },
+          "total_categories": {
+            "type": "integer",
+            "title": "Total Categories"
+          },
+          "total_contacts": {
+            "type": "integer",
+            "title": "Total Contacts"
+          },
+          "total_attachments": {
+            "type": "integer",
+            "title": "Total Attachments"
+          },
+          "attachments_size_bytes": {
+            "type": "integer",
+            "title": "Attachments Size Bytes"
+          },
+          "attachments_size_formatted": {
+            "type": "string",
+            "title": "Attachments Size Formatted"
+          },
+          "total_backup_size_bytes": {
+            "type": "integer",
+            "title": "Total Backup Size Bytes"
+          },
+          "total_backup_size_formatted": {
+            "type": "string",
+            "title": "Total Backup Size Formatted"
+          },
+          "last_backup_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Backup At"
+          },
+          "database_path": {
+            "type": "string",
+            "title": "Database Path"
+          },
+          "attachments_path": {
+            "type": "string",
+            "title": "Attachments Path"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "default": "2.4.0"
+          }
+        },
+        "type": "object",
+        "required": [
+          "database_size_bytes",
+          "database_size_formatted",
+          "total_transactions",
+          "total_accounts",
+          "total_categories",
+          "total_contacts",
+          "total_attachments",
+          "attachments_size_bytes",
+          "attachments_size_formatted",
+          "total_backup_size_bytes",
+          "total_backup_size_formatted",
+          "database_path",
+          "attachments_path"
+        ],
+        "title": "SystemStatsResponse"
       },
       "Token": {
         "properties": {

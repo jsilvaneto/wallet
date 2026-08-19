@@ -655,4 +655,23 @@ export interface ConciliationImportResponse {
   created_transaction_ids: string[];
 }
 
+export interface SystemStatsResponse {
+  database_size_bytes: number;
+  database_size_formatted: string;
+  total_transactions: number;
+  total_accounts: number;
+  total_categories: number;
+  total_contacts: number;
+  total_attachments: number;
+  attachments_size_bytes: number;
+  attachments_size_formatted: string;
+  total_backup_size_bytes: number;
+  total_backup_size_formatted: string;
+  last_backup_at?: string | null;
+  database_path: string;
+  attachments_path: string;
+  version: string;
+}
+
+
 

@@ -200,6 +200,13 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Botão **Conciliação OFX/CSV** renderizado condicionalmente na barra de ações de [Transactions.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/pages/Transactions.tsx) exclusivamente para `EMPRESA`.
   - [x] Registrado no [ADR 012](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/012-importador-conciliacao-bancaria-pj.md).
 
+- [x] **Backup Consolidado em 1 Clique & Recuperação de Desastres**:
+  - [x] Endpoints em `system.py` (`GET /system/stats` e `GET /system/backup`).
+  - [x] Rotina atômica com checkpoint WAL de SQLite (`PRAGMA wal_checkpoint(TRUNCATE);`), empacotamento completo de `wallet.db`, pasta `attachments/` e `manifest.json` em arquivo `.ZIP`.
+  - [x] Download instantâneo pelo navegador via endpoint assíncrono com limpeza automática de arquivos temporários.
+  - [x] Card executivo na aba **Configurações > Comprovantes & Backups** com estatísticas de disco em tempo real e data do último backup.
+  - [x] Registrado no [ADR 013](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/013-backup-consolidado-em-1-clique.md).
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 

@@ -4,7 +4,7 @@ import { api } from "../api/client";
 import { 
   Category, Item, Account, AccountType, PaymentMethod, CreditCard as CreditCardType, Contact, Debt, Budget, Goal, Schedule,
   User, SyncConfig, SyncLog, SyncTestResult, SyncResultResponse,
-  AttachmentStats, StorageDirectoryConfigResponse
+  AttachmentStats, StorageDirectoryConfigResponse, SystemStatsResponse
 } from "../types";
 import { formatCurrency } from "../utils/format";
 import { SyncSetupGuideModal } from "../components/SyncSetupGuideModal";
@@ -21,7 +21,7 @@ import {
   Building2, Landmark, PiggyBank, Percent, ChevronLeft, ChevronRight,
   Info, Coins, Wallet, CircleDollarSign, ArrowUp, ArrowDown,
   HardDrive, Paperclip, BookOpen, QrCode, Banknote, FileText, ArrowRightLeft,
-  FileCheck, Shield, Sparkles, Play, Pause, Ban, Repeat, History
+  FileCheck, Shield, Sparkles, Play, Pause, Ban, Repeat, History, FileDown
 } from "lucide-react";
 
 export type SettingsTab = 
@@ -272,6 +272,8 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [savingCustomDir, setSavingCustomDir] = useState(false);
   const [resettingCustomDir, setResettingCustomDir] = useState(false);
   const [attachmentStats, setAttachmentStats] = useState<AttachmentStats | null>(null);
+  const [systemStats, setSystemStats] = useState<SystemStatsResponse | null>(null);
+  const [downloadingBackup, setDownloadingBackup] = useState(false);
   const [savingSyncConfig, setSavingSyncConfig] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: "success" | "error"; message: string; details?: string } | null>(null);
   const [copiedEmail, setCopiedEmail] = useState(false);
@@ -372,8 +374,12 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
         setLoadingSyncLogs(false);
       } else if (activeTab === "ANEXOS") {
         try {
-          const attRes = await api.get<AttachmentStats>("/attachments/stats", { params: { profile } });
+          const [attRes, sysRes] = await Promise.all([
+            api.get<AttachmentStats>("/attachments/stats", { params: { profile } }),
+            api.get<SystemStatsResponse>("/system/stats")
+          ]);
           setAttachmentStats(attRes.data);
+          setSystemStats(sysRes.data);
           if (attRes.data.active_directory) {
             setCustomDirInput(attRes.data.active_directory);
           }
@@ -1524,7 +1530,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       title: "Dados & Arquivos",
       tabs: [
         { id: "SYNC", label: "Sincronização Nuvem", shortDescription: "Espelho Google Sheets", icon: Cloud },
-        { id: "ANEXOS", label: "Comprovantes & Anexos", shortDescription: "Armazenamento no disco", icon: HardDrive },
+        { id: "ANEXOS", label: "Comprovantes & Backups", shortDescription: "Download de .ZIP, disco e arquivos", icon: HardDrive },
       ],
     },
     {
@@ -4345,6 +4351,105 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 </p>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
                   O Wallet valida permissões de gravação antes de alterar e mantém fallback transparente caso arquivos antigos ainda estejam no local original.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Card de Backup Completo do Sistema em 1 Clique */}
+          <div className="bg-gradient-to-br from-indigo-950/40 via-zinc-900 to-zinc-900 border border-indigo-500/30 rounded-2xl p-6 shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center shadow-lg shadow-indigo-950/30 shrink-0">
+                  <ShieldCheck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-zinc-100 flex items-center gap-2">
+                    <span>Backup Completo do Sistema em 1 Clique</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      Disaster Recovery
+                    </span>
+                  </h4>
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Gera um arquivo <strong className="text-zinc-200">.ZIP</strong> consolidado contendo o banco de dados SQLite (<code>wallet.db</code>), todos os comprovantes/anexos particionados e manifesto.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  setDownloadingBackup(true);
+                  try {
+                    const response = await api.get("/system/backup", {
+                      responseType: "blob",
+                    });
+                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                    const link = document.createElement("a");
+                    link.href = url;
+                    const nowStr = new Date().toISOString().slice(0, 10);
+                    link.setAttribute("download", `wallet_backup_${nowStr}.zip`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+
+                    const sysRes = await api.get<SystemStatsResponse>("/system/stats");
+                    setSystemStats(sysRes.data);
+                  } catch (err) {
+                    console.error("Erro ao baixar backup:", err);
+                    alert("Erro ao gerar e baixar pacote de backup do sistema.");
+                  } finally {
+                    setDownloadingBackup(false);
+                  }
+                }}
+                disabled={downloadingBackup}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+              >
+                {downloadingBackup ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Gerando Snapshot &amp; Compactando ZIP...</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="w-4 h-4" />
+                    <span>Baixar Backup Completo (.ZIP)</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Grid de Estatísticas do Pacote */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              <div className="p-3.5 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Banco de Dados</span>
+                <p className="text-sm font-bold font-mono text-zinc-100 mt-0.5">
+                  {systemStats?.database_size_formatted || "—"}
+                </p>
+                <span className="text-[10px] text-zinc-500">{systemStats?.total_transactions || 0} lançamentos</span>
+              </div>
+
+              <div className="p-3.5 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Anexos Arquivados</span>
+                <p className="text-sm font-bold font-mono text-zinc-100 mt-0.5">
+                  {systemStats?.attachments_size_formatted || "—"}
+                </p>
+                <span className="text-[10px] text-zinc-500">{systemStats?.total_attachments || 0} comprovantes</span>
+              </div>
+
+              <div className="p-3.5 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">Tamanho Estimado ZIP</span>
+                <p className="text-sm font-bold font-mono text-indigo-300 mt-0.5">
+                  {systemStats?.total_backup_size_formatted || "—"}
+                </p>
+                <span className="text-[10px] text-zinc-500">Compressão DEFLATE</span>
+              </div>
+
+              <div className="p-3.5 bg-zinc-900/60 border border-zinc-800 rounded-xl">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Último Backup</span>
+                <p className="text-xs font-semibold text-zinc-200 mt-1 truncate">
+                  {systemStats?.last_backup_at || "Ainda não realizado"}
                 </p>
               </div>
             </div>
