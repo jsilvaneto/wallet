@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
 import { 
-  Category, Item, Account, AccountType, PaymentMethod, CreditCard as CreditCardType, Contact, Debt, Budget, Goal,
+  Category, Item, Account, AccountType, PaymentMethod, CreditCard as CreditCardType, Contact, Debt, Budget, Goal, Schedule,
   User, SyncConfig, SyncLog, SyncTestResult, SyncResultResponse,
   AttachmentStats, StorageDirectoryConfigResponse
 } from "../types";
@@ -21,7 +21,7 @@ import {
   Building2, Landmark, PiggyBank, Percent, ChevronLeft, ChevronRight,
   Info, Coins, Wallet, CircleDollarSign, ArrowUp, ArrowDown,
   HardDrive, Paperclip, BookOpen, QrCode, Banknote, FileText, ArrowRightLeft,
-  FileCheck, Shield, Sparkles
+  FileCheck, Shield, Sparkles, Play, Pause, Ban, Repeat, History
 } from "lucide-react";
 
 export type SettingsTab = 
@@ -34,6 +34,7 @@ export type SettingsTab =
   | "DIVIDAS" 
   | "ORCAMENTOS" 
   | "METAS"
+  | "RECORRENCIAS"
   | "SYNC" 
   | "ANEXOS" 
   | "USUARIOS" 
@@ -236,6 +237,22 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [contributeError, setContributeError] = useState<string | null>(null);
 
   // ==========================================
+  // 6.2 ESTADOS DE ASSINATURAS & RECORRÊNCIAS
+  // ==========================================
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [scheduleSearch, setScheduleSearch] = useState("");
+  const [scheduleTypeFilter, setScheduleTypeFilter] = useState<string>("TODOS");
+  const [scheduleStatusFilter, setScheduleStatusFilter] = useState<string>("TODOS");
+
+  // Modal de Reajuste de Recorrência
+  const [adjustModalSchedule, setAdjustModalSchedule] = useState<Schedule | null>(null);
+  const [adjustAmountStr, setAdjustAmountStr] = useState("");
+  const [adjustDueDay, setAdjustDueDay] = useState<number>(1);
+  const [adjustDescription, setAdjustDescription] = useState("");
+  const [adjustSaving, setAdjustSaving] = useState(false);
+  const [adjustError, setAdjustError] = useState<string | null>(null);
+
+  // ==========================================
   // 7. ESTADOS DE SINCRONIZAÇÃO GOOGLE SHEETS
   // ==========================================
   const [syncConfig, setSyncConfig] = useState<SyncConfig | null>(null);
@@ -331,6 +348,9 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       } else if (activeTab === "METAS") {
         const res = await api.get("/goals", { params: { profile } });
         setGoals(res.data);
+      } else if (activeTab === "RECORRENCIAS") {
+        const res = await api.get("/schedules", { params: { profile } });
+        setSchedules(res.data);
       } else if (activeTab === "USUARIOS") {
         setLoadingUsers(true);
         const res = await api.get<User[]>("/auth/users");
@@ -418,6 +438,25 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
     }
     return list.sort((a, b) => a.title.localeCompare(b.title, "pt-BR", { sensitivity: "base" }));
   }, [goals, goalSearch, goalStatusFilter]);
+
+  const sortedSchedules = useMemo(() => {
+    let list = [...schedules];
+    if (scheduleSearch.trim()) {
+      const q = scheduleSearch.toLowerCase();
+      list = list.filter((s) => 
+        s.description.toLowerCase().includes(q) || 
+        (s.category_name || "").toLowerCase().includes(q) ||
+        (s.contact_name || "").toLowerCase().includes(q)
+      );
+    }
+    if (scheduleTypeFilter !== "TODOS") {
+      list = list.filter((s) => s.schedule_type === scheduleTypeFilter);
+    }
+    if (scheduleStatusFilter !== "TODOS") {
+      list = list.filter((s) => s.status === scheduleStatusFilter);
+    }
+    return list.sort((a, b) => a.description.localeCompare(b.description, "pt-BR", { sensitivity: "base" }));
+  }, [schedules, scheduleSearch, scheduleTypeFilter, scheduleStatusFilter]);
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => a.username.localeCompare(b.username, "pt-BR", { sensitivity: "base" }));
@@ -1052,6 +1091,72 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   };
 
   // ==========================================
+  // HANDLERS: ASSINATURAS & RECORRÊNCIAS
+  // ==========================================
+  const openAdjustSchedule = (s: Schedule) => {
+    setAdjustModalSchedule(s);
+    setAdjustAmountStr((s.amount_cents / 100).toFixed(2).replace(".", ","));
+    setAdjustDueDay(s.due_day);
+    setAdjustDescription(s.description);
+    setAdjustError(null);
+    setAdjustSaving(false);
+  };
+
+  const closeAdjustSchedule = () => {
+    setAdjustModalSchedule(null);
+    setAdjustError(null);
+  };
+
+  const handleSaveAdjustSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adjustModalSchedule || !adjustAmountStr.trim()) return;
+    setAdjustSaving(true);
+    setAdjustError(null);
+    try {
+      const amountCents = Math.round(parseFloat(adjustAmountStr.replace(",", ".")) * 100);
+      await api.post(`/schedules/${adjustModalSchedule.id}/adjust`, {
+        new_amount_cents: amountCents,
+        new_due_day: adjustDueDay,
+        new_description: adjustDescription.trim() || undefined,
+      });
+      setAdjustModalSchedule(null);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao reajustar plano:", err);
+      setAdjustError(err.response?.data?.detail || "Erro ao reajustar lançamentos futuros.");
+    } finally {
+      setAdjustSaving(false);
+    }
+  };
+
+  const handleScheduleAction = async (id: string, action: "PAUSAR" | "REATIVAR" | "CANCELAR") => {
+    const promptMap = {
+      PAUSAR: "Deseja pausar esta assinatura/recorrência?",
+      REATIVAR: "Deseja reativar esta assinatura/recorrência?",
+      CANCELAR: "Atenção: Cancelar este contrato removerá todos os lançamentos futuros pendentes, mas manterá intacto o histórico do que já foi pago. Confirmar cancelamento?",
+    };
+    if (!confirm(promptMap[action])) return;
+    try {
+      await api.post(`/schedules/${id}/action`, { action });
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao alterar status da recorrência:", err);
+      alert(err.response?.data?.detail || "Erro ao executar ação.");
+    }
+  };
+
+  const handleDeleteSchedule = async (id: string) => {
+    if (!confirm("Deseja excluir definitivamente esta assinatura e seus lançamentos futuros?")) return;
+    try {
+      await api.delete(`/schedules/${id}`);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao excluir plano:", err);
+      alert(err.response?.data?.detail || "Erro ao excluir plano.");
+    }
+  };
+
+  // ==========================================
   // HANDLER GENÉRICO DE EXCLUSÃO
   // ==========================================
   const handleDeleteItem = async (endpoint: string, id: string) => {
@@ -1411,6 +1516,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
         { id: "DIVIDAS", label: "Dívidas & Passivos", shortDescription: "Controle e amortização", icon: Scale },
         { id: "ORCAMENTOS", label: "Orçamentos Mensais", shortDescription: "Tetos e limites por categoria", icon: PiggyBank },
         { id: "METAS", label: "Metas Financeiras", shortDescription: "Objetivos, reservas e aportes", icon: Target },
+        { id: "RECORRENCIAS", label: "Assinaturas & Recorrências", shortDescription: "Contratos contínuos e parcelamentos", icon: RefreshCw },
       ],
     },
     {
@@ -3430,6 +3536,242 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       )}
 
       {/* ========================================== */}
+      {/* ABA 6.2: ASSINATURAS & RECORRÊNCIAS        */}
+      {/* ========================================== */}
+      {activeTab === "RECORRENCIAS" && (
+        <div className="space-y-6 animate-fade-in">
+          
+          {/* Header & Indicadores Rápidos */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                Contratos Ativos
+              </span>
+              <div className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Repeat className="w-5 h-5 text-emerald-500" />
+                <span>{schedules.filter(s => s.status === "ATIVO").length} plano(s)</span>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                Custo Mensal Recorrente (Ativos)
+              </span>
+              <div className="text-xl font-bold font-mono text-rose-600 dark:text-rose-400">
+                {hideValues ? "••••••" : formatCurrency(
+                  schedules
+                    .filter(s => s.status === "ATIVO" && s.type === "DESPESA")
+                    .reduce((acc, curr) => acc + curr.amount_cents, 0)
+                )}
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm">
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">
+                Receita Recorrente Fixa (Ativos)
+              </span>
+              <div className="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                {hideValues ? "••••••" : formatCurrency(
+                  schedules
+                    .filter(s => s.status === "ATIVO" && s.type === "RECEITA")
+                    .reduce((acc, curr) => acc + curr.amount_cents, 0)
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Barra de Filtros */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <RefreshCw className="w-4 h-4 text-emerald-500" />
+                <span>Central de Contratos & Planos Recorrentes</span>
+              </h3>
+              <p className="text-xs text-zinc-400">
+                {sortedSchedules.length} plano(s) listado(s) • {profile}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                placeholder="Buscar contrato..."
+                value={scheduleSearch}
+                onChange={(e) => setScheduleSearch(e.target.value)}
+                className="px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+              />
+              <select
+                value={scheduleTypeFilter}
+                onChange={(e) => setScheduleTypeFilter(e.target.value)}
+                className="px-2.5 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 font-medium"
+              >
+                <option value="TODOS">Todos os tipos</option>
+                <option value="RECORRENTE_CONTINUA">Assinaturas Contínuas</option>
+                <option value="PARCELADA">Compras Parceladas</option>
+              </select>
+              <select
+                value={scheduleStatusFilter}
+                onChange={(e) => setScheduleStatusFilter(e.target.value)}
+                className="px-2.5 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 font-medium"
+              >
+                <option value="TODOS">Todos os status</option>
+                <option value="ATIVO">Ativos</option>
+                <option value="PAUSADO">Pausados</option>
+                <option value="CANCELADO">Cancelados</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Grid de Cards de Recorrências */}
+          {sortedSchedules.length === 0 ? (
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-12 text-center text-xs text-zinc-500">
+              Nenhuma assinatura ou parcelamento encontrado. Crie lançamentos recorrentes através do botão "Novo Lançamento".
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortedSchedules.map((s) => {
+                const isContinuous = s.schedule_type === "RECORRENTE_CONTINUA";
+                const isPaused = s.status === "PAUSADO";
+                const isCanceled = s.status === "CANCELADO";
+
+                return (
+                  <div
+                    key={s.id}
+                    className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between"
+                  >
+                    <div className="space-y-3">
+                      {/* Top Header do Card */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border mb-1.5 inline-block ${
+                            isContinuous
+                              ? "bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+                              : "bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+                          }`}>
+                            {isContinuous ? "🔁 Assinatura Contínua" : `💳 Parcelamento (${s.total_installments}x)`}
+                          </span>
+                          <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                            {s.description}
+                          </h4>
+                          <p className="text-xs text-zinc-400">
+                            {s.category_name || "Sem categoria"} {s.contact_name ? `• ${s.contact_name}` : ""}
+                          </p>
+                        </div>
+
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                          s.status === "ATIVO"
+                            ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+                            : isPaused
+                            ? "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+                            : "bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800"
+                        }`}>
+                          {s.status}
+                        </span>
+                      </div>
+
+                      {/* Valor e Periodicidade */}
+                      <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-100 dark:border-zinc-800/60">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-zinc-500">Valor Recorrente:</span>
+                          <div className="text-right">
+                            <span className={`text-base font-bold font-mono ${
+                              s.type === "DESPESA" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                            }`}>
+                              {s.type === "DESPESA" ? "-" : "+"} {hideValues ? "••••••" : formatCurrency(s.amount_cents)}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 block">/ {s.frequency.toLowerCase()}</span>
+                          </div>
+                        </div>
+
+                        <div className="mt-2 pt-2 border-t border-zinc-200/50 dark:border-zinc-700/50 flex justify-between text-[11px] text-zinc-400 font-mono">
+                          <span>Vencimento: Dia {s.due_day}</span>
+                          <span>Próximo: {s.next_due_date || "—"}</span>
+                        </div>
+                      </div>
+
+                      {/* Progresso de Pagamentos */}
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between text-[11px] text-zinc-500 font-mono">
+                          <span>Quitados: <strong>{s.paid_count}</strong> ({formatCurrency(s.paid_amount_cents, hideValues)})</span>
+                          <span>Pendentes: <strong>{s.pending_count}</strong></span>
+                        </div>
+                        {!isContinuous && s.total_installments && (
+                          <div className="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full transition-all"
+                              style={{ width: `${Math.min(100, Math.round((s.paid_count / s.total_installments) * 100))}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Ações Rápidas */}
+                    <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openAdjustSchedule(s)}
+                        className="px-2.5 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                        title="Reajustar valor futuro"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Reajustar</span>
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {s.status === "ATIVO" && (
+                          <button
+                            type="button"
+                            onClick={() => handleScheduleAction(s.id, "PAUSAR")}
+                            className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-lg transition-all cursor-pointer"
+                            title="Pausar recorrência"
+                          >
+                            <Pause className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {isPaused && (
+                          <button
+                            type="button"
+                            onClick={() => handleScheduleAction(s.id, "REATIVAR")}
+                            className="p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg transition-all cursor-pointer"
+                            title="Reativar recorrência"
+                          >
+                            <Play className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {!isCanceled && (
+                          <button
+                            type="button"
+                            onClick={() => handleScheduleAction(s.id, "CANCELAR")}
+                            className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all cursor-pointer"
+                            title="Cancelar contrato (remove futuros)"
+                          >
+                            <Ban className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSchedule(s.id)}
+                          className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all cursor-pointer"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* ========================================== */}
       {/* ABA 7: SINCRONIZAÇÃO NUVEM (GOOGLE SHEETS) */}
       {/* ========================================== */}
       {activeTab === "SYNC" && (
@@ -5347,6 +5689,108 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 >
                   {contributeSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   <span>Confirmar {contributeAction === "APORTE" ? "Aporte" : "Resgate"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Reajuste de Assinatura & Recorrência */}
+      {adjustModalSchedule && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-indigo-500" />
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                    Reajustar Assinatura / Contrato
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    {adjustModalSchedule.description}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeAdjustSchedule}
+                className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdjustSchedule} className="p-5 space-y-4">
+              {adjustError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{adjustError}</span>
+                </div>
+              )}
+
+              <div className="p-3 rounded-xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-800/40 text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">
+                💡 O novo valor e dia de vencimento serão aplicados a todos os <strong>lançamentos futuros pendentes</strong> ({adjustModalSchedule.pending_count} parcelas/meses). O histórico já quitado permanecerá inalterado.
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Novo Valor por Parcela / Mês (R$)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="0,00"
+                  value={adjustAmountStr}
+                  onChange={(e) => setAdjustAmountStr(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg font-mono font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Dia de Vencimento
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={31}
+                    required
+                    value={adjustDueDay}
+                    onChange={(e) => setAdjustDueDay(parseInt(e.target.value) || 1)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg font-mono text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Descrição Base
+                  </label>
+                  <input
+                    type="text"
+                    value={adjustDescription}
+                    onChange={(e) => setAdjustDescription(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={closeAdjustSchedule}
+                  className="px-4 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={adjustSaving}
+                  className="px-5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-indigo-600/20 transition-all flex items-center gap-1.5"
+                >
+                  {adjustSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Aplicar Reajuste Futuro</span>
                 </button>
               </div>
             </form>

@@ -184,6 +184,13 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Widget dedicado no **Dashboard** com barras de progresso e percentual de conclusão.
   - [x] Registrado no [ADR 010](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/010-gestao-de-metas-e-objetivos-financeiros.md).
 
+- [x] **Central de Assinaturas, Contratos & Recorrências (`Schedules`)**:
+  - [x] Endpoints enriquecidos em `schedules.py` (`GET /schedules`, `POST /schedules`, `POST /schedules/{id}/adjust`, `POST /schedules/{id}/action`, `DELETE /schedules/{id}`).
+  - [x] Reajuste inteligente em massa: atualiza valor e dia de vencimento em todos os lançamentos futuros pendentes, preservando 100% do histórico já liquidado.
+  - [x] Ações de ciclo de vida: **Pausar**, **Reativar** e **Cancelar** (com remoção limpa de parcelas futuras pendentes).
+  - [x] Aba executiva em **Configurações > Assinaturas & Recorrências** com cards informativos, KPIs de custo fixo mensal e receita recorrente, filtros e modal de reajuste.
+  - [x] Registrado no [ADR 011](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/011-central-de-assinaturas-e-recorrencias.md).
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 

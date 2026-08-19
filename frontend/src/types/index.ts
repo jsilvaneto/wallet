@@ -190,6 +190,42 @@ export interface Goal {
   progress_percentage?: number;
 }
 
+export type ScheduleType = "RECORRENTE_CONTINUA" | "PARCELADA";
+export type FrequencyType = "SEMANAL" | "MENSAL" | "TRIMESTRAL" | "SEMESTRAL" | "ANUAL";
+export type ScheduleStatus = "ATIVO" | "PAUSADO" | "FINALIZADO" | "CANCELADO";
+
+export interface Schedule {
+  id: string;
+  profile: ProfileType;
+  type: TransactionType;
+  account_id?: string | null;
+  credit_card_id?: string | null;
+  category_id: string;
+  item_id?: string | null;
+  contact_id?: string | null;
+  debt_id?: string | null;
+  payment_method_id?: string | null;
+  description: string;
+  schedule_type: ScheduleType;
+  frequency: FrequencyType;
+  amount_cents: number;
+  total_installments?: number | null;
+  start_date: string;
+  due_day: number;
+  status: ScheduleStatus;
+  created_at: string;
+  category_name?: string | null;
+  account_name?: string | null;
+  credit_card_name?: string | null;
+  payment_method_name?: string | null;
+  contact_name?: string | null;
+  paid_count: number;
+  pending_count: number;
+  paid_amount_cents: number;
+  pending_amount_cents: number;
+  next_due_date?: string | null;
+}
+
 export interface Transaction {
   id: string;
   profile: ProfileType;

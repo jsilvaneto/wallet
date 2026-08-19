@@ -2270,7 +2270,7 @@
     "/api/v1/schedules": {
       "get": {
         "tags": [
-          "Pagamentos Planejados"
+          "Pagamentos Planejados & Recorrências"
         ],
         "summary": "List Schedules",
         "operationId": "list_schedules_api_v1_schedules_get",
@@ -2313,6 +2313,24 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "name": "schedule_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "RECORRENTE_CONTINUA ou PARCELADA",
+              "title": "Schedule Type"
+            },
+            "description": "RECORRENTE_CONTINUA ou PARCELADA"
           }
         ],
         "responses": {
@@ -2344,7 +2362,7 @@
       },
       "post": {
         "tags": [
-          "Pagamentos Planejados"
+          "Pagamentos Planejados & Recorrências"
         ],
         "summary": "Create Schedule",
         "operationId": "create_schedule_api_v1_schedules_post",
@@ -2387,10 +2405,126 @@
         }
       }
     },
+    "/api/v1/schedules/{schedule_id}/adjust": {
+      "post": {
+        "tags": [
+          "Pagamentos Planejados & Recorrências"
+        ],
+        "summary": "Adjust Schedule",
+        "description": "Reajusta valor, dia de vencimento ou descrição de um plano e aplica automaticamente aos lançamentos futuros pendentes.",
+        "operationId": "adjust_schedule_api_v1_schedules__schedule_id__adjust_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Schedule Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleAdjust"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/schedules/{schedule_id}/action": {
+      "post": {
+        "tags": [
+          "Pagamentos Planejados & Recorrências"
+        ],
+        "summary": "Perform Schedule Action",
+        "description": "Executa ações de ciclo de vida (PAUSAR, REATIVAR ou CANCELAR com exclusão de parcelas futuras).",
+        "operationId": "perform_schedule_action_api_v1_schedules__schedule_id__action_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "schedule_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Schedule Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/schedules/{schedule_id}": {
       "put": {
         "tags": [
-          "Pagamentos Planejados"
+          "Pagamentos Planejados & Recorrências"
         ],
         "summary": "Update Schedule",
         "operationId": "update_schedule_api_v1_schedules__schedule_id__put",
@@ -2445,7 +2579,7 @@
       },
       "delete": {
         "tags": [
-          "Pagamentos Planejados"
+          "Pagamentos Planejados & Recorrências"
         ],
         "summary": "Delete Schedule",
         "operationId": "delete_schedule_api_v1_schedules__schedule_id__delete",
@@ -7812,6 +7946,71 @@
         "type": "object",
         "title": "PaymentMethodUpdate"
       },
+      "ScheduleAction": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "PAUSAR",
+              "REATIVAR",
+              "CANCELAR"
+            ],
+            "title": "Action",
+            "description": "Ação na recorrência"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "ScheduleAction"
+      },
+      "ScheduleAdjust": {
+        "properties": {
+          "new_amount_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Amount Cents",
+            "description": "Novo valor para parcelas/lançamentos futuros"
+          },
+          "new_due_day": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 31.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Due Day",
+            "description": "Novo dia de vencimento"
+          },
+          "new_description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Description"
+          }
+        },
+        "type": "object",
+        "title": "ScheduleAdjust"
+      },
       "ScheduleCreate": {
         "properties": {
           "type": {
@@ -8140,6 +8339,92 @@
           "created_at": {
             "type": "string",
             "title": "Created At"
+          },
+          "category_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Name"
+          },
+          "account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Name"
+          },
+          "credit_card_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Card Name"
+          },
+          "payment_method_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Name"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "paid_count": {
+            "type": "integer",
+            "title": "Paid Count",
+            "default": 0
+          },
+          "pending_count": {
+            "type": "integer",
+            "title": "Pending Count",
+            "default": 0
+          },
+          "paid_amount_cents": {
+            "type": "integer",
+            "title": "Paid Amount Cents",
+            "default": 0
+          },
+          "pending_amount_cents": {
+            "type": "integer",
+            "title": "Pending Amount Cents",
+            "default": 0
+          },
+          "next_due_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due Date"
           }
         },
         "type": "object",

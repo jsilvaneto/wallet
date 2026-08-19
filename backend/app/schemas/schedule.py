@@ -33,10 +33,28 @@ class ScheduleUpdate(BaseModel):
     due_day: Optional[int] = Field(None, ge=1, le=31)
     status: Optional[ScheduleStatus] = None
 
+class ScheduleAdjust(BaseModel):
+    new_amount_cents: Optional[int] = Field(None, gt=0, description="Novo valor para parcelas/lançamentos futuros")
+    new_due_day: Optional[int] = Field(None, ge=1, le=31, description="Novo dia de vencimento")
+    new_description: Optional[str] = Field(None, min_length=1, max_length=255)
+
+class ScheduleAction(BaseModel):
+    action: Literal["PAUSAR", "REATIVAR", "CANCELAR"] = Field(..., description="Ação na recorrência")
+
 class ScheduleResponse(ScheduleBase):
     id: str
     profile: ProfileType
     status: ScheduleStatus
     created_at: str
+    category_name: Optional[str] = None
+    account_name: Optional[str] = None
+    credit_card_name: Optional[str] = None
+    payment_method_name: Optional[str] = None
+    contact_name: Optional[str] = None
+    paid_count: int = 0
+    pending_count: int = 0
+    paid_amount_cents: int = 0
+    pending_amount_cents: int = 0
+    next_due_date: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
