@@ -4820,6 +4820,34 @@
   },
   "components": {
     "schemas": {
+      "AccountBalanceSummary": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "account_name": {
+            "type": "string",
+            "title": "Account Name"
+          },
+          "account_type": {
+            "type": "string",
+            "title": "Account Type"
+          },
+          "balance_cents": {
+            "type": "integer",
+            "title": "Balance Cents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "account_name",
+          "account_type",
+          "balance_cents"
+        ],
+        "title": "AccountBalanceSummary"
+      },
       "AccountCreate": {
         "properties": {
           "name": {
@@ -5462,6 +5490,54 @@
           "created_at"
         ],
         "title": "BudgetResponse"
+      },
+      "BudgetSummaryItem": {
+        "properties": {
+          "budget_id": {
+            "type": "string",
+            "title": "Budget Id"
+          },
+          "category_id": {
+            "type": "string",
+            "title": "Category Id"
+          },
+          "category_name": {
+            "type": "string",
+            "title": "Category Name"
+          },
+          "limit_amount_cents": {
+            "type": "integer",
+            "title": "Limit Amount Cents"
+          },
+          "spent_amount_cents": {
+            "type": "integer",
+            "title": "Spent Amount Cents"
+          },
+          "percentage": {
+            "type": "number",
+            "title": "Percentage"
+          },
+          "remaining_cents": {
+            "type": "integer",
+            "title": "Remaining Cents"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "budget_id",
+          "category_id",
+          "category_name",
+          "limit_amount_cents",
+          "spent_amount_cents",
+          "percentage",
+          "remaining_cents",
+          "status"
+        ],
+        "title": "BudgetSummaryItem"
       },
       "BudgetUpdate": {
         "properties": {
@@ -6641,6 +6717,10 @@
             "type": "integer",
             "title": "Net Realized Cents"
           },
+          "savings_rate": {
+            "type": "number",
+            "title": "Savings Rate"
+          },
           "income_pending_cents": {
             "type": "integer",
             "title": "Income Pending Cents"
@@ -6673,12 +6753,84 @@
             "type": "integer",
             "title": "Due Today Amount Cents"
           },
+          "total_account_balance_cents": {
+            "type": "integer",
+            "title": "Total Account Balance Cents"
+          },
+          "total_credit_card_invoices_cents": {
+            "type": "integer",
+            "title": "Total Credit Card Invoices Cents"
+          },
+          "total_debts_remaining_cents": {
+            "type": "integer",
+            "title": "Total Debts Remaining Cents"
+          },
+          "net_worth_cents": {
+            "type": "integer",
+            "title": "Net Worth Cents"
+          },
+          "accounts_balances": {
+            "items": {
+              "$ref": "#/components/schemas/AccountBalanceSummary"
+            },
+            "type": "array",
+            "title": "Accounts Balances",
+            "default": []
+          },
+          "historical_trend": {
+            "items": {
+              "$ref": "#/components/schemas/MonthlyTrendItem"
+            },
+            "type": "array",
+            "title": "Historical Trend",
+            "default": []
+          },
+          "nature_breakdown": {
+            "items": {
+              "$ref": "#/components/schemas/NatureBreakdown"
+            },
+            "type": "array",
+            "title": "Nature Breakdown",
+            "default": []
+          },
           "top_expense_categories": {
             "items": {
               "$ref": "#/components/schemas/CategoryBreakdown"
             },
             "type": "array",
             "title": "Top Expense Categories",
+            "default": []
+          },
+          "budgets_summary": {
+            "items": {
+              "$ref": "#/components/schemas/BudgetSummaryItem"
+            },
+            "type": "array",
+            "title": "Budgets Summary",
+            "default": []
+          },
+          "upcoming_7_days": {
+            "items": {
+              "$ref": "#/components/schemas/UpcomingTransactionItem"
+            },
+            "type": "array",
+            "title": "Upcoming 7 Days",
+            "default": []
+          },
+          "payment_methods_distribution": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentMethodDistribution"
+            },
+            "type": "array",
+            "title": "Payment Methods Distribution",
+            "default": []
+          },
+          "goals_summary": {
+            "items": {
+              "$ref": "#/components/schemas/GoalSummaryItem"
+            },
+            "type": "array",
+            "title": "Goals Summary",
             "default": []
           }
         },
@@ -6690,6 +6842,7 @@
           "income_realized_cents",
           "expense_realized_cents",
           "net_realized_cents",
+          "savings_rate",
           "income_pending_cents",
           "expense_pending_cents",
           "net_pending_cents",
@@ -6697,7 +6850,11 @@
           "overdue_count",
           "overdue_amount_cents",
           "due_today_count",
-          "due_today_amount_cents"
+          "due_today_amount_cents",
+          "total_account_balance_cents",
+          "total_credit_card_invoices_cents",
+          "total_debts_remaining_cents",
+          "net_worth_cents"
         ],
         "title": "DashboardSummaryResponse"
       },
@@ -7065,6 +7222,55 @@
         ],
         "title": "GoalResponse"
       },
+      "GoalSummaryItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "target_amount_cents": {
+            "type": "integer",
+            "title": "Target Amount Cents"
+          },
+          "current_amount_cents": {
+            "type": "integer",
+            "title": "Current Amount Cents"
+          },
+          "percentage": {
+            "type": "number",
+            "title": "Percentage"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "target_amount_cents",
+          "current_amount_cents",
+          "percentage",
+          "status"
+        ],
+        "title": "GoalSummaryItem"
+      },
       "GoalUpdate": {
         "properties": {
           "title": {
@@ -7322,6 +7528,87 @@
         "type": "object",
         "title": "ItemUpdate"
       },
+      "MonthlyTrendItem": {
+        "properties": {
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "income_realized_cents": {
+            "type": "integer",
+            "title": "Income Realized Cents"
+          },
+          "expense_realized_cents": {
+            "type": "integer",
+            "title": "Expense Realized Cents"
+          },
+          "net_realized_cents": {
+            "type": "integer",
+            "title": "Net Realized Cents"
+          },
+          "savings_rate": {
+            "type": "number",
+            "title": "Savings Rate"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "year",
+          "label",
+          "income_realized_cents",
+          "expense_realized_cents",
+          "net_realized_cents",
+          "savings_rate"
+        ],
+        "title": "MonthlyTrendItem"
+      },
+      "NatureBreakdown": {
+        "properties": {
+          "nature": {
+            "type": "string",
+            "title": "Nature"
+          },
+          "nature_label": {
+            "type": "string",
+            "title": "Nature Label"
+          },
+          "amount_cents": {
+            "type": "integer",
+            "title": "Amount Cents"
+          },
+          "percentage": {
+            "type": "number",
+            "title": "Percentage"
+          },
+          "target_percentage": {
+            "type": "number",
+            "title": "Target Percentage"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nature",
+          "nature_label",
+          "amount_cents",
+          "percentage",
+          "target_percentage",
+          "status"
+        ],
+        "title": "NatureBreakdown"
+      },
       "PaymentMethodCreate": {
         "properties": {
           "name": {
@@ -7347,6 +7634,45 @@
           "profile"
         ],
         "title": "PaymentMethodCreate"
+      },
+      "PaymentMethodDistribution": {
+        "properties": {
+          "payment_method_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "amount_cents": {
+            "type": "integer",
+            "title": "Amount Cents"
+          },
+          "percentage": {
+            "type": "number",
+            "title": "Percentage"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "amount_cents",
+          "percentage",
+          "count"
+        ],
+        "title": "PaymentMethodDistribution"
       },
       "PaymentMethodResponse": {
         "properties": {
@@ -9217,6 +9543,77 @@
         },
         "type": "object",
         "title": "TransactionUpdate"
+      },
+      "UpcomingTransactionItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "due_date": {
+            "type": "string",
+            "title": "Due Date"
+          },
+          "amount_cents": {
+            "type": "integer",
+            "title": "Amount Cents"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "category_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Name"
+          },
+          "account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Name"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "description",
+          "due_date",
+          "amount_cents",
+          "type",
+          "status"
+        ],
+        "title": "UpcomingTransactionItem"
       },
       "UserCreate": {
         "properties": {

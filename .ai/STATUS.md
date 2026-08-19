@@ -166,6 +166,16 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Exportação de **PDF / Impressão** via `@media print` otimizada para folha A4 e download de planilha **CSV** compatível com Excel.
   - [x] Registrado no [ADR 008](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/008-acoes-em-lote-e-exportacao-relatorios.md).
 
+- [x] **Reforma Executiva do Dashboard & Posição Patrimonial**:
+  - [x] Endpoint unificado `/api/v1/dashboard/summary` com cálculo dinâmico de saldos em contas e patrimônio líquido instantâneo.
+  - [x] Mini-carrossel de saldos individuais por conta e carteira com ícones por tipo (Corrente, Poupança, Investimentos, Caixa).
+  - [x] Gráfico histórico interativo de 6 meses com colunas duplas de receitas vs. despesas, saldo líquido e taxa de poupança/margem operacional.
+  - [x] Diagnóstico estratégico da Regra 50-30-20 (Gastos Obrigatórios ~50%, Necessários ~30%, Desejos ~20%) com termômetro visual.
+  - [x] Widget de monitoramento de tetos orçamentários (`Budgets`) com alertas de consumo (*Normal*, *Atenção*, *Estourado*).
+  - [x] Widget de Timeline dos Próximos 7 Dias com **Liquidação Rápida em 1 Clique** direto no Dashboard.
+  - [x] Distribuição analítica por Forma de Pagamento (Pix, Boleto, Cartão de Crédito, Débito, Dinheiro).
+  - [x] Registrado no [ADR 009](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/009-reforma-executiva-dashboard-analitico.md).
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 

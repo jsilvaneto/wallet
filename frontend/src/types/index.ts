@@ -215,6 +215,73 @@ export interface CategoryBreakdown {
   percentage: number;
 }
 
+export interface AccountBalanceSummary {
+  account_id: string;
+  account_name: string;
+  account_type: "CORRENTE" | "POUPANCA" | "INVESTIMENTO" | "CAIXA" | string;
+  balance_cents: number;
+}
+
+export interface MonthlyTrendItem {
+  month: number;
+  year: number;
+  label: string;
+  income_realized_cents: number;
+  expense_realized_cents: number;
+  net_realized_cents: number;
+  savings_rate: number;
+}
+
+export interface NatureBreakdown {
+  nature: CategoryNature;
+  nature_label: string;
+  amount_cents: number;
+  percentage: number;
+  target_percentage: number;
+  status: "NORMAL" | "ATENCAO" | "EXCEDIDO";
+}
+
+export interface BudgetSummaryItem {
+  budget_id: string;
+  category_id: string;
+  category_name: string;
+  limit_amount_cents: number;
+  spent_amount_cents: number;
+  percentage: number;
+  remaining_cents: number;
+  status: "NORMAL" | "ATENCAO" | "ESTOURADO";
+}
+
+export interface UpcomingTransactionItem {
+  id: string;
+  description: string;
+  due_date: string;
+  amount_cents: number;
+  type: TransactionType;
+  status: TransactionStatus;
+  category_name?: string | null;
+  account_name?: string | null;
+  contact_name?: string | null;
+}
+
+export interface PaymentMethodDistribution {
+  payment_method_id?: string | null;
+  name: string;
+  amount_cents: number;
+  percentage: number;
+  count: number;
+}
+
+export interface GoalSummaryItem {
+  id: string;
+  title: string;
+  target_amount_cents: number;
+  current_amount_cents: number;
+  percentage: number;
+  target_date?: string | null;
+  status: string;
+}
+
 export interface DashboardSummary {
   profile: ProfileType;
   month: number;
@@ -222,6 +289,7 @@ export interface DashboardSummary {
   income_realized_cents: number;
   expense_realized_cents: number;
   net_realized_cents: number;
+  savings_rate: number;
   income_pending_cents: number;
   expense_pending_cents: number;
   net_pending_cents: number;
@@ -230,7 +298,34 @@ export interface DashboardSummary {
   overdue_amount_cents: number;
   due_today_count: number;
   due_today_amount_cents: number;
+  
+  // Posição Patrimonial & Saldos
+  total_account_balance_cents: number;
+  total_credit_card_invoices_cents: number;
+  total_debts_remaining_cents: number;
+  net_worth_cents: number;
+  accounts_balances: AccountBalanceSummary[];
+
+  // Histórico & Tendência
+  historical_trend: MonthlyTrendItem[];
+
+  // Diagnóstico 50-30-20
+  nature_breakdown: NatureBreakdown[];
+
+  // Top Categorias
   top_expense_categories: CategoryBreakdown[];
+
+  // Orçamentos
+  budgets_summary: BudgetSummaryItem[];
+
+  // Próximos 7 Dias
+  upcoming_7_days: UpcomingTransactionItem[];
+
+  // Meios de Pagamento
+  payment_methods_distribution: PaymentMethodDistribution[];
+
+  // Metas
+  goals_summary: GoalSummaryItem[];
 }
 
 export interface SyncConfig {
