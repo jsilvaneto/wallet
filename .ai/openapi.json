@@ -734,6 +734,497 @@
         }
       }
     },
+    "/api/v1/credit-cards": {
+      "get": {
+        "tags": [
+          "Cartões de Crédito & Faturas"
+        ],
+        "summary": "List Credit Cards",
+        "operationId": "list_credit_cards_api_v1_credit_cards_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "PESSOAL ou EMPRESA",
+              "title": "Profile"
+            },
+            "description": "PESSOAL ou EMPRESA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreditCardResponse"
+                  },
+                  "title": "Response List Credit Cards Api V1 Credit Cards Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Cartões de Crédito & Faturas"
+        ],
+        "summary": "Create Credit Card",
+        "operationId": "create_credit_card_api_v1_credit_cards_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditCardCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditCardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credit-cards/{card_id}": {
+      "get": {
+        "tags": [
+          "Cartões de Crédito & Faturas"
+        ],
+        "summary": "Get Credit Card",
+        "operationId": "get_credit_card_api_v1_credit_cards__card_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Card Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditCardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Cartões de Crédito & Faturas"
+        ],
+        "summary": "Update Credit Card",
+        "operationId": "update_credit_card_api_v1_credit_cards__card_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Card Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditCardUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditCardResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Cartões de Crédito & Faturas"
+        ],
+        "summary": "Delete Credit Card",
+        "operationId": "delete_credit_card_api_v1_credit_cards__card_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Card Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credit-cards/{card_id}/invoices": {
+      "get": {
+        "tags": [
+          "Cartões de Crédito & Faturas"
+        ],
+        "summary": "List Card Invoices",
+        "operationId": "list_card_invoices_api_v1_credit_cards__card_id__invoices_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Card Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CreditCardInvoiceSummary"
+                  },
+                  "title": "Response List Card Invoices Api V1 Credit Cards  Card Id  Invoices Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credit-cards/{card_id}/invoices/{year}/{month}": {
+      "get": {
+        "tags": [
+          "Cartões de Crédito & Faturas"
+        ],
+        "summary": "Get Card Invoice Detail",
+        "operationId": "get_card_invoice_detail_api_v1_credit_cards__card_id__invoices__year___month__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Card Id"
+            }
+          },
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Year"
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditCardInvoiceDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credit-cards/{card_id}/invoices/{year}/{month}/settle": {
+      "post": {
+        "tags": [
+          "Cartões de Crédito & Faturas"
+        ],
+        "summary": "Settle Invoice",
+        "operationId": "settle_invoice_api_v1_credit_cards__card_id__invoices__year___month__settle_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Card Id"
+            }
+          },
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Year"
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Month"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditCardInvoiceSettleRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditCardInvoiceSettleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credit-cards/{card_id}/invoices/{year}/{month}/unsettle": {
+      "post": {
+        "tags": [
+          "Cartões de Crédito & Faturas"
+        ],
+        "summary": "Unsettle Invoice",
+        "operationId": "unsettle_invoice_api_v1_credit_cards__card_id__invoices__year___month__unsettle_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "card_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Card Id"
+            }
+          },
+          {
+            "name": "year",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Year"
+            }
+          },
+          {
+            "name": "month",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/categories": {
       "get": {
         "tags": [
@@ -2099,6 +2590,42 @@
               "title": "Payment Method Id"
             },
             "description": "Filtrar por Forma de Pagamento"
+          },
+          {
+            "name": "credit_card_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar por Cartão de Crédito",
+              "title": "Credit Card Id"
+            },
+            "description": "Filtrar por Cartão de Crédito"
+          },
+          {
+            "name": "is_invoice_payment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar lançamentos de débito de fatura",
+              "title": "Is Invoice Payment"
+            },
+            "description": "Filtrar lançamentos de débito de fatura"
           },
           {
             "name": "contact_id",
@@ -5096,6 +5623,664 @@
         "type": "object",
         "title": "ContactUpdate"
       },
+      "CreditCardCreate": {
+        "properties": {
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Nome identificador do cartão"
+          },
+          "limit_cents": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Limit Cents",
+            "description": "Limite total do cartão em centavos inteiros"
+          },
+          "closing_day": {
+            "type": "integer",
+            "maximum": 31.0,
+            "minimum": 1.0,
+            "title": "Closing Day",
+            "description": "Dia do fechamento (melhor dia de compra)"
+          },
+          "due_day": {
+            "type": "integer",
+            "maximum": 31.0,
+            "minimum": 1.0,
+            "title": "Due Day",
+            "description": "Dia do vencimento da fatura"
+          },
+          "color": {
+            "type": "string",
+            "maxLength": 30,
+            "title": "Color",
+            "description": "Cor de destaque visual do cartão",
+            "default": "emerald"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand",
+            "description": "Bandeira do cartão",
+            "default": "MASTERCARD"
+          },
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id",
+            "description": "ID da conta bancária padrão de pagamento"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile",
+          "name",
+          "limit_cents",
+          "closing_day",
+          "due_day"
+        ],
+        "title": "CreditCardCreate"
+      },
+      "CreditCardInvoiceDetail": {
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "title": "Card Id"
+          },
+          "card_name": {
+            "type": "string",
+            "title": "Card Name"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "period_start": {
+            "type": "string",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "title": "Period End"
+          },
+          "due_date": {
+            "type": "string",
+            "title": "Due Date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ABERTA",
+              "FECHADA",
+              "PAGA"
+            ],
+            "title": "Status"
+          },
+          "total_cents": {
+            "type": "integer",
+            "title": "Total Cents"
+          },
+          "paid_cents": {
+            "type": "integer",
+            "title": "Paid Cents"
+          },
+          "remaining_cents": {
+            "type": "integer",
+            "title": "Remaining Cents"
+          },
+          "items_count": {
+            "type": "integer",
+            "title": "Items Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CreditCardInvoiceItem"
+            },
+            "type": "array",
+            "title": "Items",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "card_id",
+          "card_name",
+          "month",
+          "year",
+          "period_start",
+          "period_end",
+          "due_date",
+          "status",
+          "total_cents",
+          "paid_cents",
+          "remaining_cents",
+          "items_count"
+        ],
+        "title": "CreditCardInvoiceDetail"
+      },
+      "CreditCardInvoiceItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "amount_cents": {
+            "type": "integer",
+            "title": "Amount Cents"
+          },
+          "category_id": {
+            "type": "string",
+            "title": "Category Id"
+          },
+          "category_name": {
+            "type": "string",
+            "title": "Category Name"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "due_date": {
+            "type": "string",
+            "title": "Due Date"
+          },
+          "payment_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Date"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          },
+          "installment_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installment Number"
+          },
+          "total_installments": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Installments"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDENTE",
+              "CONCLUIDO",
+              "CANCELADO"
+            ],
+            "title": "Status"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "description",
+          "amount_cents",
+          "category_id",
+          "category_name",
+          "due_date",
+          "created_at",
+          "status"
+        ],
+        "title": "CreditCardInvoiceItem"
+      },
+      "CreditCardInvoiceSettleRequest": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id",
+            "description": "ID da conta bancária de onde sairá o pagamento"
+          },
+          "payment_date": {
+            "type": "string",
+            "title": "Payment Date",
+            "description": "Data do pagamento (YYYY-MM-DD)"
+          },
+          "payment_method_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Id",
+            "description": "Forma de pagamento utilizada (ex: Débito Automático, Boleto, Pix)"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id",
+            "description": "Categoria do débito bancário (opcional)"
+          },
+          "amount_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Cents",
+            "description": "Valor do pagamento (se nulo, usa o total restante da fatura)"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes",
+            "description": "Observações do pagamento"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "payment_date"
+        ],
+        "title": "CreditCardInvoiceSettleRequest"
+      },
+      "CreditCardInvoiceSettleResponse": {
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "title": "Card Id"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "total_settled_cents": {
+            "type": "integer",
+            "title": "Total Settled Cents"
+          },
+          "settled_items_count": {
+            "type": "integer",
+            "title": "Settled Items Count"
+          },
+          "bank_transaction_id": {
+            "type": "string",
+            "title": "Bank Transaction Id"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "card_id",
+          "month",
+          "year",
+          "total_settled_cents",
+          "settled_items_count",
+          "bank_transaction_id",
+          "message"
+        ],
+        "title": "CreditCardInvoiceSettleResponse"
+      },
+      "CreditCardInvoiceSummary": {
+        "properties": {
+          "card_id": {
+            "type": "string",
+            "title": "Card Id"
+          },
+          "card_name": {
+            "type": "string",
+            "title": "Card Name"
+          },
+          "month": {
+            "type": "integer",
+            "title": "Month"
+          },
+          "year": {
+            "type": "integer",
+            "title": "Year"
+          },
+          "period_start": {
+            "type": "string",
+            "title": "Period Start"
+          },
+          "period_end": {
+            "type": "string",
+            "title": "Period End"
+          },
+          "due_date": {
+            "type": "string",
+            "title": "Due Date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ABERTA",
+              "FECHADA",
+              "PAGA"
+            ],
+            "title": "Status"
+          },
+          "total_cents": {
+            "type": "integer",
+            "title": "Total Cents"
+          },
+          "paid_cents": {
+            "type": "integer",
+            "title": "Paid Cents"
+          },
+          "remaining_cents": {
+            "type": "integer",
+            "title": "Remaining Cents"
+          },
+          "items_count": {
+            "type": "integer",
+            "title": "Items Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "card_id",
+          "card_name",
+          "month",
+          "year",
+          "period_start",
+          "period_end",
+          "due_date",
+          "status",
+          "total_cents",
+          "paid_cents",
+          "remaining_cents",
+          "items_count"
+        ],
+        "title": "CreditCardInvoiceSummary"
+      },
+      "CreditCardResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "limit_cents": {
+            "type": "integer",
+            "title": "Limit Cents"
+          },
+          "used_limit_cents": {
+            "type": "integer",
+            "title": "Used Limit Cents",
+            "default": 0
+          },
+          "available_limit_cents": {
+            "type": "integer",
+            "title": "Available Limit Cents",
+            "default": 0
+          },
+          "current_invoice_cents": {
+            "type": "integer",
+            "title": "Current Invoice Cents",
+            "default": 0
+          },
+          "closing_day": {
+            "type": "integer",
+            "title": "Closing Day"
+          },
+          "due_day": {
+            "type": "integer",
+            "title": "Due Day"
+          },
+          "color": {
+            "type": "string",
+            "title": "Color",
+            "default": "emerald"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Name"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "profile",
+          "name",
+          "limit_cents",
+          "closing_day",
+          "due_day",
+          "created_at"
+        ],
+        "title": "CreditCardResponse"
+      },
+      "CreditCardUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "limit_cents": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Cents"
+          },
+          "closing_day": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 31.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closing Day"
+          },
+          "due_day": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 31.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Day"
+          },
+          "color": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          }
+        },
+        "type": "object",
+        "title": "CreditCardUpdate"
+      },
       "DashboardSummaryResponse": {
         "properties": {
           "profile": {
@@ -5895,6 +7080,28 @@
             "title": "Type",
             "description": "RECEITA ou DESPESA"
           },
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "credit_card_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Card Id"
+          },
           "category_id": {
             "type": "string",
             "title": "Category Id",
@@ -6035,6 +7242,28 @@
             ],
             "title": "Type",
             "description": "RECEITA ou DESPESA"
+          },
+          "account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "credit_card_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Card Id"
           },
           "category_id": {
             "type": "string",
@@ -6798,6 +8027,17 @@
             ],
             "title": "Account Id"
           },
+          "credit_card_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Card Id"
+          },
           "category_id": {
             "type": "string",
             "title": "Category Id",
@@ -6846,6 +8086,33 @@
               }
             ],
             "title": "Payment Method Id"
+          },
+          "invoice_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Month"
+          },
+          "invoice_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Year"
+          },
+          "is_invoice_payment": {
+            "type": "integer",
+            "title": "Is Invoice Payment",
+            "default": 0
           },
           "description": {
             "type": "string",
@@ -6955,6 +8222,17 @@
             ],
             "title": "Account Id"
           },
+          "credit_card_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Card Id"
+          },
           "category_id": {
             "type": "string",
             "title": "Category Id",
@@ -7003,6 +8281,33 @@
               }
             ],
             "title": "Payment Method Id"
+          },
+          "invoice_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Month"
+          },
+          "invoice_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Year"
+          },
+          "is_invoice_payment": {
+            "type": "integer",
+            "title": "Is Invoice Payment",
+            "default": 0
           },
           "description": {
             "type": "string",
@@ -7171,6 +8476,17 @@
             ],
             "title": "Account Id"
           },
+          "credit_card_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credit Card Id"
+          },
           "category_id": {
             "anyOf": [
               {
@@ -7225,6 +8541,28 @@
               }
             ],
             "title": "Payment Method Id"
+          },
+          "invoice_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Month"
+          },
+          "invoice_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Year"
           },
           "description": {
             "anyOf": [

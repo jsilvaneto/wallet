@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Category, Contact, Item, Account, PaymentMethod, Attachment, Transaction, AttachmentType, ATTACHMENT_TYPES } from "../types";
+import { Category, Contact, Item, Account, PaymentMethod, CreditCard as CreditCardType, Attachment, Transaction, AttachmentType, ATTACHMENT_TYPES } from "../types";
 import { formatCurrency, getTodayBR, maskDateBR, parseDateBRToISO, formatDateToBR } from "../utils/format";
 import { 
   X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, 
   Package, Landmark, Paperclip, Upload, Image as ImageIcon, 
-  CheckCircle2, Loader2, Pencil, Clock, Check, ChevronDown, CreditCard
+  CheckCircle2, Loader2, Pencil, Clock, Check, ChevronDown, CreditCard, Sparkles
 } from "lucide-react";
 
 interface TransactionModalProps {
@@ -40,6 +40,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [categoryId, setCategoryId] = useState("");
   const [accountId, setAccountId] = useState("");
   const [paymentMethodId, setPaymentMethodId] = useState("");
+  const [creditCardId, setCreditCardId] = useState("");
   const [contactId, setContactId] = useState("");
   const [dueDateStr, setDueDateStr] = useState<string>(getTodayBR());
   const [paymentDateStr, setPaymentDateStr] = useState<string>("");
@@ -54,9 +55,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [items, setItems] = useState<Item[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cardHint, setCardHint] = useState<string | null>(null);
 
   const handleOpenDatePicker = (ref: React.RefObject<HTMLInputElement | null>) => {
     if (ref.current) {
@@ -76,21 +79,24 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     setError(null);
+    setCardHint(null);
 
     const loadDependencies = async () => {
       try {
-        const [catRes, conRes, itemRes, accRes, pmRes] = await Promise.all([
+        const [catRes, conRes, itemRes, accRes, pmRes, cardsRes] = await Promise.all([
           api.get("/categories", { params: { profile, type } }),
           api.get("/contacts", { params: { profile } }),
           api.get("/items", { params: { profile, type } }),
           api.get("/accounts", { params: { profile } }),
           api.get("/payment-methods", { params: { profile } }),
+          api.get("/credit-cards", { params: { profile } }),
         ]);
         setCategories(catRes.data);
         setContacts(conRes.data);
         setItems(itemRes.data);
         setAccounts(accRes.data);
         setPaymentMethods(pmRes.data);
+        setCreditCards(cardsRes.data);
 
         // Se estiver criando, define a primeira categoria se houver
         if (!transactionToEdit) {
@@ -115,6 +121,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setItemId(transactionToEdit.item_id || "");
       setAccountId(transactionToEdit.account_id || "");
       setPaymentMethodId(transactionToEdit.payment_method_id || "");
+      setCreditCardId(transactionToEdit.credit_card_id || "");
       setContactId(transactionToEdit.contact_id || "");
       setDueDateStr(formatDateToBR(transactionToEdit.due_date));
       setStatus(transactionToEdit.status === "CONCLUIDO" ? "CONCLUIDO" : "PENDENTE");
@@ -132,6 +139,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setItemId("");
       setAccountId("");
       setPaymentMethodId("");
+      setCreditCardId("");
       setContactId("");
       setNotes("");
       setUploadedAttachments([]);
@@ -139,6 +147,56 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   }, [isOpen, profile, type, transactionToEdit]);
 
   if (!isOpen) return null;
+
+  const handleCardChange = (cardId: string) => {
+    setCreditCardId(cardId);
+    if (!cardId) {
+      setCardHint(null);
+      return;
+    }
+    const card = creditCards.find((c) => c.id === cardId);
+    if (!card) return;
+
+    if (!paymentMethodId) {
+      const pmCard = paymentMethods.find((p) => p.name.toLowerCase().includes("crédito") || p.name.toLowerCase().includes("cartão"));
+      if (pmCard) setPaymentMethodId(pmCard.id);
+    }
+
+    if (card.account_id && !accountId) {
+      setAccountId(card.account_id);
+    }
+
+    const isoDate = parseDateBRToISO(dueDateStr);
+    if (isoDate) {
+      const [y, m, d] = isoDate.split("-").map(Number);
+      let invMonth = m;
+      let invYear = y;
+      const isAfterClosing = d >= card.closing_day;
+      if (isAfterClosing) {
+        const totM = m;
+        invYear = y + Math.floor(totM / 12);
+        invMonth = (totM % 12) + 1;
+      }
+
+      let dueYear = invYear;
+      let dueMonth = invMonth;
+      if (card.due_day < card.closing_day) {
+        const totM = invMonth;
+        dueYear = invYear + Math.floor(totM / 12);
+        dueMonth = (totM % 12) + 1;
+      }
+      const daysInMonth = new Date(dueYear, dueMonth, 0).getDate();
+      const actualDueDay = Math.min(card.due_day, daysInMonth);
+      const computedDueISO = `${dueYear}-${String(dueMonth).padStart(2, "0")}-${String(actualDueDay).padStart(2, "0")}`;
+      const computedDueBR = formatDateToBR(computedDueISO);
+
+      if (isAfterClosing) {
+        setCardHint(`✨ Melhor dia de compra: compra após o fechamento (dia ${card.closing_day}). Entrará na fatura de ${String(invMonth).padStart(2, "0")}/${invYear} com vencimento em ${computedDueBR}.`);
+      } else {
+        setCardHint(`Fatura de ${String(invMonth).padStart(2, "0")}/${invYear} (vence em ${computedDueBR}).`);
+      }
+    }
+  };
 
   const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -254,6 +312,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           item_id: itemId || null,
           account_id: accountId || null,
           payment_method_id: paymentMethodId || null,
+          credit_card_id: creditCardId || null,
           contact_id: contactId || null,
           due_date: isoDueDate,
           status,
@@ -273,6 +332,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             item_id: itemId || null,
             account_id: accountId || null,
             payment_method_id: paymentMethodId || null,
+            credit_card_id: creditCardId || null,
             contact_id: contactId || null,
             due_date: isoDueDate,
             notes: notes || null,
@@ -289,6 +349,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             item_id: itemId || null,
             account_id: accountId || null,
             payment_method_id: paymentMethodId || null,
+            credit_card_id: creditCardId || null,
             contact_id: contactId || null,
             schedule_type: mode === "PARCELADO" ? "PARCELADA" : "RECORRENTE_CONTINUA",
             frequency: "MENSAL",
@@ -684,7 +745,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </select>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                   <Landmark className="w-3.5 h-3.5 text-zinc-400" />
@@ -693,7 +754,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <select
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
                 >
                   <option value="">Nenhuma (Opcional)</option>
                   {[...accounts]
@@ -709,12 +770,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                   <CreditCard className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>Forma de Pagamento</span>
+                  <span>Forma de Pagto</span>
                 </label>
                 <select
                   value={paymentMethodId}
                   onChange={(e) => setPaymentMethodId(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
                 >
                   <option value="">Nenhuma (Opcional)</option>
                   {[...paymentMethods]
@@ -729,13 +790,34 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-purple-500" />
+                  <span>Cartão de Crédito</span>
+                </label>
+                <select
+                  value={creditCardId}
+                  onChange={(e) => handleCardChange(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-zinc-900 dark:text-zinc-100 font-medium"
+                >
+                  <option value="">Nenhum (Lançamento Comum)</option>
+                  {[...creditCards]
+                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                    .map((card) => (
+                      <option key={card.id} value={card.id}>
+                        {card.name} (Disp: R$ {(card.available_limit_cents / 100).toFixed(0)})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                   <ContactIcon className="w-3.5 h-3.5 text-zinc-400" />
                   <span>Contato / Favorecido</span>
                 </label>
                 <select
                   value={contactId}
                   onChange={(e) => setContactId(e.target.value)}
-                  className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
                 >
                   <option value="">Nenhum (Opcional)</option>
                   {[...contacts]
@@ -748,6 +830,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 </select>
               </div>
             </div>
+
+            {/* Card Smart Hint */}
+            {cardHint && (
+              <div className="p-2.5 rounded-xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200/80 dark:border-purple-800/80 text-purple-700 dark:text-purple-300 text-xs flex items-center gap-2 font-medium animate-fade-in">
+                <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                <span>{cardHint}</span>
+              </div>
+            )}
           </div>
 
           {/* Notes */}

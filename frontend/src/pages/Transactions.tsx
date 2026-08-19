@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Transaction, Category, Contact, Account, PaymentMethod, AttachmentType, ATTACHMENT_TYPES } from "../types";
+import { Transaction, Category, Contact, Account, PaymentMethod, CreditCard as CreditCardType, AttachmentType, ATTACHMENT_TYPES } from "../types";
 import { formatCurrency, formatDateToBR } from "../utils/format";
 import { TransactionModal } from "../components/TransactionModal";
 import { AttachmentViewerModal } from "../components/AttachmentViewerModal";
@@ -10,7 +10,7 @@ import {
   Filter, AlertCircle, Search, X, Calendar, 
   ChevronLeft, ChevronRight, Clock, DollarSign, 
   Landmark, Tag, Users, CheckCircle2, RotateCcw, AlertTriangle, 
-  Layers, Wallet, PiggyBank, CircleDollarSign, CreditCard, Paperclip, FileText, Pencil
+  Layers, Wallet, PiggyBank, CircleDollarSign, CreditCard, Paperclip, FileText, Pencil, Sparkles
 } from "lucide-react";
 
 type PeriodPreset = 
@@ -33,9 +33,11 @@ export const Transactions: React.FC = () => {
   const [contacts, setContacts] = useState<Record<string, Contact>>({});
   const [accounts, setAccounts] = useState<Record<string, Account>>({});
   const [paymentMethods, setPaymentMethods] = useState<Record<string, PaymentMethod>>({});
+  const [creditCards, setCreditCards] = useState<Record<string, CreditCardType>>({});
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
   const [accountsList, setAccountsList] = useState<Account[]>([]);
   const [paymentMethodsList, setPaymentMethodsList] = useState<PaymentMethod[]>([]);
+  const [creditCardsList, setCreditCardsList] = useState<CreditCardType[]>([]);
   const [contactsList, setContactsList] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,6 +54,7 @@ export const Transactions: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<TypeFilterOption>("TODOS");
   const [accountFilter, setAccountFilter] = useState<string>("TODAS");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("TODAS");
+  const [creditCardFilter, setCreditCardFilter] = useState<string>("TODOS");
   const [categoryFilter, setCategoryFilter] = useState<string>("TODAS");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -125,7 +128,7 @@ export const Transactions: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [transRes, catRes, conRes, accRes, pmRes] = await Promise.all([
+      const [transRes, catRes, conRes, accRes, pmRes, cardsRes] = await Promise.all([
         api.get("/transactions", {
           params: {
             profile,
@@ -135,6 +138,7 @@ export const Transactions: React.FC = () => {
             end_due_date: statusFilter === "ATRASADAS" ? undefined : dateRange.end,
             account_id: accountFilter === "TODAS" ? undefined : accountFilter,
             payment_method_id: paymentMethodFilter === "TODAS" ? undefined : paymentMethodFilter,
+            credit_card_id: creditCardFilter === "TODOS" ? undefined : creditCardFilter,
             category_id: categoryFilter === "TODAS" ? undefined : categoryFilter,
             is_overdue: statusFilter === "ATRASADAS" ? true : undefined,
           },
@@ -143,6 +147,7 @@ export const Transactions: React.FC = () => {
         api.get("/contacts", { params: { profile } }),
         api.get("/accounts", { params: { profile } }),
         api.get("/payment-methods", { params: { profile } }),
+        api.get("/credit-cards", { params: { profile } }),
       ]);
 
       setTransactions(transRes.data);
@@ -150,6 +155,7 @@ export const Transactions: React.FC = () => {
       setContactsList(conRes.data);
       setAccountsList(accRes.data);
       setPaymentMethodsList(pmRes.data);
+      setCreditCardsList(cardsRes.data);
 
       const catMap: Record<string, Category> = {};
       catRes.data.forEach((c: Category) => {
@@ -174,6 +180,12 @@ export const Transactions: React.FC = () => {
         pmMap[pm.id] = pm;
       });
       setPaymentMethods(pmMap);
+
+      const cardMap: Record<string, CreditCardType> = {};
+      cardsRes.data.forEach((c: CreditCardType) => {
+        cardMap[c.id] = c;
+      });
+      setCreditCards(cardMap);
     } catch (err) {
       console.error("Erro ao carregar transações:", err);
     } finally {
@@ -183,7 +195,7 @@ export const Transactions: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [profile, statusFilter, typeFilter, periodPreset, dateRange.start, dateRange.end, accountFilter, paymentMethodFilter, categoryFilter]);
+  }, [profile, statusFilter, typeFilter, periodPreset, dateRange.start, dateRange.end, accountFilter, paymentMethodFilter, creditCardFilter, categoryFilter]);
 
   // Navegação de mês
   const handlePrevMonth = () => {
@@ -220,60 +232,55 @@ export const Transactions: React.FC = () => {
       fetchData();
       refreshSyncStatus(false);
     } catch (err) {
-      console.error("Erro ao excluir:", err);
+      console.error("Erro ao excluir:");
     }
   };
 
-  // Reset de todos os filtros
+  // Reset total dos filtros
   const handleResetFilters = () => {
     setPeriodPreset("MES_ATUAL");
     setNavDate(new Date());
+    setCustomStartDate("");
+    setCustomEndDate("");
     setStatusFilter("TODOS");
     setTypeFilter("TODOS");
     setAccountFilter("TODAS");
     setPaymentMethodFilter("TODAS");
+    setCreditCardFilter("TODOS");
     setCategoryFilter("TODAS");
     setSearchQuery("");
-    setCustomStartDate("");
-    setCustomEndDate("");
   };
 
-  const isFiltered = 
-    periodPreset !== "MES_ATUAL" ||
-    statusFilter !== "TODOS" ||
-    typeFilter !== "TODOS" ||
-    accountFilter !== "TODAS" ||
-    paymentMethodFilter !== "TODAS" ||
-    categoryFilter !== "TODAS" ||
-    searchQuery.trim() !== "";
+  const isFiltered = useMemo(() => {
+    return (
+      periodPreset !== "MES_ATUAL" ||
+      statusFilter !== "TODOS" ||
+      typeFilter !== "TODOS" ||
+      accountFilter !== "TODAS" ||
+      paymentMethodFilter !== "TODAS" ||
+      creditCardFilter !== "TODOS" ||
+      categoryFilter !== "TODAS" ||
+      searchQuery.trim() !== ""
+    );
+  }, [periodPreset, statusFilter, typeFilter, accountFilter, paymentMethodFilter, creditCardFilter, categoryFilter, searchQuery]);
 
-  // Filtragem local textual instantânea
+  // Transações filtradas localmente apenas pelo searchQuery
   const filteredTransactions = useMemo(() => {
+    if (!searchQuery.trim()) return transactions;
+    const q = searchQuery.toLowerCase();
     return transactions.filter((t) => {
-      // Filtro de status se for ATRASADAS
-      if (statusFilter === "ATRASADAS") {
-        if (t.status === "CONCLUIDO" || t.due_date >= todayStr) return false;
-      }
-
-      // Busca textual
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase().trim();
       const descMatch = t.description.toLowerCase().includes(q);
-      const notesMatch = t.notes ? t.notes.toLowerCase().includes(q) : false;
-      const catName = categories[t.category_id]?.name?.toLowerCase() || "";
-      const catMatch = catName.includes(q);
-      const conName = t.contact_id ? contacts[t.contact_id]?.name?.toLowerCase() || "" : "";
-      const conMatch = conName.includes(q);
-      const accName = t.account_id ? accounts[t.account_id]?.name?.toLowerCase() || "" : "";
-      const accMatch = accName.includes(q);
-      const pmName = t.payment_method_id ? paymentMethods[t.payment_method_id]?.name?.toLowerCase() || "" : "";
-      const pmMatch = pmName.includes(q);
-      const amountStr = (t.amount_cents / 100).toFixed(2).replace(".", ",");
-      const amountMatch = amountStr.includes(q);
+      const catMatch = categories[t.category_id]?.name.toLowerCase().includes(q);
+      const contactMatch = t.contact_id && contacts[t.contact_id]?.name.toLowerCase().includes(q);
+      const accMatch = t.account_id && accounts[t.account_id]?.name.toLowerCase().includes(q);
+      const pmMatch = t.payment_method_id && paymentMethods[t.payment_method_id]?.name.toLowerCase().includes(q);
+      const cardMatch = t.credit_card_id && creditCards[t.credit_card_id]?.name.toLowerCase().includes(q);
+      const notesMatch = t.notes && t.notes.toLowerCase().includes(q);
+      const amountMatch = (t.amount_cents / 100).toString().includes(q);
 
-      return descMatch || notesMatch || catMatch || conMatch || accMatch || pmMatch || amountMatch;
+      return descMatch || catMatch || contactMatch || accMatch || pmMatch || cardMatch || notesMatch || amountMatch;
     });
-  }, [transactions, searchQuery, categories, contacts, accounts, paymentMethods, statusFilter, todayStr]);
+  }, [transactions, searchQuery, categories, contacts, accounts, paymentMethods, creditCards]);
 
   // Métricas calculadas
   const metrics = useMemo(() => {
@@ -688,6 +695,24 @@ export const Transactions: React.FC = () => {
             </select>
           )}
 
+          {/* Credit Card Filter */}
+          {creditCardsList.length > 0 && (
+            <select
+              value={creditCardFilter}
+              onChange={(e) => setCreditCardFilter(e.target.value)}
+              className="px-3 py-1.5 bg-purple-50/50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60 rounded-xl text-purple-900 dark:text-purple-200 text-xs font-semibold focus:outline-none focus:border-purple-500 font-medium"
+            >
+              <option value="TODOS">Todos os Cartões</option>
+              {[...creditCardsList]
+                .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                .map((card) => (
+                  <option key={card.id} value={card.id}>
+                    {card.name}
+                  </option>
+                ))}
+            </select>
+          )}
+
           {/* Category Filter */}
           {categoriesList.length > 0 && (
             <select
@@ -906,22 +931,46 @@ export const Transactions: React.FC = () => {
                         {categories[t.category_id]?.name || "-"}
                       </td>
 
-                      {/* Account / Carteira & Forma de Pagamento */}
+                      {/* Account / Carteira & Forma de Pagamento / Cartão */}
                       <td className="py-3.5 px-4 xl:px-6 whitespace-nowrap">
                         {(() => {
                           const pm = t.payment_method_id ? paymentMethods[t.payment_method_id] : null;
-                          if (!acc && !pm) {
+                          const card = t.credit_card_id ? creditCards[t.credit_card_id] : null;
+                          const isInvoicePay = t.is_invoice_payment === 1;
+
+                          if (!acc && !pm && !card && !isInvoicePay) {
                             return <span className="text-zinc-400">-</span>;
                           }
                           return (
-                            <div className="space-y-0.5">
+                            <div className="space-y-1">
+                              {isInvoicePay && (
+                                <div>
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-100 dark:bg-sky-950/80 text-sky-700 dark:text-sky-300 text-[10px] font-extrabold border border-sky-300 dark:border-sky-800">
+                                    <CheckCircle2 className="w-3 h-3" /> Fatura Liquidada
+                                  </span>
+                                </div>
+                              )}
+
+                              {card && (
+                                <div className="flex items-center gap-1 text-[11px] font-bold text-purple-700 dark:text-purple-300">
+                                  <CreditCard className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                                  <span>{card.name}</span>
+                                  {t.invoice_month && t.invoice_year && (
+                                    <span className="text-[10px] text-purple-500 font-mono">
+                                      ({String(t.invoice_month).padStart(2, "0")}/{t.invoice_year})
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
                               {acc && (
-                                <div className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 font-medium">
+                                <div className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 font-medium text-xs">
                                   <AccIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                                   <span>{acc.name}</span>
                                 </div>
                               )}
-                              {pm && (
+
+                              {pm && !card && (
                                 <div className="flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">
                                   <CreditCard className="w-3 h-3 text-zinc-400 shrink-0" />
                                   <span>{pm.name}</span>

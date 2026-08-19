@@ -9,6 +9,8 @@ ScheduleStatus = Literal["ATIVO", "PAUSADO", "FINALIZADO", "CANCELADO"]
 
 class ScheduleBase(BaseModel):
     type: TransactionType = Field(..., description="RECEITA ou DESPESA")
+    account_id: Optional[str] = None
+    credit_card_id: Optional[str] = None
     category_id: str = Field(..., description="ID da categoria")
     item_id: Optional[str] = None
     contact_id: Optional[str] = None

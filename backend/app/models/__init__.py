@@ -47,6 +47,29 @@ class PaymentMethod(Base):
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_payment_method_profile"),
     )
 
+# 2.2 Cartões de Crédito (Gestão de limites, fechamento, vencimento e faturas)
+class CreditCard(Base):
+    __tablename__ = "credit_cards"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    profile: Mapped[str] = mapped_column(String(10), nullable=False) # 'PESSOAL' ou 'EMPRESA'
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    limit_cents: Mapped[int] = mapped_column(Integer, nullable=False) # Limite total em centavos
+    closing_day: Mapped[int] = mapped_column(Integer, nullable=False) # Dia do fechamento (melhor dia de compra), 1 a 31
+    due_day: Mapped[int] = mapped_column(Integer, nullable=False) # Dia do vencimento da fatura, 1 a 31
+    color: Mapped[str] = mapped_column(String(30), default="emerald", nullable=False) # Cor de destaque (emerald, indigo, purple, rose, amber, sky, zinc)
+    brand: Mapped[Optional[str]] = mapped_column(String(30), nullable=True) # MASTERCARD, VISA, ELO, AMEX, HIPERCARD, OUTRO
+    account_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True) # Conta padrão para pagamento da fatura
+    created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
+
+    account: Mapped[Optional["Account"]] = relationship("Account")
+
+    __table_args__ = (
+        CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_credit_card_profile"),
+        CheckConstraint("closing_day BETWEEN 1 AND 31", name="chk_credit_card_closing_day"),
+        CheckConstraint("due_day BETWEEN 1 AND 31", name="chk_credit_card_due_day"),
+    )
+
 # 3. Categorias
 class Category(Base):
     __tablename__ = "categories"
@@ -70,7 +93,7 @@ class Item(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     profile: Mapped[str] = mapped_column(String(10), nullable=False)
-    category_id: Mapped[str] = mapped_column(String(36), ForeignKey("categories.id", ondelete="RESTRICT"), nullable=False)
+    category_id: Mapped[str] = mapped_column(String(36), ForeignKey("categories.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     default_amount_cents: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
@@ -88,14 +111,13 @@ class Contact(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     profile: Mapped[str] = mapped_column(String(10), nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    type: Mapped[str] = mapped_column(String(20), nullable=False) # FORNECEDOR, CLIENTE, FUNCIONARIO, OUTRO
-    document: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    type: Mapped[str] = mapped_column(String(30), nullable=False) # CLIENTE, FORNECEDOR, COLABORADOR, FAVORECIDO, OUTRO
+    document: Mapped[Optional[str]] = mapped_column(String(30), nullable=True) # CPF ou CNPJ
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
 
     __table_args__ = (
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_contact_profile"),
-        CheckConstraint("type IN ('FORNECEDOR', 'CLIENTE', 'FUNCIONARIO', 'OUTRO')", name="chk_contact_type"),
     )
 
 # 6. Dívidas / Passivos
@@ -104,19 +126,18 @@ class Debt(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     profile: Mapped[str] = mapped_column(String(10), nullable=False)
-    contact_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
-    title: Mapped[str] = mapped_column(String(150), nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
     total_amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     remaining_amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    interest_rate: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     due_date: Mapped[Optional[str]] = mapped_column(String(10), nullable=True) # YYYY-MM-DD
-    status: Mapped[str] = mapped_column(String(20), default="ATIVA", nullable=False) # ATIVA, QUITADA, CANCELADA
+    status: Mapped[str] = mapped_column(String(20), default="EM_ANDAMENTO", nullable=False) # EM_ANDAMENTO, QUITADA, RENEGOCIADA
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
-
-    contact: Mapped[Optional["Contact"]] = relationship("Contact")
 
     __table_args__ = (
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_debt_profile"),
-        CheckConstraint("status IN ('ATIVA', 'QUITADA', 'CANCELADA')", name="chk_debt_status"),
+        CheckConstraint("status IN ('EM_ANDAMENTO', 'QUITADA', 'RENEGOCIADA')", name="chk_debt_status"),
     )
 
 # 7. Planos Mestres de Pagamentos (Recorrentes ou Parcelados)
@@ -126,6 +147,8 @@ class Schedule(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     profile: Mapped[str] = mapped_column(String(10), nullable=False)
     type: Mapped[str] = mapped_column(String(10), nullable=False) # RECEITA, DESPESA
+    account_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
+    credit_card_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("credit_cards.id", ondelete="SET NULL"), nullable=True)
     category_id: Mapped[str] = mapped_column(String(36), ForeignKey("categories.id", ondelete="RESTRICT"), nullable=False)
     item_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("items.id", ondelete="SET NULL"), nullable=True)
     contact_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
@@ -147,6 +170,7 @@ class Schedule(Base):
     contact: Mapped[Optional["Contact"]] = relationship("Contact")
     debt: Mapped[Optional["Debt"]] = relationship("Debt")
     payment_method: Mapped[Optional["PaymentMethod"]] = relationship("PaymentMethod")
+    credit_card: Mapped[Optional["CreditCard"]] = relationship("CreditCard")
 
     __table_args__ = (
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_schedule_profile"),
@@ -164,6 +188,7 @@ class Transaction(Base):
     profile: Mapped[str] = mapped_column(String(10), nullable=False)
     type: Mapped[str] = mapped_column(String(10), nullable=False) # RECEITA, DESPESA
     account_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
+    credit_card_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("credit_cards.id", ondelete="SET NULL"), nullable=True)
     category_id: Mapped[str] = mapped_column(String(36), ForeignKey("categories.id", ondelete="RESTRICT"), nullable=False)
     item_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("items.id", ondelete="SET NULL"), nullable=True)
     contact_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
@@ -171,6 +196,10 @@ class Transaction(Base):
     schedule_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("schedules.id", ondelete="CASCADE"), nullable=True)
     payment_method_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("payment_methods.id", ondelete="SET NULL"), nullable=True)
     
+    invoice_month: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # Mês de competência da fatura (1 a 12)
+    invoice_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True) # Ano de competência da fatura (YYYY)
+    is_invoice_payment: Mapped[int] = mapped_column(Integer, default=0, nullable=False) # 1 se for débito consolidado de liquidação de fatura
+
     installment_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     total_installments: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -184,6 +213,7 @@ class Transaction(Base):
     updated_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, onupdate=now_utc_iso, nullable=False)
 
     account: Mapped[Optional["Account"]] = relationship("Account")
+    credit_card: Mapped[Optional["CreditCard"]] = relationship("CreditCard")
     category: Mapped["Category"] = relationship("Category")
     item: Mapped[Optional["Item"]] = relationship("Item")
     contact: Mapped[Optional["Contact"]] = relationship("Contact")

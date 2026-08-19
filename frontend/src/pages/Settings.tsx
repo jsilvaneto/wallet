@@ -2,12 +2,13 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
 import { 
-  Category, Item, Account, AccountType, PaymentMethod, Contact, Debt, Budget, 
+  Category, Item, Account, AccountType, PaymentMethod, CreditCard as CreditCardType, Contact, Debt, Budget, 
   User, SyncConfig, SyncLog, SyncTestResult, SyncResultResponse,
   AttachmentStats, StorageDirectoryConfigResponse
 } from "../types";
 import { formatCurrency } from "../utils/format";
 import { SyncSetupGuideModal } from "../components/SyncSetupGuideModal";
+import { CreditCardInvoicesModal } from "../components/CreditCardInvoicesModal";
 import { 
   Settings as SettingsIcon, Palette, Users, Cloud, 
   Sun, Moon, Eye, EyeOff, UserPlus, Trash2, ShieldCheck, 
@@ -18,7 +19,8 @@ import {
   Plus, Pencil, X, Loader2, Search, DollarSign, Calendar,
   Building2, Landmark, PiggyBank, Percent, ChevronLeft, ChevronRight,
   Info, Coins, Wallet, CircleDollarSign, ArrowUp, ArrowDown,
-  HardDrive, Paperclip, BookOpen, QrCode, Banknote, FileText, ArrowRightLeft
+  HardDrive, Paperclip, BookOpen, QrCode, Banknote, FileText, ArrowRightLeft,
+  FileCheck, Shield
 } from "lucide-react";
 
 export type SettingsTab = 
@@ -26,6 +28,7 @@ export type SettingsTab =
   | "ITENS" 
   | "CONTAS" 
   | "PAGAMENTOS"
+  | "CARTOES"
   | "CONTATOS" 
   | "DIVIDAS" 
   | "ORCAMENTOS" 
@@ -114,6 +117,35 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [editPmName, setEditPmName] = useState("");
   const [editPmSaving, setEditPmSaving] = useState(false);
   const [editPmError, setEditPmError] = useState<string | null>(null);
+
+  // ==========================================
+  // 3.2 ESTADOS DE CARTÕES DE CRÉDITO
+  // ==========================================
+  const [creditCards, setCreditCards] = useState<CreditCardType[]>([]);
+  const [cardName, setCardName] = useState("");
+  const [cardLimitStr, setCardLimitStr] = useState("");
+  const [cardClosingDay, setCardClosingDay] = useState("20");
+  const [cardDueDay, setCardDueDay] = useState("27");
+  const [cardColor, setCardColor] = useState("emerald");
+  const [cardBrand, setCardBrand] = useState("MASTERCARD");
+  const [cardAccountId, setCardAccountId] = useState("");
+  const [cardSearch, setCardSearch] = useState("");
+  const [creatingCard, setCreatingCard] = useState(false);
+
+  // Modal de Edição de Cartão
+  const [editModalCard, setEditModalCard] = useState<CreditCardType | null>(null);
+  const [editCardName, setEditCardName] = useState("");
+  const [editCardLimitStr, setEditCardLimitStr] = useState("");
+  const [editCardClosingDay, setEditCardClosingDay] = useState("20");
+  const [editCardDueDay, setEditCardDueDay] = useState("27");
+  const [editCardColor, setEditCardColor] = useState("emerald");
+  const [editCardBrand, setEditCardBrand] = useState("MASTERCARD");
+  const [editCardAccountId, setEditCardAccountId] = useState("");
+  const [editCardSaving, setEditCardSaving] = useState(false);
+  const [editCardError, setEditCardError] = useState<string | null>(null);
+
+  // Modal de Faturas do Cartão
+  const [invoicesModalCard, setInvoicesModalCard] = useState<CreditCardType | null>(null);
 
   // ==========================================
   // 4. ESTADOS DE CONTATOS
@@ -235,6 +267,13 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       } else if (activeTab === "PAGAMENTOS") {
         const res = await api.get("/payment-methods", { params: { profile } });
         setPaymentMethods(res.data);
+      } else if (activeTab === "CARTOES") {
+        const [cardsRes, accsRes] = await Promise.all([
+          api.get("/credit-cards", { params: { profile } }),
+          api.get("/accounts", { params: { profile } }),
+        ]);
+        setCreditCards(cardsRes.data);
+        setAccounts(accsRes.data);
       } else if (activeTab === "CONTATOS") {
         const res = await api.get("/contacts", { params: { profile } });
         setContacts(res.data);
@@ -314,6 +353,10 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const sortedPaymentMethods = useMemo(() => {
     return [...paymentMethods].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
   }, [paymentMethods]);
+
+  const sortedCreditCards = useMemo(() => {
+    return [...creditCards].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
+  }, [creditCards]);
 
   const sortedContacts = useMemo(() => {
     return [...contacts].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
@@ -566,6 +609,97 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       setEditPmError(err.response?.data?.detail || "Erro ao salvar alterações na forma de pagamento.");
     } finally {
       setEditPmSaving(false);
+    }
+  };
+
+  // ==========================================
+  // HANDLERS: CARTÕES DE CRÉDITO
+  // ==========================================
+  const handleCreateCreditCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cardName.trim() || !cardLimitStr.trim()) return;
+    setCreatingCard(true);
+    try {
+      const cleanLimit = cardLimitStr.replace(/\./g, "").replace(",", ".");
+      const limitCents = Math.round(parseFloat(cleanLimit) * 100);
+      if (isNaN(limitCents) || limitCents <= 0) {
+        alert("Informe um limite válido maior que zero.");
+        setCreatingCard(false);
+        return;
+      }
+
+      await api.post("/credit-cards", {
+        profile,
+        name: cardName.trim(),
+        limit_cents: limitCents,
+        closing_day: parseInt(cardClosingDay, 10),
+        due_day: parseInt(cardDueDay, 10),
+        color: cardColor,
+        brand: cardBrand,
+        account_id: cardAccountId || null,
+      });
+
+      setCardName("");
+      setCardLimitStr("");
+      setCardAccountId("");
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao cadastrar cartão de crédito:", err);
+      alert(err.response?.data?.detail || "Erro ao cadastrar cartão de crédito.");
+    } finally {
+      setCreatingCard(false);
+    }
+  };
+
+  const openEditCreditCard = (c: CreditCardType) => {
+    setEditModalCard(c);
+    setEditCardName(c.name);
+    setEditCardLimitStr((c.limit_cents / 100).toFixed(2).replace(".", ","));
+    setEditCardClosingDay(String(c.closing_day));
+    setEditCardDueDay(String(c.due_day));
+    setEditCardColor(c.color || "emerald");
+    setEditCardBrand(c.brand || "MASTERCARD");
+    setEditCardAccountId(c.account_id || "");
+    setEditCardError(null);
+    setEditCardSaving(false);
+  };
+
+  const closeEditCreditCard = () => {
+    setEditModalCard(null);
+    setEditCardError(null);
+  };
+
+  const handleSaveEditCreditCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalCard || !editCardName.trim() || !editCardLimitStr.trim()) return;
+    setEditCardSaving(true);
+    setEditCardError(null);
+    try {
+      const cleanLimit = editCardLimitStr.replace(/\./g, "").replace(",", ".");
+      const limitCents = Math.round(parseFloat(cleanLimit) * 100);
+      if (isNaN(limitCents) || limitCents <= 0) {
+        setEditCardError("Informe um limite válido maior que zero.");
+        setEditCardSaving(false);
+        return;
+      }
+
+      await api.put(`/credit-cards/${editModalCard.id}`, {
+        name: editCardName.trim(),
+        limit_cents: limitCents,
+        closing_day: parseInt(editCardClosingDay, 10),
+        due_day: parseInt(editCardDueDay, 10),
+        color: editCardColor,
+        brand: editCardBrand,
+        account_id: editCardAccountId || null,
+      });
+
+      setEditModalCard(null);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao editar cartão de crédito:", err);
+      setEditCardError(err.response?.data?.detail || "Erro ao salvar alterações no cartão.");
+    } finally {
+      setEditCardSaving(false);
     }
   };
 
@@ -1060,6 +1194,25 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
     return CreditCard;
   };
 
+  const getCardThemeClasses = (color: string) => {
+    switch (color) {
+      case "purple":
+        return "from-purple-900 via-indigo-900 to-zinc-950 border-purple-700/50 shadow-purple-900/30 text-purple-200";
+      case "indigo":
+        return "from-indigo-900 via-slate-900 to-zinc-950 border-indigo-700/50 shadow-indigo-900/30 text-indigo-200";
+      case "rose":
+        return "from-rose-900 via-zinc-900 to-zinc-950 border-rose-700/50 shadow-rose-900/30 text-rose-200";
+      case "amber":
+        return "from-amber-950 via-zinc-900 to-zinc-950 border-amber-700/50 shadow-amber-900/30 text-amber-200";
+      case "sky":
+        return "from-sky-900 via-slate-900 to-zinc-950 border-sky-700/50 shadow-sky-900/30 text-sky-200";
+      case "zinc":
+        return "from-zinc-800 via-zinc-900 to-zinc-950 border-zinc-700/50 shadow-zinc-900/30 text-zinc-200";
+      default:
+        return "from-emerald-950 via-zinc-900 to-zinc-950 border-emerald-700/50 shadow-emerald-900/30 text-emerald-200";
+    }
+  };
+
   const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -1088,6 +1241,7 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
         { id: "ITENS", label: "Itens Rápidos", shortDescription: "Valores padrão sugeridos", icon: Package },
         { id: "CONTAS", label: "Contas & Carteiras", shortDescription: "Bancos e caixas", icon: Landmark },
         { id: "PAGAMENTOS", label: "Formas de Pagamento", shortDescription: "Pix, cartões, dinheiro e boletos", icon: CreditCard },
+        { id: "CARTOES", label: "Cartões de Crédito", shortDescription: "Limites, faturas e fechamento", icon: CreditCard },
         { id: "CONTATOS", label: "Contatos", shortDescription: "Clientes e fornecedores", icon: Users },
         { id: "DIVIDAS", label: "Dívidas & Passivos", shortDescription: "Controle e amortização", icon: Scale },
         { id: "ORCAMENTOS", label: "Orçamentos & Metas", shortDescription: "Tetos e limites mensais", icon: PiggyBank },
@@ -1979,6 +2133,307 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* ABA 3.2: CARTÕES DE CRÉDITO                */}
+      {/* ========================================== */}
+      {activeTab === "CARTOES" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+          {/* Form */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Plus className="w-4 h-4 text-emerald-500" />
+                <span>Novo Cartão de Crédito</span>
+              </h3>
+            </div>
+
+            <form onSubmit={handleCreateCreditCard} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Nome do Cartão
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Nubank Ultravioleta, Itaú Visa..."
+                  value={cardName}
+                  onChange={(e) => setCardName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Limite Total (R$)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: 5000,00"
+                  value={cardLimitStr}
+                  onChange={(e) => setCardLimitStr(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100 font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1" title="Melhor dia de compra / corte">
+                    Dia Fechamento (1-31)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    required
+                    value={cardClosingDay}
+                    onChange={(e) => setCardClosingDay(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1" title="Dia do vencimento da fatura">
+                    Dia Vencimento (1-31)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    required
+                    value={cardDueDay}
+                    onChange={(e) => setCardDueDay(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Bandeira
+                  </label>
+                  <select
+                    value={cardBrand}
+                    onChange={(e) => setCardBrand(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="MASTERCARD">Mastercard</option>
+                    <option value="VISA">Visa</option>
+                    <option value="ELO">Elo</option>
+                    <option value="AMEX">American Express</option>
+                    <option value="HIPERCARD">Hipercard</option>
+                    <option value="OUTRO">Outro</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Tema Visual
+                  </label>
+                  <select
+                    value={cardColor}
+                    onChange={(e) => setCardColor(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100 font-medium"
+                  >
+                    <option value="emerald">Emerald (Verde)</option>
+                    <option value="purple">Purple (Roxo / Nubank)</option>
+                    <option value="indigo">Indigo (Azul Escuro)</option>
+                    <option value="rose">Rose (Vermelho)</option>
+                    <option value="amber">Amber (Dourado / Laranja)</option>
+                    <option value="sky">Sky (Azul Claro)</option>
+                    <option value="zinc">Zinc (Black / Escuro)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Conta Débito Padrão (Opcional)
+                </label>
+                <select
+                  value={cardAccountId}
+                  onChange={(e) => setCardAccountId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="">Nenhuma (Selecionar no pagamento)</option>
+                  {[...accounts]
+                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                    .map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} ({acc.type})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                disabled={creatingCard}
+                className="w-full py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-1.5"
+              >
+                {creatingCard ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Cadastrando...</span>
+                  </>
+                ) : (
+                  <span>Cadastrar Cartão de Crédito</span>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Listagem de Cartões de Crédito (Cards Virtuais) */}
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Cartões de Crédito Cadastrados
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  {sortedCreditCards.length} cartões • Limites e faturas gerenciadas • {profile}
+                </p>
+              </div>
+
+              {/* Filtros e Busca */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2" />
+                  <input
+                    type="text"
+                    placeholder="Buscar cartão..."
+                    value={cardSearch}
+                    onChange={(e) => setCardSearch(e.target.value)}
+                    className="pl-8 pr-2.5 py-1 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 w-36 sm:w-48 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {sortedCreditCards.length === 0 ? (
+              <div className="p-8 text-center text-xs text-zinc-500">
+                Nenhum cartão de crédito cadastrado.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-1">
+                {sortedCreditCards
+                  .filter((c) => {
+                    if (cardSearch.trim()) {
+                      return c.name.toLowerCase().includes(cardSearch.toLowerCase());
+                    }
+                    return true;
+                  })
+                  .map((c) => {
+                    const usedPct = c.limit_cents > 0 
+                      ? Math.min(100, Math.round((c.used_limit_cents / c.limit_cents) * 100))
+                      : 0;
+
+                    return (
+                      <div
+                        key={c.id}
+                        className="rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 bg-zinc-50/40 dark:bg-zinc-900/50 p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-3"
+                      >
+                        {/* Virtual Card Front */}
+                        <div className={`p-4 rounded-2xl bg-gradient-to-br ${getCardThemeClasses(c.color)} border shadow-lg relative overflow-hidden flex flex-col justify-between h-36`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <CreditCard className="w-4 h-4 text-white/80" />
+                              <span className="text-xs font-bold tracking-wider uppercase text-white truncate max-w-[150px]">
+                                {c.name}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-white/10 text-white border border-white/15">
+                              {c.brand || "CARTÃO"}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 text-white">
+                            <div>
+                              <span className="text-[10px] text-white/60 block font-medium">Limite Total</span>
+                              <span className="text-sm font-mono font-extrabold block truncate">
+                                {formatCurrency(c.limit_cents, hideValues)}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[10px] text-white/60 block font-medium">Disponível</span>
+                              <span className="text-sm font-mono font-extrabold text-emerald-300 block truncate">
+                                {formatCurrency(c.available_limit_cents, hideValues)}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-white/80 border-t border-white/10 pt-1.5 font-medium">
+                            <span>Melhor Dia: <strong>{c.closing_day}</strong></span>
+                            <span>Vence: <strong>{c.due_day}</strong></span>
+                          </div>
+                        </div>
+
+                        {/* Limit Progress and Info */}
+                        <div className="space-y-1.5 px-1">
+                          <div className="flex items-center justify-between text-[11px] font-medium text-zinc-500">
+                            <span>Uso do Limite:</span>
+                            <span className="font-mono font-bold text-zinc-700 dark:text-zinc-300">
+                              {usedPct}% ({formatCurrency(c.used_limit_cents, hideValues)})
+                            </span>
+                          </div>
+
+                          <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full transition-all duration-500 rounded-full ${
+                                usedPct > 85 ? "bg-rose-500" : usedPct > 60 ? "bg-amber-500" : "bg-emerald-500"
+                              }`}
+                              style={{ width: `${usedPct}%` }}
+                            />
+                          </div>
+
+                          {c.account_name && (
+                            <p className="text-[11px] text-zinc-400 truncate flex items-center gap-1 pt-0.5">
+                              <Landmark className="w-3 h-3 text-zinc-400" />
+                              <span>Débito em: {c.account_name}</span>
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                          <button
+                            type="button"
+                            onClick={() => setInvoicesModalCard(c)}
+                            className="px-3 py-1.5 text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/80 rounded-xl transition-all flex items-center gap-1.5"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Ver Faturas</span>
+                          </button>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openEditCreditCard(c)}
+                              className="p-1.5 text-zinc-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-lg transition-all"
+                              title="Editar Cartão"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteItem("credit-cards", c.id)}
+                              className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all"
+                              title="Excluir Cartão"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -3806,6 +4261,190 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
             </form>
           </div>
         </div>
+      )}
+
+      {/* 3.2 Modal de Edição de Cartão de Crédito */}
+      {editModalCard && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-r from-sky-50/50 via-white to-white dark:from-sky-950/20 dark:via-zinc-900 dark:to-zinc-900">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-sky-100 dark:bg-sky-950/80 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800/60 shadow-sm">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                    Editar Cartão de Crédito
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Perfil {profile} • Atualize limites, dias de corte e configurações
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeEditCreditCard}
+                className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditCreditCard} className="p-5 space-y-4">
+              {editCardError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{editCardError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Nome do Cartão
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editCardName}
+                  onChange={(e) => setEditCardName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Limite Total (R$)
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editCardLimitStr}
+                  onChange={(e) => setEditCardLimitStr(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100 font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Dia Fechamento (1-31)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    required
+                    value={editCardClosingDay}
+                    onChange={(e) => setEditCardClosingDay(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Dia Vencimento (1-31)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="31"
+                    required
+                    value={editCardDueDay}
+                    onChange={(e) => setEditCardDueDay(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Bandeira
+                  </label>
+                  <select
+                    value={editCardBrand}
+                    onChange={(e) => setEditCardBrand(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="MASTERCARD">Mastercard</option>
+                    <option value="VISA">Visa</option>
+                    <option value="ELO">Elo</option>
+                    <option value="AMEX">American Express</option>
+                    <option value="HIPERCARD">Hipercard</option>
+                    <option value="OUTRO">Outro</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Tema Visual
+                  </label>
+                  <select
+                    value={editCardColor}
+                    onChange={(e) => setEditCardColor(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100 font-medium"
+                  >
+                    <option value="emerald">Emerald (Verde)</option>
+                    <option value="purple">Purple (Roxo / Nubank)</option>
+                    <option value="indigo">Indigo (Azul Escuro)</option>
+                    <option value="rose">Rose (Vermelho)</option>
+                    <option value="amber">Amber (Dourado / Laranja)</option>
+                    <option value="sky">Sky (Azul Claro)</option>
+                    <option value="zinc">Zinc (Black / Escuro)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Conta Débito Padrão (Opcional)
+                </label>
+                <select
+                  value={editCardAccountId}
+                  onChange={(e) => setEditCardAccountId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="">Nenhuma (Selecionar no pagamento)</option>
+                  {[...accounts]
+                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                    .map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.name} ({acc.type})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={closeEditCreditCard}
+                  className="px-4 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={editCardSaving}
+                  className="px-5 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-sky-600/20 transition-all flex items-center gap-1.5"
+                >
+                  {editCardSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Faturas do Cartão */}
+      {invoicesModalCard && (
+        <CreditCardInvoicesModal
+          isOpen={true}
+          onClose={() => setInvoicesModalCard(null)}
+          card={invoicesModalCard}
+          onInvoiceUpdated={loadData}
+        />
       )}
 
       {/* 4. Modal de Edição de Contato */}

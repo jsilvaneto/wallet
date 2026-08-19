@@ -1,9 +1,10 @@
 import calendar
 from datetime import date, datetime
-from typing import List
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import Schedule, Transaction
+from app.models import Schedule, Transaction, CreditCard
 from app.schemas.schedule import ScheduleCreate
+from app.services.credit_card_service import calculate_invoice_period_and_due_date
 
 def calculate_next_date(base_date: date, frequency: str, step: int, fixed_day: int) -> date:
     """Calcula a data futura respeitando a frequência e o dia de vencimento."""
@@ -38,6 +39,17 @@ async def create_schedule_with_transactions(db: AsyncSession, schedule_in: Sched
     # 2. Converte a data inicial
     start_dt = datetime.strptime(schedule_in.start_date, "%Y-%m-%d").date()
     
+    # Se vinculado a cartão de crédito, busca dados do cartão para cálculo de faturas
+    card: Optional[CreditCard] = None
+    base_inv_m: Optional[int] = None
+    base_inv_y: Optional[int] = None
+    if schedule_in.credit_card_id:
+        card = await db.get(CreditCard, schedule_in.credit_card_id)
+        if card:
+            base_inv_m, base_inv_y, _, _, _ = calculate_invoice_period_and_due_date(
+                start_dt, card.closing_day, card.due_day
+            )
+
     # 3. Determina quantas transações materializar
     if schedule_in.schedule_type == "PARCELADA":
         count = schedule_in.total_installments or 1
@@ -50,7 +62,22 @@ async def create_schedule_with_transactions(db: AsyncSession, schedule_in: Sched
         inst_number = (i + 1) if schedule_in.schedule_type == "PARCELADA" else None
         total_inst = schedule_in.total_installments if schedule_in.schedule_type == "PARCELADA" else None
         
-        due_dt = calculate_next_date(start_dt, schedule_in.frequency, i, schedule_in.due_day)
+        inv_month: Optional[int] = None
+        inv_year: Optional[int] = None
+
+        if card and base_inv_m is not None and base_inv_y is not None:
+            # Distribui sucessivamente pelas faturas futuras
+            tot_m = (base_inv_m - 1) + i
+            inv_year = base_inv_y + tot_m // 12
+            inv_month = tot_m % 12 + 1
+            dummy_dt = date(inv_year, inv_month, 1)
+            _, _, _, _, due_str = calculate_invoice_period_and_due_date(
+                dummy_dt, card.closing_day, card.due_day
+            )
+            due_iso = due_str
+        else:
+            due_dt = calculate_next_date(start_dt, schedule_in.frequency, i, schedule_in.due_day)
+            due_iso = due_dt.isoformat()
         
         desc = schedule_in.description
         if schedule_in.schedule_type == "PARCELADA":
@@ -59,17 +86,21 @@ async def create_schedule_with_transactions(db: AsyncSession, schedule_in: Sched
         trans = Transaction(
             profile=schedule_in.profile,
             type=schedule_in.type,
+            account_id=schedule_in.account_id,
+            credit_card_id=schedule_in.credit_card_id,
             category_id=schedule_in.category_id,
             item_id=schedule_in.item_id,
             contact_id=schedule_in.contact_id,
             debt_id=schedule_in.debt_id,
             payment_method_id=schedule_in.payment_method_id,
             schedule_id=new_schedule.id,
+            invoice_month=inv_month,
+            invoice_year=inv_year,
             installment_number=inst_number,
             total_installments=total_inst,
             description=desc,
             amount_cents=schedule_in.amount_cents,
-            due_date=due_dt.isoformat(),
+            due_date=due_iso,
             status="PENDENTE",
             sync_status="PENDENTE"
         )

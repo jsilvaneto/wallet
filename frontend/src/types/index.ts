@@ -26,6 +26,78 @@ export interface PaymentMethod {
   created_at: string;
 }
 
+export interface CreditCard {
+  id: string;
+  profile: ProfileType;
+  name: string;
+  limit_cents: number;
+  used_limit_cents: number;
+  available_limit_cents: number;
+  current_invoice_cents: number;
+  closing_day: number;
+  due_day: number;
+  color: string;
+  brand?: string | null;
+  account_id?: string | null;
+  account_name?: string | null;
+  created_at: string;
+}
+
+export interface CreditCardInvoiceItem {
+  id: string;
+  description: string;
+  amount_cents: number;
+  category_id: string;
+  category_name: string;
+  contact_id?: string | null;
+  contact_name?: string | null;
+  due_date: string;
+  payment_date?: string | null;
+  created_at: string;
+  installment_number?: number | null;
+  total_installments?: number | null;
+  status: TransactionStatus;
+  notes?: string | null;
+}
+
+export interface CreditCardInvoiceSummary {
+  card_id: string;
+  card_name: string;
+  month: number;
+  year: number;
+  period_start: string;
+  period_end: string;
+  due_date: string;
+  status: "ABERTA" | "FECHADA" | "PAGA";
+  total_cents: number;
+  paid_cents: number;
+  remaining_cents: number;
+  items_count: number;
+}
+
+export interface CreditCardInvoiceDetail extends CreditCardInvoiceSummary {
+  items: CreditCardInvoiceItem[];
+}
+
+export interface CreditCardInvoiceSettleRequest {
+  account_id: string;
+  payment_date: string;
+  payment_method_id?: string | null;
+  category_id?: string | null;
+  amount_cents?: number | null;
+  notes?: string | null;
+}
+
+export interface CreditCardInvoiceSettleResponse {
+  card_id: string;
+  month: number;
+  year: number;
+  total_settled_cents: number;
+  settled_items_count: number;
+  bank_transaction_id: string;
+  message: string;
+}
+
 export interface Category {
   id: string;
   profile: ProfileType;
@@ -87,22 +159,26 @@ export interface Transaction {
   id: string;
   profile: ProfileType;
   type: TransactionType;
-  account_id?: string;
-  payment_method_id?: string;
+  account_id?: string | null;
+  payment_method_id?: string | null;
+  credit_card_id?: string | null;
+  invoice_month?: number | null;
+  invoice_year?: number | null;
+  is_invoice_payment?: number;
   category_id: string;
-  item_id?: string;
-  contact_id?: string;
-  debt_id?: string;
-  schedule_id?: string;
-  installment_number?: number;
-  total_installments?: number;
+  item_id?: string | null;
+  contact_id?: string | null;
+  debt_id?: string | null;
+  schedule_id?: string | null;
+  installment_number?: number | null;
+  total_installments?: number | null;
   description: string;
   amount_cents: number;
   due_date: string;
-  payment_date?: string;
+  payment_date?: string | null;
   status: TransactionStatus;
   sync_status: "PENDENTE" | "SINCRONIZADO";
-  notes?: string;
+  notes?: string | null;
   created_at: string;
   attachments?: Attachment[];
   attachments_count?: number;

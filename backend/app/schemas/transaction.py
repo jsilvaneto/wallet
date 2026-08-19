@@ -10,11 +10,15 @@ SyncStatus = Literal["PENDENTE", "SINCRONIZADO"]
 class TransactionBase(BaseModel):
     type: TransactionType = Field(..., description="RECEITA ou DESPESA")
     account_id: Optional[str] = None
+    credit_card_id: Optional[str] = None
     category_id: str = Field(..., description="ID da categoria")
     item_id: Optional[str] = None
     contact_id: Optional[str] = None
     debt_id: Optional[str] = None
     payment_method_id: Optional[str] = None
+    invoice_month: Optional[int] = None
+    invoice_year: Optional[int] = None
+    is_invoice_payment: int = 0
     description: str = Field(..., min_length=1, max_length=255)
     amount_cents: int = Field(..., gt=0, description="Valor em centavos")
     due_date: str = Field(..., description="Data prevista / vencimento (YYYY-MM-DD)")
@@ -29,11 +33,14 @@ class TransactionCreate(TransactionBase):
 class TransactionUpdate(BaseModel):
     type: Optional[TransactionType] = None
     account_id: Optional[str] = None
+    credit_card_id: Optional[str] = None
     category_id: Optional[str] = None
     item_id: Optional[str] = None
     contact_id: Optional[str] = None
     debt_id: Optional[str] = None
     payment_method_id: Optional[str] = None
+    invoice_month: Optional[int] = None
+    invoice_year: Optional[int] = None
     description: Optional[str] = Field(None, min_length=1, max_length=255)
     amount_cents: Optional[int] = Field(None, gt=0)
     due_date: Optional[str] = None

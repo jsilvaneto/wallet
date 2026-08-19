@@ -33,13 +33,28 @@ CREATE TABLE contacts (
 	id VARCHAR(36) NOT NULL, 
 	profile VARCHAR(10) NOT NULL, 
 	name VARCHAR(100) NOT NULL, 
-	type VARCHAR(20) NOT NULL, 
+	type VARCHAR(30) NOT NULL, 
 	document VARCHAR(30), 
 	notes TEXT, 
 	created_at VARCHAR(30) NOT NULL, 
 	PRIMARY KEY (id), 
-	CONSTRAINT chk_contact_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
-	CONSTRAINT chk_contact_type CHECK (type IN ('FORNECEDOR', 'CLIENTE', 'FUNCIONARIO', 'OUTRO'))
+	CONSTRAINT chk_contact_profile CHECK (profile IN ('PESSOAL', 'EMPRESA'))
+);
+
+CREATE TABLE debts (
+	id VARCHAR(36) NOT NULL, 
+	profile VARCHAR(10) NOT NULL, 
+	name VARCHAR(100) NOT NULL, 
+	total_amount_cents INTEGER NOT NULL, 
+	remaining_amount_cents INTEGER NOT NULL, 
+	interest_rate VARCHAR(20), 
+	due_date VARCHAR(10), 
+	status VARCHAR(20) NOT NULL, 
+	notes TEXT, 
+	created_at VARCHAR(30) NOT NULL, 
+	PRIMARY KEY (id), 
+	CONSTRAINT chk_debt_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
+	CONSTRAINT chk_debt_status CHECK (status IN ('EM_ANDAMENTO', 'QUITADA', 'RENEGOCIADA'))
 );
 
 CREATE TABLE goals (
@@ -106,20 +121,22 @@ CREATE TABLE budgets (
 	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE CASCADE
 );
 
-CREATE TABLE debts (
+CREATE TABLE credit_cards (
 	id VARCHAR(36) NOT NULL, 
 	profile VARCHAR(10) NOT NULL, 
-	contact_id VARCHAR(36), 
-	title VARCHAR(150) NOT NULL, 
-	total_amount_cents INTEGER NOT NULL, 
-	remaining_amount_cents INTEGER NOT NULL, 
-	due_date VARCHAR(10), 
-	status VARCHAR(20) NOT NULL, 
+	name VARCHAR(100) NOT NULL, 
+	limit_cents INTEGER NOT NULL, 
+	closing_day INTEGER NOT NULL, 
+	due_day INTEGER NOT NULL, 
+	color VARCHAR(30) NOT NULL, 
+	brand VARCHAR(30), 
+	account_id VARCHAR(36), 
 	created_at VARCHAR(30) NOT NULL, 
 	PRIMARY KEY (id), 
-	CONSTRAINT chk_debt_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
-	CONSTRAINT chk_debt_status CHECK (status IN ('ATIVA', 'QUITADA', 'CANCELADA')), 
-	FOREIGN KEY(contact_id) REFERENCES contacts (id) ON DELETE SET NULL
+	CONSTRAINT chk_credit_card_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
+	CONSTRAINT chk_credit_card_closing_day CHECK (closing_day BETWEEN 1 AND 31), 
+	CONSTRAINT chk_credit_card_due_day CHECK (due_day BETWEEN 1 AND 31), 
+	FOREIGN KEY(account_id) REFERENCES accounts (id) ON DELETE SET NULL
 );
 
 CREATE TABLE items (
@@ -131,13 +148,15 @@ CREATE TABLE items (
 	created_at VARCHAR(30) NOT NULL, 
 	PRIMARY KEY (id), 
 	CONSTRAINT chk_item_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
-	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE RESTRICT
+	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE CASCADE
 );
 
 CREATE TABLE schedules (
 	id VARCHAR(36) NOT NULL, 
 	profile VARCHAR(10) NOT NULL, 
 	type VARCHAR(10) NOT NULL, 
+	account_id VARCHAR(36), 
+	credit_card_id VARCHAR(36), 
 	category_id VARCHAR(36) NOT NULL, 
 	item_id VARCHAR(36), 
 	contact_id VARCHAR(36), 
@@ -158,6 +177,8 @@ CREATE TABLE schedules (
 	CONSTRAINT chk_schedule_kind CHECK (schedule_type IN ('RECORRENTE_CONTINUA', 'PARCELADA')), 
 	CONSTRAINT chk_schedule_freq CHECK (frequency IN ('SEMANAL', 'MENSAL', 'TRIMESTRAL', 'SEMESTRAL', 'ANUAL')), 
 	CONSTRAINT chk_schedule_day CHECK (due_day BETWEEN 1 AND 31), 
+	FOREIGN KEY(account_id) REFERENCES accounts (id) ON DELETE SET NULL, 
+	FOREIGN KEY(credit_card_id) REFERENCES credit_cards (id) ON DELETE SET NULL, 
 	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE RESTRICT, 
 	FOREIGN KEY(item_id) REFERENCES items (id) ON DELETE SET NULL, 
 	FOREIGN KEY(contact_id) REFERENCES contacts (id) ON DELETE SET NULL, 
@@ -170,12 +191,16 @@ CREATE TABLE transactions (
 	profile VARCHAR(10) NOT NULL, 
 	type VARCHAR(10) NOT NULL, 
 	account_id VARCHAR(36), 
+	credit_card_id VARCHAR(36), 
 	category_id VARCHAR(36) NOT NULL, 
 	item_id VARCHAR(36), 
 	contact_id VARCHAR(36), 
 	debt_id VARCHAR(36), 
 	schedule_id VARCHAR(36), 
 	payment_method_id VARCHAR(36), 
+	invoice_month INTEGER, 
+	invoice_year INTEGER, 
+	is_invoice_payment INTEGER NOT NULL, 
 	installment_number INTEGER, 
 	total_installments INTEGER, 
 	description VARCHAR(255) NOT NULL, 
@@ -193,6 +218,7 @@ CREATE TABLE transactions (
 	CONSTRAINT chk_trans_status CHECK (status IN ('PENDENTE', 'CONCLUIDO', 'CANCELADO')), 
 	CONSTRAINT chk_trans_sync CHECK (sync_status IN ('PENDENTE', 'SINCRONIZADO')), 
 	FOREIGN KEY(account_id) REFERENCES accounts (id) ON DELETE SET NULL, 
+	FOREIGN KEY(credit_card_id) REFERENCES credit_cards (id) ON DELETE SET NULL, 
 	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE RESTRICT, 
 	FOREIGN KEY(item_id) REFERENCES items (id) ON DELETE SET NULL, 
 	FOREIGN KEY(contact_id) REFERENCES contacts (id) ON DELETE SET NULL, 
@@ -226,11 +252,11 @@ CREATE TABLE attachments (
 
 CREATE UNIQUE INDEX ix_users_username ON users (username);
 
+CREATE INDEX idx_trans_status ON transactions (status);
+
 CREATE INDEX idx_trans_profile_due ON transactions (profile, due_date);
 
 CREATE INDEX idx_trans_sync ON transactions (sync_status);
-
-CREATE INDEX idx_trans_status ON transactions (status);
 
 CREATE INDEX idx_attachment_profile ON attachments (profile);
 

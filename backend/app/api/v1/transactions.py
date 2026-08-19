@@ -6,10 +6,12 @@ from sqlalchemy.orm import selectinload
 from typing import List, Optional
 
 from app.database import get_db
-from app.models import Transaction, Debt, User, Attachment
+from app.models import Transaction, Debt, User, Attachment, CreditCard
 from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse
 from app.services.attachment_service import enrich_attachment_schema
+from app.services.credit_card_service import calculate_invoice_period_and_due_date
 from app.api.v1.deps import get_current_user
+from datetime import datetime, timezone, date
 
 router = APIRouter(prefix="/transactions", tags=["Transações e Fluxo"])
 
@@ -34,6 +36,8 @@ async def list_transactions(
     category_id: Optional[str] = Query(None, description="Filtrar por Categoria"),
     account_id: Optional[str] = Query(None, description="Filtrar por Conta Bancária / Carteira"),
     payment_method_id: Optional[str] = Query(None, description="Filtrar por Forma de Pagamento"),
+    credit_card_id: Optional[str] = Query(None, description="Filtrar por Cartão de Crédito"),
+    is_invoice_payment: Optional[bool] = Query(None, description="Filtrar lançamentos de débito de fatura"),
     contact_id: Optional[str] = Query(None, description="Filtrar por Contato / Favorecido"),
     debt_id: Optional[str] = Query(None, description="Filtrar por Dívida vinculada"),
     search: Optional[str] = Query(None, description="Busca textual na descrição ou observações"),
@@ -61,6 +65,10 @@ async def list_transactions(
         query = query.where(Transaction.account_id == account_id)
     if isinstance(payment_method_id, str) and payment_method_id:
         query = query.where(Transaction.payment_method_id == payment_method_id)
+    if isinstance(credit_card_id, str) and credit_card_id:
+        query = query.where(Transaction.credit_card_id == credit_card_id)
+    if is_invoice_payment is not None:
+        query = query.where(Transaction.is_invoice_payment == (1 if is_invoice_payment else 0))
     if isinstance(contact_id, str) and contact_id:
         query = query.where(Transaction.contact_id == contact_id)
     if isinstance(debt_id, str) and debt_id:
@@ -82,6 +90,21 @@ async def create_transaction(
 ):
     trans_data = trans_in.model_dump()
     attachment_ids = trans_data.pop("attachment_ids", None)
+
+    # Se estiver vinculado a cartão de crédito e não tiver competência informada, calcula automaticamente
+    if trans_data.get("credit_card_id") and not (trans_data.get("invoice_month") and trans_data.get("invoice_year")):
+        card = await db.get(CreditCard, trans_data["credit_card_id"])
+        if card:
+            try:
+                base_dt = datetime.strptime(trans_data["due_date"], "%Y-%m-%d").date()
+            except Exception:
+                base_dt = date.today()
+            inv_m, inv_y, _, _, calc_due = calculate_invoice_period_and_due_date(
+                base_dt, card.closing_day, card.due_day
+            )
+            trans_data["invoice_month"] = inv_m
+            trans_data["invoice_year"] = inv_y
+            trans_data["due_date"] = calc_due
 
     new_trans = Transaction(**trans_data)
     db.add(new_trans)

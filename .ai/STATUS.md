@@ -122,6 +122,25 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Painel de Configurações & Cadastros com sidebar ajustada (`lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]`) e listagens em 2 a 3 colunas responsivas para Categorias, Itens, Contas, Contatos, Dívidas, Orçamentos e Gestão de Usuários.
   - [x] Modais de Lançamentos ([TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx)) e Visualizador de Anexos ([AttachmentViewerModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/AttachmentViewerModal.tsx)) ampliados para telas de alta resolução.
 
+- [x] **Formas de Pagamento & Desacoplamento Bancário**:
+  - [x] Criação da entidade `PaymentMethod` (Pix, Boleto, Cartão de Crédito, Cartão de Débito, Dinheiro Físico, Transferência, Débito Automático).
+  - [x] Aba dedicada em **Configurações > Formas de Pagamento** com ordenação A a Z e modal de edição.
+  - [x] Campo opcional `payment_method_id` integrado nos modelos `Transaction` e `Schedule`.
+  - [x] Filtro de forma de pagamento na tabela de lançamentos e coluna visual identificando o meio de pagamento.
+  - [x] Registrado no [ADR 004](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/004-desacoplamento-contas-e-formas-de-pagamento.md).
+
+- [x] **Gestão de Cartões de Crédito, Faturas & Liquidação Consolidada**:
+  - [x] Modelo `CreditCard` com limite total (`limit_cents`), dia de fechamento (`closing_day`), dia de vencimento (`due_day`), cor visual, bandeira e conta de débito padrão.
+  - [x] Cálculo dinâmico de limites em tempo real (`used_limit_cents` e `available_limit_cents`) baseado em despesas pendentes no cartão.
+  - [x] Aba **Configurações > Cartões de Crédito** com renderização de cartões virtuais em degradê, barra de progresso de limite, estatísticas e botão **Ver Faturas**.
+  - [x] Distribuição automática de compras à vista e parceladas (em N vezes) pelas faturas dos meses futuros (`invoice_month`, `invoice_year`).
+  - [x] Dica inteligente de "Melhor dia de compra" no modal de lançamentos quando a compra ocorre no ou após o fechamento do cartão.
+  - [x] Componente modal interativo [CreditCardInvoicesModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/CreditCardInvoicesModal.tsx) para navegação mês a mês, detalhamento de compras, status da fatura (Aberta, Fechada, Paga) e liquidação consolidada.
+  - [x] **Liquidação da Fatura em 1 Clique**: Baixa atômica em todos os itens da fatura (`status = "CONCLUIDO"`) e geração de um único lançamento bancário consolidado (`is_invoice_payment = 1`), recompondo imediatamente o limite do cartão.
+  - [x] **Reabertura de Fatura**: Estorno e desfazimento do pagamento da fatura com remoção da transação bancária e retorno dos itens para pendente.
+  - [x] Filtro por Cartão de Crédito na tabela de lançamentos e badge visual na listagem.
+  - [x] Registrado no [ADR 005](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/005-gestao-cartoes-credito-faturas.md).
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 

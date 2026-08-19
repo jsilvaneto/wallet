@@ -9,7 +9,7 @@ from app.core.security import get_password_hash
 from app.api.v1 import api_router
 
 async def migrate_database_schema():
-    """Garante que colunas novas como 'nature', 'attachment_type' e 'payment_method_id' existam no banco SQLite."""
+    """Garante que colunas novas como 'nature', 'attachment_type', 'payment_method_id' e 'credit_card_id' existam no banco SQLite."""
     async with engine.begin() as conn:
         try:
             # 1. Verifica colunas da tabela categories
@@ -27,14 +27,28 @@ async def migrate_database_schema():
             # 3. Verifica colunas da tabela transactions
             res_trans = await conn.execute(text("PRAGMA table_info(transactions)"))
             trans_columns = [row[1] for row in res_trans.fetchall()]
-            if trans_columns and "payment_method_id" not in trans_columns:
-                await conn.execute(text("ALTER TABLE transactions ADD COLUMN payment_method_id VARCHAR(36) REFERENCES payment_methods(id) ON DELETE SET NULL"))
+            if trans_columns:
+                if "payment_method_id" not in trans_columns:
+                    await conn.execute(text("ALTER TABLE transactions ADD COLUMN payment_method_id VARCHAR(36) REFERENCES payment_methods(id) ON DELETE SET NULL"))
+                if "credit_card_id" not in trans_columns:
+                    await conn.execute(text("ALTER TABLE transactions ADD COLUMN credit_card_id VARCHAR(36) REFERENCES credit_cards(id) ON DELETE SET NULL"))
+                if "invoice_month" not in trans_columns:
+                    await conn.execute(text("ALTER TABLE transactions ADD COLUMN invoice_month INTEGER"))
+                if "invoice_year" not in trans_columns:
+                    await conn.execute(text("ALTER TABLE transactions ADD COLUMN invoice_year INTEGER"))
+                if "is_invoice_payment" not in trans_columns:
+                    await conn.execute(text("ALTER TABLE transactions ADD COLUMN is_invoice_payment INTEGER DEFAULT 0 NOT NULL"))
 
             # 4. Verifica colunas da tabela schedules
             res_sched = await conn.execute(text("PRAGMA table_info(schedules)"))
             sched_columns = [row[1] for row in res_sched.fetchall()]
-            if sched_columns and "payment_method_id" not in sched_columns:
-                await conn.execute(text("ALTER TABLE schedules ADD COLUMN payment_method_id VARCHAR(36) REFERENCES payment_methods(id) ON DELETE SET NULL"))
+            if sched_columns:
+                if "account_id" not in sched_columns:
+                    await conn.execute(text("ALTER TABLE schedules ADD COLUMN account_id VARCHAR(36) REFERENCES accounts(id) ON DELETE SET NULL"))
+                if "payment_method_id" not in sched_columns:
+                    await conn.execute(text("ALTER TABLE schedules ADD COLUMN payment_method_id VARCHAR(36) REFERENCES payment_methods(id) ON DELETE SET NULL"))
+                if "credit_card_id" not in sched_columns:
+                    await conn.execute(text("ALTER TABLE schedules ADD COLUMN credit_card_id VARCHAR(36) REFERENCES credit_cards(id) ON DELETE SET NULL"))
         except Exception as e:
             print("Aviso na migração SQLite:", e)
 
