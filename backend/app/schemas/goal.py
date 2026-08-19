@@ -20,6 +20,10 @@ class GoalUpdate(BaseModel):
     target_date: Optional[str] = None
     status: Optional[GoalStatus] = None
 
+class GoalContribute(BaseModel):
+    amount_cents: int = Field(..., gt=0, description="Valor do aporte ou resgate em centavos")
+    action: Literal["APORTE", "RESGATE"] = Field(default="APORTE", description="APORTE para adicionar ou RESGATE para retirar")
+
 class GoalResponse(GoalBase):
     id: str
     profile: ProfileType
@@ -29,3 +33,4 @@ class GoalResponse(GoalBase):
     progress_percentage: float = 0.0
 
     model_config = ConfigDict(from_attributes=True)
+

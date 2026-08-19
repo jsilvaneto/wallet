@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
 import { 
-  Category, Item, Account, AccountType, PaymentMethod, CreditCard as CreditCardType, Contact, Debt, Budget, 
+  Category, Item, Account, AccountType, PaymentMethod, CreditCard as CreditCardType, Contact, Debt, Budget, Goal,
   User, SyncConfig, SyncLog, SyncTestResult, SyncResultResponse,
   AttachmentStats, StorageDirectoryConfigResponse
 } from "../types";
@@ -21,7 +21,7 @@ import {
   Building2, Landmark, PiggyBank, Percent, ChevronLeft, ChevronRight,
   Info, Coins, Wallet, CircleDollarSign, ArrowUp, ArrowDown,
   HardDrive, Paperclip, BookOpen, QrCode, Banknote, FileText, ArrowRightLeft,
-  FileCheck, Shield
+  FileCheck, Shield, Sparkles
 } from "lucide-react";
 
 export type SettingsTab = 
@@ -33,6 +33,7 @@ export type SettingsTab =
   | "CONTATOS" 
   | "DIVIDAS" 
   | "ORCAMENTOS" 
+  | "METAS"
   | "SYNC" 
   | "ANEXOS" 
   | "USUARIOS" 
@@ -206,6 +207,35 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [editBudgetError, setEditBudgetError] = useState<string | null>(null);
 
   // ==========================================
+  // 6.1 ESTADOS DE METAS FINANCEIRAS
+  // ==========================================
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goalTitle, setGoalTitle] = useState("");
+  const [goalTargetAmountStr, setGoalTargetAmountStr] = useState("");
+  const [goalCurrentAmountStr, setGoalCurrentAmountStr] = useState("");
+  const [goalTargetDate, setGoalTargetDate] = useState("");
+  const [creatingGoal, setCreatingGoal] = useState(false);
+  const [goalSearch, setGoalSearch] = useState("");
+  const [goalStatusFilter, setGoalStatusFilter] = useState<string>("TODOS");
+
+  // Modal de Edição de Meta
+  const [editModalGoal, setEditModalGoal] = useState<Goal | null>(null);
+  const [editGoalTitle, setEditGoalTitle] = useState("");
+  const [editGoalTargetAmountStr, setEditGoalTargetAmountStr] = useState("");
+  const [editGoalCurrentAmountStr, setEditGoalCurrentAmountStr] = useState("");
+  const [editGoalTargetDate, setEditGoalTargetDate] = useState("");
+  const [editGoalStatus, setEditGoalStatus] = useState<"EM_ANDAMENTO" | "CONCLUIDA" | "CANCELADA">("EM_ANDAMENTO");
+  const [editGoalSaving, setEditGoalSaving] = useState(false);
+  const [editGoalError, setEditGoalError] = useState<string | null>(null);
+
+  // Modal de Aporte / Resgate de Meta
+  const [contributeModalGoal, setContributeModalGoal] = useState<Goal | null>(null);
+  const [contributeAmountStr, setContributeAmountStr] = useState("");
+  const [contributeAction, setContributeAction] = useState<"APORTE" | "RESGATE">("APORTE");
+  const [contributeSaving, setContributeSaving] = useState(false);
+  const [contributeError, setContributeError] = useState<string | null>(null);
+
+  // ==========================================
   // 7. ESTADOS DE SINCRONIZAÇÃO GOOGLE SHEETS
   // ==========================================
   const [syncConfig, setSyncConfig] = useState<SyncConfig | null>(null);
@@ -298,6 +328,9 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
         if (catRes.data.length > 0 && !budgetCatId) {
           setBudgetCatId(catRes.data[0].id);
         }
+      } else if (activeTab === "METAS") {
+        const res = await api.get("/goals", { params: { profile } });
+        setGoals(res.data);
       } else if (activeTab === "USUARIOS") {
         setLoadingUsers(true);
         const res = await api.get<User[]>("/auth/users");
@@ -373,6 +406,18 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const sortedBudgets = useMemo(() => {
     return [...budgets].sort((a, b) => (a.category_name || "").localeCompare(b.category_name || "", "pt-BR", { sensitivity: "base" }));
   }, [budgets]);
+
+  const sortedGoals = useMemo(() => {
+    let list = [...goals];
+    if (goalSearch.trim()) {
+      const q = goalSearch.toLowerCase();
+      list = list.filter((g) => g.title.toLowerCase().includes(q));
+    }
+    if (goalStatusFilter !== "TODOS") {
+      list = list.filter((g) => g.status === goalStatusFilter);
+    }
+    return list.sort((a, b) => a.title.localeCompare(b.title, "pt-BR", { sensitivity: "base" }));
+  }, [goals, goalSearch, goalStatusFilter]);
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => a.username.localeCompare(b.username, "pt-BR", { sensitivity: "base" }));
@@ -891,6 +936,122 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   };
 
   // ==========================================
+  // HANDLERS: METAS FINANCEIRAS
+  // ==========================================
+  const handleCreateGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!goalTitle.trim() || !goalTargetAmountStr.trim()) return;
+    setCreatingGoal(true);
+    try {
+      const targetCents = Math.round(parseFloat(goalTargetAmountStr.replace(",", ".")) * 100);
+      const currentCents = goalCurrentAmountStr.trim() ? Math.round(parseFloat(goalCurrentAmountStr.replace(",", ".")) * 100) : 0;
+      await api.post("/goals", {
+        profile,
+        title: goalTitle.trim(),
+        target_amount_cents: targetCents,
+        current_amount_cents: currentCents,
+        target_date: goalTargetDate || null,
+      });
+      setGoalTitle("");
+      setGoalTargetAmountStr("");
+      setGoalCurrentAmountStr("");
+      setGoalTargetDate("");
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao criar meta:", err);
+      alert(err.response?.data?.detail || "Erro ao criar meta.");
+    } finally {
+      setCreatingGoal(false);
+    }
+  };
+
+  const openEditGoal = (g: Goal) => {
+    setEditModalGoal(g);
+    setEditGoalTitle(g.title);
+    setEditGoalTargetAmountStr((g.target_amount_cents / 100).toFixed(2).replace(".", ","));
+    setEditGoalCurrentAmountStr((g.current_amount_cents / 100).toFixed(2).replace(".", ","));
+    setEditGoalTargetDate(g.target_date || "");
+    setEditGoalStatus(g.status);
+    setEditGoalError(null);
+    setEditGoalSaving(false);
+  };
+
+  const closeEditGoal = () => {
+    setEditModalGoal(null);
+    setEditGoalError(null);
+  };
+
+  const handleSaveEditGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalGoal || !editGoalTitle.trim() || !editGoalTargetAmountStr.trim()) return;
+    setEditGoalSaving(true);
+    setEditGoalError(null);
+    try {
+      const targetCents = Math.round(parseFloat(editGoalTargetAmountStr.replace(",", ".")) * 100);
+      const currentCents = editGoalCurrentAmountStr.trim() ? Math.round(parseFloat(editGoalCurrentAmountStr.replace(",", ".")) * 100) : 0;
+      await api.put(`/goals/${editModalGoal.id}`, {
+        title: editGoalTitle.trim(),
+        target_amount_cents: targetCents,
+        current_amount_cents: currentCents,
+        target_date: editGoalTargetDate || null,
+        status: editGoalStatus,
+      });
+      setEditModalGoal(null);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao atualizar meta:", err);
+      setEditGoalError(err.response?.data?.detail || "Erro ao atualizar meta.");
+    } finally {
+      setEditGoalSaving(false);
+    }
+  };
+
+  const openContributeGoal = (g: Goal) => {
+    setContributeModalGoal(g);
+    setContributeAmountStr("");
+    setContributeAction("APORTE");
+    setContributeError(null);
+    setContributeSaving(false);
+  };
+
+  const closeContributeGoal = () => {
+    setContributeModalGoal(null);
+    setContributeError(null);
+  };
+
+  const handleSaveContributeGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contributeModalGoal || !contributeAmountStr.trim()) return;
+    setContributeSaving(true);
+    setContributeError(null);
+    try {
+      const amountCents = Math.round(parseFloat(contributeAmountStr.replace(",", ".")) * 100);
+      await api.post(`/goals/${contributeModalGoal.id}/contribute`, {
+        amount_cents: amountCents,
+        action: contributeAction,
+      });
+      setContributeModalGoal(null);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao registrar aporte:", err);
+      setContributeError(err.response?.data?.detail || "Erro ao registrar aporte/resgate.");
+    } finally {
+      setContributeSaving(false);
+    }
+  };
+
+  const handleDeleteGoal = async (id: string) => {
+    if (!confirm("Deseja realmente excluir esta meta financeira?")) return;
+    try {
+      await api.delete(`/goals/${id}`);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao excluir meta:", err);
+      alert(err.response?.data?.detail || "Erro ao excluir meta.");
+    }
+  };
+
+  // ==========================================
   // HANDLER GENÉRICO DE EXCLUSÃO
   // ==========================================
   const handleDeleteItem = async (endpoint: string, id: string) => {
@@ -1248,7 +1409,8 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
         { id: "CARTOES", label: "Cartões de Crédito", shortDescription: "Limites, faturas e fechamento", icon: CreditCard },
         { id: "CONTATOS", label: "Contatos", shortDescription: "Clientes e fornecedores", icon: Users },
         { id: "DIVIDAS", label: "Dívidas & Passivos", shortDescription: "Controle e amortização", icon: Scale },
-        { id: "ORCAMENTOS", label: "Orçamentos & Metas", shortDescription: "Tetos e limites mensais", icon: PiggyBank },
+        { id: "ORCAMENTOS", label: "Orçamentos Mensais", shortDescription: "Tetos e limites por categoria", icon: PiggyBank },
+        { id: "METAS", label: "Metas Financeiras", shortDescription: "Objetivos, reservas e aportes", icon: Target },
       ],
     },
     {
@@ -3058,6 +3220,216 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       )}
 
       {/* ========================================== */}
+      {/* ABA 6.1: METAS FINANCEIRAS & OBJETIVOS     */}
+      {/* ========================================== */}
+      {activeTab === "METAS" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+          {/* Form de Criação */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Plus className="w-4 h-4 text-emerald-500" />
+                <span>Nova Meta Financeira</span>
+              </h3>
+            </div>
+
+            <form onSubmit={handleCreateGoal} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Título do Objetivo / Meta
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Reserva de Emergência, Viagem, Carro"
+                  value={goalTitle}
+                  onChange={(e) => setGoalTitle(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100 font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Valor Alvo Desejado (R$)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="0,00"
+                  value={goalTargetAmountStr}
+                  onChange={(e) => setGoalTargetAmountStr(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 font-mono text-zinc-900 dark:text-zinc-100 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Valor Já Acumulado Inicial (R$)
+                </label>
+                <input
+                  type="text"
+                  placeholder="0,00 (opcional)"
+                  value={goalCurrentAmountStr}
+                  onChange={(e) => setGoalCurrentAmountStr(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Data Limite Prevista (Opcional)
+                </label>
+                <input
+                  type="date"
+                  value={goalTargetDate}
+                  onChange={(e) => setGoalTargetDate(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 font-mono text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={creatingGoal}
+                className="w-full py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                {creatingGoal ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Salvando Meta...</span>
+                  </>
+                ) : (
+                  <span>Cadastrar Meta</span>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Listagem de Metas */}
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-emerald-500" />
+                  <span>Objetivos & Metas Cadastradas</span>
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  {sortedGoals.length} meta(s) cadastrada(s) • {profile}
+                </p>
+              </div>
+
+              {/* Filtros */}
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Buscar meta..."
+                  value={goalSearch}
+                  onChange={(e) => setGoalSearch(e.target.value)}
+                  className="px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100"
+                />
+                <select
+                  value={goalStatusFilter}
+                  onChange={(e) => setGoalStatusFilter(e.target.value)}
+                  className="px-2.5 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 font-medium"
+                >
+                  <option value="TODOS">Todos os status</option>
+                  <option value="EM_ANDAMENTO">Em Andamento</option>
+                  <option value="CONCLUIDA">Concluídas</option>
+                  <option value="CANCELADA">Canceladas</option>
+                </select>
+              </div>
+            </div>
+
+            {sortedGoals.length === 0 ? (
+              <div className="p-8 text-center text-xs text-zinc-500">
+                Nenhuma meta financeira encontrada.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3.5 max-h-[600px] overflow-y-auto pr-1">
+                {sortedGoals.map((g) => {
+                  const pct = g.progress_percentage || (g.target_amount_cents > 0 ? Math.round((g.current_amount_cents / g.target_amount_cents) * 100) : 0);
+                  const isCompleted = g.status === "CONCLUIDA" || pct >= 100;
+                  const remaining = Math.max(0, g.target_amount_cents - g.current_amount_cents);
+
+                  return (
+                    <div
+                      key={g.id}
+                      className="p-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 shadow-sm space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                            {g.title}
+                          </h4>
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${
+                            isCompleted
+                              ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/60"
+                              : g.status === "CANCELADA"
+                              ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border-zinc-300 dark:border-zinc-700"
+                              : "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700/60"
+                          }`}>
+                            {isCompleted ? "✓ CONCLUÍDA" : `${pct}% ACUMULADO`}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => openContributeGoal(g)}
+                            className="px-2 py-1 text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 rounded-lg transition-all flex items-center gap-1"
+                            title="Aporte / Resgate"
+                          >
+                            <Coins className="w-3 h-3" />
+                            <span>Aporte</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => openEditGoal(g)}
+                            className="p-1 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-all"
+                            title="Editar Meta"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteGoal(g.id)}
+                            className="p-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all"
+                            title="Excluir Meta"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Progresso Financeiro */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
+                          <span>Acumulado: <strong className="text-zinc-900 dark:text-zinc-100">{hideValues ? "••••••" : formatCurrency(g.current_amount_cents)}</strong></span>
+                          <span>Alvo: {hideValues ? "••••••" : formatCurrency(g.target_amount_cents)}</span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden border border-zinc-200/60 dark:border-zinc-700/60">
+                          <div
+                            className={`h-full transition-all rounded-full ${
+                              isCompleted ? "bg-emerald-500" : "bg-indigo-500"
+                            }`}
+                            style={{ width: `${Math.min(100, pct)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-zinc-400 pt-0.5">
+                          <span>Faltam: <strong>{hideValues ? "••••••" : formatCurrency(remaining)}</strong></span>
+                          {g.target_date && <span>Data Limite: {g.target_date}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
       {/* ABA 7: SINCRONIZAÇÃO NUVEM (GOOGLE SHEETS) */}
       {/* ========================================== */}
       {activeTab === "SYNC" && (
@@ -4744,6 +5116,237 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                 >
                   {editBudgetSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   <span>Salvar Limite</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Edição de Meta */}
+      {editModalGoal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Editar Meta Financeira
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeEditGoal}
+                className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditGoal} className="p-5 space-y-4">
+              {editGoalError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{editGoalError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Título da Meta
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editGoalTitle}
+                  onChange={(e) => setEditGoalTitle(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Valor Alvo (R$)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editGoalTargetAmountStr}
+                    onChange={(e) => setEditGoalTargetAmountStr(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg font-mono font-bold text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Valor Acumulado (R$)
+                  </label>
+                  <input
+                    type="text"
+                    value={editGoalCurrentAmountStr}
+                    onChange={(e) => setEditGoalCurrentAmountStr(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg font-mono text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Data Limite (Opcional)
+                  </label>
+                  <input
+                    type="date"
+                    value={editGoalTargetDate}
+                    onChange={(e) => setEditGoalTargetDate(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg font-mono text-zinc-900 dark:text-zinc-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Status da Meta
+                  </label>
+                  <select
+                    value={editGoalStatus}
+                    onChange={(e) => setEditGoalStatus(e.target.value as any)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-900 dark:text-zinc-100 font-medium"
+                  >
+                    <option value="EM_ANDAMENTO">Em Andamento</option>
+                    <option value="CONCLUIDA">Concluída</option>
+                    <option value="CANCELADA">Cancelada</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={closeEditGoal}
+                  className="px-4 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={editGoalSaving}
+                  className="px-5 py-2 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-indigo-600/20 transition-all flex items-center gap-1.5"
+                >
+                  {editGoalSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Aporte / Resgate de Meta */}
+      {contributeModalGoal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="flex items-center gap-2">
+                <Coins className="w-5 h-5 text-emerald-500" />
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                    Aporte / Resgate de Meta
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    {contributeModalGoal.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeContributeGoal}
+                className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveContributeGoal} className="p-5 space-y-4">
+              {contributeError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{contributeError}</span>
+                </div>
+              )}
+
+              {/* Toggle Aporte vs Resgate */}
+              <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setContributeAction("APORTE")}
+                  className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    contributeAction === "APORTE"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Aporte (Depositar)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContributeAction("RESGATE")}
+                  className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                    contributeAction === "RESGATE"
+                      ? "bg-rose-600 text-white shadow-sm"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                  }`}
+                >
+                  <ArrowDown className="w-3.5 h-3.5" />
+                  <span>Resgate (Retirar)</span>
+                </button>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Valor da Movimentação (R$)
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="0,00"
+                  value={contributeAmountStr}
+                  onChange={(e) => setContributeAmountStr(e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg font-mono font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 space-y-1">
+                <div className="flex justify-between">
+                  <span>Saldo Atual:</span>
+                  <strong className="font-mono">{formatCurrency(contributeModalGoal.current_amount_cents)}</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Meta Alvo:</span>
+                  <strong className="font-mono">{formatCurrency(contributeModalGoal.target_amount_cents)}</strong>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={closeContributeGoal}
+                  className="px-4 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={contributeSaving}
+                  className={`px-5 py-2 text-xs font-bold disabled:opacity-50 text-white rounded-lg shadow-md transition-all flex items-center gap-1.5 ${
+                    contributeAction === "APORTE"
+                      ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
+                      : "bg-rose-600 hover:bg-rose-700 shadow-rose-600/20"
+                  }`}
+                >
+                  {contributeSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Confirmar {contributeAction === "APORTE" ? "Aporte" : "Resgate"}</span>
                 </button>
               </div>
             </form>

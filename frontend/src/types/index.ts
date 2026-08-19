@@ -178,6 +178,18 @@ export interface Budget {
   created_at: string;
 }
 
+export interface Goal {
+  id: string;
+  profile: ProfileType;
+  title: string;
+  target_amount_cents: number;
+  current_amount_cents: number;
+  target_date?: string | null;
+  status: "EM_ANDAMENTO" | "CONCLUIDA" | "CANCELADA";
+  created_at: string;
+  progress_percentage?: number;
+}
+
 export interface Transaction {
   id: string;
   profile: ProfileType;

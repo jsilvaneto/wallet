@@ -176,6 +176,14 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Distribuição analítica por Forma de Pagamento (Pix, Boleto, Cartão de Crédito, Débito, Dinheiro).
   - [x] Registrado no [ADR 009](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/009-reforma-executiva-dashboard-analitico.md).
 
+- [x] **Gestão de Metas Financeiras & Reservas (`Goals`)**:
+  - [x] Endpoints em `goals.py` (`POST /goals`, `PUT /goals/{id}`, `POST /goals/{id}/contribute`, `DELETE /goals/{id}`, `GET /goals`).
+  - [x] Rotinas de aporte (incremento) e resgate (decremento) com atualização automática do status para `CONCLUIDA` ao bater a meta.
+  - [x] Aba dedicada em **Configurações > Metas Financeiras** com formulário, busca, filtros de status e cards com cálculo de valor restante.
+  - [x] Modais intuitivos para edição e aportes/resgates com alternância dinâmica de tipo.
+  - [x] Widget dedicado no **Dashboard** com barras de progresso e percentual de conclusão.
+  - [x] Registrado no [ADR 010](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/010-gestao-de-metas-e-objetivos-financeiros.md).
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 

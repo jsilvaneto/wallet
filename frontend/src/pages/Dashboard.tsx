@@ -781,6 +781,56 @@ export const Dashboard: React.FC = () => {
               )}
             </div>
 
+            {/* Widget: Metas Financeiras & Reservas */}
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  <Target className="w-4 h-4 text-emerald-500" />
+                  <span>Metas Financeiras & Objetivos</span>
+                </h3>
+                <span className="text-xs text-zinc-400 font-mono">
+                  {summary.goals_summary.length} meta(s)
+                </span>
+              </div>
+
+              {summary.goals_summary.length === 0 ? (
+                <div className="p-6 text-center text-xs text-zinc-400 space-y-1">
+                  <p>Nenhuma meta financeira cadastrada.</p>
+                  <p className="text-[11px] text-zinc-500">Defina objetivos em Configurações &gt; Metas Financeiras.</p>
+                </div>
+              ) : (
+                <div className="space-y-3 pt-1">
+                  {summary.goals_summary.map((g) => {
+                    const isDone = g.status === "CONCLUIDA" || g.percentage >= 100;
+                    return (
+                      <div key={g.id} className="space-y-1.5 p-2 rounded-xl bg-zinc-50/50 dark:bg-zinc-800/20 border border-zinc-100 dark:border-zinc-800/60">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-zinc-800 dark:text-zinc-200">{g.title}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            isDone 
+                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
+                              : "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-400"
+                          }`}>
+                            {isDone ? "✓ Atingida" : `${g.percentage}% acumulado`}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-mono text-zinc-500">
+                          <span>Acumulado: <strong>{formatCurrency(g.current_amount_cents, hideValues)}</strong></span>
+                          <span>Alvo: {formatCurrency(g.target_amount_cents, hideValues)}</span>
+                        </div>
+                        <div className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${isDone ? "bg-emerald-500" : "bg-indigo-500"}`}
+                            style={{ width: `${Math.min(100, g.percentage)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
           </div>
         </>
       )}

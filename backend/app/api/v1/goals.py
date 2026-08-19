@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from app.database import get_db
 from app.models import Goal, User
-from app.schemas.goal import GoalCreate, GoalUpdate, GoalResponse
+from app.schemas.goal import GoalCreate, GoalUpdate, GoalResponse, GoalContribute
 from app.api.v1.deps import get_current_user
 
 router = APIRouter(prefix="/goals", tags=["Metas"])
@@ -84,6 +84,44 @@ async def update_goal(
 
     if goal.current_amount_cents >= goal.target_amount_cents:
         goal.status = "CONCLUIDA"
+
+    await db.commit()
+    await db.refresh(goal)
+
+    pct = round((goal.current_amount_cents / goal.target_amount_cents) * 100, 2) if goal.target_amount_cents > 0 else 0.0
+    return GoalResponse(
+        id=goal.id,
+        profile=goal.profile, # type: ignore
+        title=goal.title,
+        target_amount_cents=goal.target_amount_cents,
+        current_amount_cents=goal.current_amount_cents,
+        target_date=goal.target_date,
+        status=goal.status, # type: ignore
+        created_at=goal.created_at,
+        progress_percentage=pct
+    )
+
+@router.post("/{goal_id}/contribute", response_model=GoalResponse)
+async def contribute_to_goal(
+    goal_id: str,
+    payload: GoalContribute,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Registra um aporte (depósito) ou resgate em uma meta financeira."""
+    goal = await db.get(Goal, goal_id)
+    if not goal:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Meta não encontrada")
+
+    if payload.action == "APORTE":
+        goal.current_amount_cents += payload.amount_cents
+    elif payload.action == "RESGATE":
+        goal.current_amount_cents = max(0, goal.current_amount_cents - payload.amount_cents)
+
+    if goal.current_amount_cents >= goal.target_amount_cents:
+        goal.status = "CONCLUIDA"
+    elif goal.current_amount_cents < goal.target_amount_cents and goal.status == "CONCLUIDA":
+        goal.status = "EM_ANDAMENTO"
 
     await db.commit()
     await db.refresh(goal)

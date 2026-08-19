@@ -3757,6 +3757,64 @@
         }
       }
     },
+    "/api/v1/goals/{goal_id}/contribute": {
+      "post": {
+        "tags": [
+          "Metas"
+        ],
+        "summary": "Contribute To Goal",
+        "description": "Registra um aporte (depósito) ou resgate em uma meta financeira.",
+        "operationId": "contribute_to_goal_api_v1_goals__goal_id__contribute_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "goal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Goal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalContribute"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/dashboard/summary": {
       "get": {
         "tags": [
@@ -7088,6 +7146,31 @@
         },
         "type": "object",
         "title": "DebtUpdate"
+      },
+      "GoalContribute": {
+        "properties": {
+          "amount_cents": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount Cents",
+            "description": "Valor do aporte ou resgate em centavos"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "APORTE",
+              "RESGATE"
+            ],
+            "title": "Action",
+            "description": "APORTE para adicionar ou RESGATE para retirar",
+            "default": "APORTE"
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount_cents"
+        ],
+        "title": "GoalContribute"
       },
       "GoalCreate": {
         "properties": {
