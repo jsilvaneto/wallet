@@ -56,6 +56,15 @@ CREATE TABLE goals (
 	CONSTRAINT chk_goal_status CHECK (status IN ('EM_ANDAMENTO', 'CONCLUIDA', 'CANCELADA'))
 );
 
+CREATE TABLE payment_methods (
+	id VARCHAR(36) NOT NULL, 
+	profile VARCHAR(10) NOT NULL, 
+	name VARCHAR(100) NOT NULL, 
+	created_at VARCHAR(30) NOT NULL, 
+	PRIMARY KEY (id), 
+	CONSTRAINT chk_payment_method_profile CHECK (profile IN ('PESSOAL', 'EMPRESA'))
+);
+
 CREATE TABLE sync_logs (
 	id VARCHAR(36) NOT NULL, 
 	action VARCHAR(20) NOT NULL, 
@@ -133,6 +142,7 @@ CREATE TABLE schedules (
 	item_id VARCHAR(36), 
 	contact_id VARCHAR(36), 
 	debt_id VARCHAR(36), 
+	payment_method_id VARCHAR(36), 
 	description VARCHAR(255) NOT NULL, 
 	schedule_type VARCHAR(30) NOT NULL, 
 	frequency VARCHAR(20) NOT NULL, 
@@ -151,7 +161,8 @@ CREATE TABLE schedules (
 	FOREIGN KEY(category_id) REFERENCES categories (id) ON DELETE RESTRICT, 
 	FOREIGN KEY(item_id) REFERENCES items (id) ON DELETE SET NULL, 
 	FOREIGN KEY(contact_id) REFERENCES contacts (id) ON DELETE SET NULL, 
-	FOREIGN KEY(debt_id) REFERENCES debts (id) ON DELETE SET NULL
+	FOREIGN KEY(debt_id) REFERENCES debts (id) ON DELETE SET NULL, 
+	FOREIGN KEY(payment_method_id) REFERENCES payment_methods (id) ON DELETE SET NULL
 );
 
 CREATE TABLE transactions (
@@ -164,6 +175,7 @@ CREATE TABLE transactions (
 	contact_id VARCHAR(36), 
 	debt_id VARCHAR(36), 
 	schedule_id VARCHAR(36), 
+	payment_method_id VARCHAR(36), 
 	installment_number INTEGER, 
 	total_installments INTEGER, 
 	description VARCHAR(255) NOT NULL, 
@@ -185,7 +197,8 @@ CREATE TABLE transactions (
 	FOREIGN KEY(item_id) REFERENCES items (id) ON DELETE SET NULL, 
 	FOREIGN KEY(contact_id) REFERENCES contacts (id) ON DELETE SET NULL, 
 	FOREIGN KEY(debt_id) REFERENCES debts (id) ON DELETE SET NULL, 
-	FOREIGN KEY(schedule_id) REFERENCES schedules (id) ON DELETE CASCADE
+	FOREIGN KEY(schedule_id) REFERENCES schedules (id) ON DELETE CASCADE, 
+	FOREIGN KEY(payment_method_id) REFERENCES payment_methods (id) ON DELETE SET NULL
 );
 
 CREATE TABLE attachments (
@@ -219,10 +232,10 @@ CREATE INDEX idx_trans_sync ON transactions (sync_status);
 
 CREATE INDEX idx_trans_status ON transactions (status);
 
-CREATE INDEX idx_attachment_sync ON attachments (sync_status);
-
 CREATE INDEX idx_attachment_profile ON attachments (profile);
 
 CREATE INDEX idx_attachment_type ON attachments (attachment_type);
 
 CREATE INDEX idx_attachment_transaction ON attachments (transaction_id);
+
+CREATE INDEX idx_attachment_sync ON attachments (sync_status);

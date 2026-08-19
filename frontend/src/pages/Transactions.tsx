@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Transaction, Category, Contact, Account, AttachmentType, ATTACHMENT_TYPES } from "../types";
+import { Transaction, Category, Contact, Account, PaymentMethod, AttachmentType, ATTACHMENT_TYPES } from "../types";
 import { formatCurrency, formatDateToBR } from "../utils/format";
 import { TransactionModal } from "../components/TransactionModal";
 import { AttachmentViewerModal } from "../components/AttachmentViewerModal";
@@ -32,8 +32,10 @@ export const Transactions: React.FC = () => {
   const [categories, setCategories] = useState<Record<string, Category>>({});
   const [contacts, setContacts] = useState<Record<string, Contact>>({});
   const [accounts, setAccounts] = useState<Record<string, Account>>({});
+  const [paymentMethods, setPaymentMethods] = useState<Record<string, PaymentMethod>>({});
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
   const [accountsList, setAccountsList] = useState<Account[]>([]);
+  const [paymentMethodsList, setPaymentMethodsList] = useState<PaymentMethod[]>([]);
   const [contactsList, setContactsList] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -49,6 +51,7 @@ export const Transactions: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilterOption>("TODOS");
   const [typeFilter, setTypeFilter] = useState<TypeFilterOption>("TODOS");
   const [accountFilter, setAccountFilter] = useState<string>("TODAS");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("TODAS");
   const [categoryFilter, setCategoryFilter] = useState<string>("TODAS");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -122,7 +125,7 @@ export const Transactions: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [transRes, catRes, conRes, accRes] = await Promise.all([
+      const [transRes, catRes, conRes, accRes, pmRes] = await Promise.all([
         api.get("/transactions", {
           params: {
             profile,
@@ -131,6 +134,7 @@ export const Transactions: React.FC = () => {
             start_due_date: statusFilter === "ATRASADAS" ? undefined : dateRange.start,
             end_due_date: statusFilter === "ATRASADAS" ? undefined : dateRange.end,
             account_id: accountFilter === "TODAS" ? undefined : accountFilter,
+            payment_method_id: paymentMethodFilter === "TODAS" ? undefined : paymentMethodFilter,
             category_id: categoryFilter === "TODAS" ? undefined : categoryFilter,
             is_overdue: statusFilter === "ATRASADAS" ? true : undefined,
           },
@@ -138,12 +142,14 @@ export const Transactions: React.FC = () => {
         api.get("/categories", { params: { profile } }),
         api.get("/contacts", { params: { profile } }),
         api.get("/accounts", { params: { profile } }),
+        api.get("/payment-methods", { params: { profile } }),
       ]);
 
       setTransactions(transRes.data);
       setCategoriesList(catRes.data);
       setContactsList(conRes.data);
       setAccountsList(accRes.data);
+      setPaymentMethodsList(pmRes.data);
 
       const catMap: Record<string, Category> = {};
       catRes.data.forEach((c: Category) => {
@@ -162,6 +168,12 @@ export const Transactions: React.FC = () => {
         accMap[a.id] = a;
       });
       setAccounts(accMap);
+
+      const pmMap: Record<string, PaymentMethod> = {};
+      pmRes.data.forEach((pm: PaymentMethod) => {
+        pmMap[pm.id] = pm;
+      });
+      setPaymentMethods(pmMap);
     } catch (err) {
       console.error("Erro ao carregar transações:", err);
     } finally {
@@ -171,7 +183,7 @@ export const Transactions: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [profile, statusFilter, typeFilter, periodPreset, dateRange.start, dateRange.end, accountFilter, categoryFilter]);
+  }, [profile, statusFilter, typeFilter, periodPreset, dateRange.start, dateRange.end, accountFilter, paymentMethodFilter, categoryFilter]);
 
   // Navegação de mês
   const handlePrevMonth = () => {
@@ -219,6 +231,7 @@ export const Transactions: React.FC = () => {
     setStatusFilter("TODOS");
     setTypeFilter("TODOS");
     setAccountFilter("TODAS");
+    setPaymentMethodFilter("TODAS");
     setCategoryFilter("TODAS");
     setSearchQuery("");
     setCustomStartDate("");
@@ -230,6 +243,7 @@ export const Transactions: React.FC = () => {
     statusFilter !== "TODOS" ||
     typeFilter !== "TODOS" ||
     accountFilter !== "TODAS" ||
+    paymentMethodFilter !== "TODAS" ||
     categoryFilter !== "TODAS" ||
     searchQuery.trim() !== "";
 
@@ -252,12 +266,14 @@ export const Transactions: React.FC = () => {
       const conMatch = conName.includes(q);
       const accName = t.account_id ? accounts[t.account_id]?.name?.toLowerCase() || "" : "";
       const accMatch = accName.includes(q);
+      const pmName = t.payment_method_id ? paymentMethods[t.payment_method_id]?.name?.toLowerCase() || "" : "";
+      const pmMatch = pmName.includes(q);
       const amountStr = (t.amount_cents / 100).toFixed(2).replace(".", ",");
       const amountMatch = amountStr.includes(q);
 
-      return descMatch || notesMatch || catMatch || conMatch || accMatch || amountMatch;
+      return descMatch || notesMatch || catMatch || conMatch || accMatch || pmMatch || amountMatch;
     });
-  }, [transactions, searchQuery, categories, contacts, accounts, statusFilter, todayStr]);
+  }, [transactions, searchQuery, categories, contacts, accounts, paymentMethods, statusFilter, todayStr]);
 
   // Métricas calculadas
   const metrics = useMemo(() => {
@@ -654,6 +670,24 @@ export const Transactions: React.FC = () => {
             </select>
           )}
 
+          {/* Payment Method Filter */}
+          {paymentMethodsList.length > 0 && (
+            <select
+              value={paymentMethodFilter}
+              onChange={(e) => setPaymentMethodFilter(e.target.value)}
+              className="px-3 py-1.5 bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-xl text-zinc-800 dark:text-zinc-200 text-xs font-semibold focus:outline-none focus:border-emerald-500 font-medium"
+            >
+              <option value="TODAS">Todas as Formas</option>
+              {[...paymentMethodsList]
+                .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                .map((pm) => (
+                  <option key={pm.id} value={pm.id}>
+                    {pm.name}
+                  </option>
+                ))}
+            </select>
+          )}
+
           {/* Category Filter */}
           {categoriesList.length > 0 && (
             <select
@@ -714,7 +748,7 @@ export const Transactions: React.FC = () => {
                   <th className="py-3.5 px-4 xl:px-6">Vencimento / Liquidação</th>
                   <th className="py-3.5 px-4 xl:px-6">Descrição</th>
                   <th className="py-3.5 px-4 xl:px-6">Categoria</th>
-                  <th className="py-3.5 px-4 xl:px-6">Conta / Carteira</th>
+                  <th className="py-3.5 px-4 xl:px-6">Conta / Forma de Pgto</th>
                   <th className="py-3.5 px-4 xl:px-6">Contato</th>
                   <th className="py-3.5 px-4 xl:px-6 text-right">Valor</th>
                   <th className="py-3.5 px-4 xl:px-6 w-20 text-center">Ações</th>
@@ -872,16 +906,30 @@ export const Transactions: React.FC = () => {
                         {categories[t.category_id]?.name || "-"}
                       </td>
 
-                      {/* Account / Carteira */}
+                      {/* Account / Carteira & Forma de Pagamento */}
                       <td className="py-3.5 px-4 xl:px-6 whitespace-nowrap">
-                        {acc ? (
-                          <div className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 font-medium">
-                            <AccIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                            <span>{acc.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-zinc-400">-</span>
-                        )}
+                        {(() => {
+                          const pm = t.payment_method_id ? paymentMethods[t.payment_method_id] : null;
+                          if (!acc && !pm) {
+                            return <span className="text-zinc-400">-</span>;
+                          }
+                          return (
+                            <div className="space-y-0.5">
+                              {acc && (
+                                <div className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300 font-medium">
+                                  <AccIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                                  <span>{acc.name}</span>
+                                </div>
+                              )}
+                              {pm && (
+                                <div className="flex items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400 font-normal">
+                                  <CreditCard className="w-3 h-3 text-zinc-400 shrink-0" />
+                                  <span>{pm.name}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Contact */}

@@ -13,6 +13,7 @@ class ScheduleBase(BaseModel):
     item_id: Optional[str] = None
     contact_id: Optional[str] = None
     debt_id: Optional[str] = None
+    payment_method_id: Optional[str] = None
     description: str = Field(..., min_length=1, max_length=255)
     schedule_type: ScheduleType = Field(..., description="RECORRENTE_CONTINUA ou PARCELADA")
     frequency: FrequencyType = Field(default="MENSAL")

@@ -33,6 +33,7 @@ async def list_transactions(
     end_due_date: Optional[str] = Query(None, description="Vencimento final (YYYY-MM-DD)"),
     category_id: Optional[str] = Query(None, description="Filtrar por Categoria"),
     account_id: Optional[str] = Query(None, description="Filtrar por Conta Bancária / Carteira"),
+    payment_method_id: Optional[str] = Query(None, description="Filtrar por Forma de Pagamento"),
     contact_id: Optional[str] = Query(None, description="Filtrar por Contato / Favorecido"),
     debt_id: Optional[str] = Query(None, description="Filtrar por Dívida vinculada"),
     search: Optional[str] = Query(None, description="Busca textual na descrição ou observações"),
@@ -58,6 +59,8 @@ async def list_transactions(
         query = query.where(Transaction.category_id == category_id)
     if isinstance(account_id, str) and account_id:
         query = query.where(Transaction.account_id == account_id)
+    if isinstance(payment_method_id, str) and payment_method_id:
+        query = query.where(Transaction.payment_method_id == payment_method_id)
     if isinstance(contact_id, str) and contact_id:
         query = query.where(Transaction.contact_id == contact_id)
     if isinstance(debt_id, str) and debt_id:

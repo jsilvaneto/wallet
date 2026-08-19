@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Category, Contact, Item, Account, Attachment, Transaction, AttachmentType, ATTACHMENT_TYPES } from "../types";
+import { Category, Contact, Item, Account, PaymentMethod, Attachment, Transaction, AttachmentType, ATTACHMENT_TYPES } from "../types";
 import { formatCurrency, getTodayBR, maskDateBR, parseDateBRToISO, formatDateToBR } from "../utils/format";
 import { 
   X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, 
   Package, Landmark, Paperclip, Upload, Image as ImageIcon, 
-  CheckCircle2, Loader2, Pencil, Clock, Check, ChevronDown
+  CheckCircle2, Loader2, Pencil, Clock, Check, ChevronDown, CreditCard
 } from "lucide-react";
 
 interface TransactionModalProps {
@@ -39,6 +39,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [amountStr, setAmountStr] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [accountId, setAccountId] = useState("");
+  const [paymentMethodId, setPaymentMethodId] = useState("");
   const [contactId, setContactId] = useState("");
   const [dueDateStr, setDueDateStr] = useState<string>(getTodayBR());
   const [paymentDateStr, setPaymentDateStr] = useState<string>("");
@@ -52,6 +53,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<Item[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,16 +79,18 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
     const loadDependencies = async () => {
       try {
-        const [catRes, conRes, itemRes, accRes] = await Promise.all([
+        const [catRes, conRes, itemRes, accRes, pmRes] = await Promise.all([
           api.get("/categories", { params: { profile, type } }),
           api.get("/contacts", { params: { profile } }),
           api.get("/items", { params: { profile, type } }),
           api.get("/accounts", { params: { profile } }),
+          api.get("/payment-methods", { params: { profile } }),
         ]);
         setCategories(catRes.data);
         setContacts(conRes.data);
         setItems(itemRes.data);
         setAccounts(accRes.data);
+        setPaymentMethods(pmRes.data);
 
         // Se estiver criando, define a primeira categoria se houver
         if (!transactionToEdit) {
@@ -110,6 +114,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setCategoryId(transactionToEdit.category_id || "");
       setItemId(transactionToEdit.item_id || "");
       setAccountId(transactionToEdit.account_id || "");
+      setPaymentMethodId(transactionToEdit.payment_method_id || "");
       setContactId(transactionToEdit.contact_id || "");
       setDueDateStr(formatDateToBR(transactionToEdit.due_date));
       setStatus(transactionToEdit.status === "CONCLUIDO" ? "CONCLUIDO" : "PENDENTE");
@@ -126,6 +131,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setAmountStr("");
       setItemId("");
       setAccountId("");
+      setPaymentMethodId("");
       setContactId("");
       setNotes("");
       setUploadedAttachments([]);
@@ -247,6 +253,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           category_id: categoryId,
           item_id: itemId || null,
           account_id: accountId || null,
+          payment_method_id: paymentMethodId || null,
           contact_id: contactId || null,
           due_date: isoDueDate,
           status,
@@ -265,6 +272,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             category_id: categoryId,
             item_id: itemId || null,
             account_id: accountId || null,
+            payment_method_id: paymentMethodId || null,
             contact_id: contactId || null,
             due_date: isoDueDate,
             notes: notes || null,
@@ -280,6 +288,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             category_id: categoryId,
             item_id: itemId || null,
             account_id: accountId || null,
+            payment_method_id: paymentMethodId || null,
             contact_id: contactId || null,
             schedule_type: mode === "PARCELADO" ? "PARCELADA" : "RECORRENTE_CONTINUA",
             frequency: "MENSAL",
@@ -675,7 +684,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               </select>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                   <Landmark className="w-3.5 h-3.5 text-zinc-400" />
@@ -692,6 +701,27 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     .map((acc) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.name} ({acc.type === "CORRENTE" ? "Corrente" : acc.type === "POUPANCA" ? "Poupança" : acc.type === "INVESTIMENTO" ? "Investimento" : acc.type === "CAIXA" ? "Caixa" : "Outro"})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <CreditCard className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Forma de Pagamento</span>
+                </label>
+                <select
+                  value={paymentMethodId}
+                  onChange={(e) => setPaymentMethodId(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="">Nenhuma (Opcional)</option>
+                  {[...paymentMethods]
+                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                    .map((pm) => (
+                      <option key={pm.id} value={pm.id}>
+                        {pm.name}
                       </option>
                     ))}
                 </select>

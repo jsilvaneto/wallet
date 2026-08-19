@@ -45,13 +45,21 @@ Os **Itens** representam produtos/serviços específicos e servem como acelerado
 
 ---
 
-## 5. Gestão de Dívidas e Orçamentos
+## 5. Contas Bancárias vs. Formas de Pagamento
+O Wallet separa explicitamente a instituição financeira/custódia do instrumento/meio utilizado para liquidar o lançamento:
+- **`Contas / Carteiras` (`Account`)**: Representa onde o recurso está custodiado (ex: *Itaú*, *Nubank*, *Caixa Econômica*, *Carteira Física*, *XP Investimentos*).
+- **`Formas de Pagamento` (`PaymentMethod`)**: Representa o instrumento/meio pelo qual o dinheiro trafega (ex: *Pix*, *Boleto*, *Cartão de Crédito*, *Cartão de Débito*, *Dinheiro Físico*, *Transferência Bancária*, *Débito Automático*).
+- Ambas são opcionais e independentes nos lançamentos e agendamentos, permitindo análises combinadas e filtros precisos por meio de pagamento.
+
+---
+
+## 6. Gestão de Dívidas e Orçamentos
 - **Dívidas (`Debt`)**: Controle de passivos com valor total, saldo devedor restante e barra de amortização progressiva.
 - **Orçamentos (`Budget`)**: Definição de teto de gastos mensais por categoria de despesa, com cálculo do realizado no mês e alertas visuais de consumo (Normal, Atenção e Estourado).
 
 ---
 
-## 6. Sincronização Nuvem (Google Sheets Mirror)
+## 7. Sincronização Nuvem (Google Sheets Mirror)
 O espelhamento com o Google Sheets permite manter uma cópia dos dados em nuvem e receber lançamentos remotos:
 - **`Transacoes`**: Aba que espelha os lançamentos do banco local SQLite para conferência e relatórios externos.
 - **`Fila_Mobile`**: Aba que recebe lançamentos gerados remotamente para importação e conciliação no banco local.

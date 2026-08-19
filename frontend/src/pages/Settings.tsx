@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
 import { 
-  Category, Item, Account, AccountType, Contact, Debt, Budget, 
+  Category, Item, Account, AccountType, PaymentMethod, Contact, Debt, Budget, 
   User, SyncConfig, SyncLog, SyncTestResult, SyncResultResponse,
   AttachmentStats, StorageDirectoryConfigResponse
 } from "../types";
@@ -18,13 +18,14 @@ import {
   Plus, Pencil, X, Loader2, Search, DollarSign, Calendar,
   Building2, Landmark, PiggyBank, Percent, ChevronLeft, ChevronRight,
   Info, Coins, Wallet, CircleDollarSign, ArrowUp, ArrowDown,
-  HardDrive, Paperclip, BookOpen
+  HardDrive, Paperclip, BookOpen, QrCode, Banknote, FileText, ArrowRightLeft
 } from "lucide-react";
 
 export type SettingsTab = 
   | "CATEGORIAS" 
   | "ITENS" 
   | "CONTAS" 
+  | "PAGAMENTOS"
   | "CONTATOS" 
   | "DIVIDAS" 
   | "ORCAMENTOS" 
@@ -99,6 +100,20 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [editAccType, setEditAccType] = useState<AccountType>("CORRENTE");
   const [editAccSaving, setEditAccSaving] = useState(false);
   const [editAccError, setEditAccError] = useState<string | null>(null);
+
+  // ==========================================
+  // 3.1 ESTADOS DE FORMAS DE PAGAMENTO
+  // ==========================================
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [pmName, setPmName] = useState("");
+  const [pmSearch, setPmSearch] = useState("");
+  const [creatingPm, setCreatingPm] = useState(false);
+
+  // Modal de Edição de Forma de Pagamento
+  const [editModalPm, setEditModalPm] = useState<PaymentMethod | null>(null);
+  const [editPmName, setEditPmName] = useState("");
+  const [editPmSaving, setEditPmSaving] = useState(false);
+  const [editPmError, setEditPmError] = useState<string | null>(null);
 
   // ==========================================
   // 4. ESTADOS DE CONTATOS
@@ -217,6 +232,9 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       } else if (activeTab === "CONTAS") {
         const res = await api.get("/accounts", { params: { profile } });
         setAccounts(res.data);
+      } else if (activeTab === "PAGAMENTOS") {
+        const res = await api.get("/payment-methods", { params: { profile } });
+        setPaymentMethods(res.data);
       } else if (activeTab === "CONTATOS") {
         const res = await api.get("/contacts", { params: { profile } });
         setContacts(res.data);
@@ -292,6 +310,10 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const sortedAccounts = useMemo(() => {
     return [...accounts].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
   }, [accounts]);
+
+  const sortedPaymentMethods = useMemo(() => {
+    return [...paymentMethods].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
+  }, [paymentMethods]);
 
   const sortedContacts = useMemo(() => {
     return [...contacts].sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }));
@@ -491,6 +513,59 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       setEditAccError(err.response?.data?.detail || "Erro ao salvar alterações na conta.");
     } finally {
       setEditAccSaving(false);
+    }
+  };
+
+  // ==========================================
+  // HANDLERS: FORMAS DE PAGAMENTO
+  // ==========================================
+  const handleCreatePaymentMethod = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pmName.trim()) return;
+    setCreatingPm(true);
+    try {
+      await api.post("/payment-methods", {
+        profile,
+        name: pmName.trim(),
+      });
+      setPmName("");
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao criar forma de pagamento:", err);
+      alert(err.response?.data?.detail || "Erro ao criar forma de pagamento.");
+    } finally {
+      setCreatingPm(false);
+    }
+  };
+
+  const openEditPaymentMethod = (pm: PaymentMethod) => {
+    setEditModalPm(pm);
+    setEditPmName(pm.name);
+    setEditPmError(null);
+    setEditPmSaving(false);
+  };
+
+  const closeEditPaymentMethod = () => {
+    setEditModalPm(null);
+    setEditPmError(null);
+  };
+
+  const handleSaveEditPaymentMethod = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModalPm || !editPmName.trim()) return;
+    setEditPmSaving(true);
+    setEditPmError(null);
+    try {
+      await api.put(`/payment-methods/${editModalPm.id}`, {
+        name: editPmName.trim(),
+      });
+      setEditModalPm(null);
+      loadData();
+    } catch (err: any) {
+      console.error("Erro ao editar forma de pagamento:", err);
+      setEditPmError(err.response?.data?.detail || "Erro ao salvar alterações na forma de pagamento.");
+    } finally {
+      setEditPmSaving(false);
     }
   };
 
@@ -975,6 +1050,16 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
     }
   };
 
+  const getPaymentMethodIcon = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes("pix")) return QrCode;
+    if (n.includes("boleto")) return FileText;
+    if (n.includes("dinheiro") || n.includes("físico") || n.includes("fisico") || n.includes("especie")) return Banknote;
+    if (n.includes("debito") || n.includes("débito") || n.includes("crédito") || n.includes("credito") || n.includes("cartão") || n.includes("cartao")) return CreditCard;
+    if (n.includes("transferência") || n.includes("transferencia") || n.includes("ted") || n.includes("doc")) return ArrowRightLeft;
+    return CreditCard;
+  };
+
   const monthNames = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -1001,7 +1086,8 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
       tabs: [
         { id: "CATEGORIAS", label: "Categorias", shortDescription: "Classificação & essencialidade", icon: FolderTree },
         { id: "ITENS", label: "Itens Rápidos", shortDescription: "Valores padrão sugeridos", icon: Package },
-        { id: "CONTAS", label: "Contas & Carteiras", shortDescription: "Bancos, caixas e cartões", icon: Landmark },
+        { id: "CONTAS", label: "Contas & Carteiras", shortDescription: "Bancos e caixas", icon: Landmark },
+        { id: "PAGAMENTOS", label: "Formas de Pagamento", shortDescription: "Pix, cartões, dinheiro e boletos", icon: CreditCard },
         { id: "CONTATOS", label: "Contatos", shortDescription: "Clientes e fornecedores", icon: Users },
         { id: "DIVIDAS", label: "Dívidas & Passivos", shortDescription: "Controle e amortização", icon: Scale },
         { id: "ORCAMENTOS", label: "Orçamentos & Metas", shortDescription: "Tetos e limites mensais", icon: PiggyBank },
@@ -1760,6 +1846,143 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                       </div>
                     </div>
                   ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================== */}
+      {/* ABA 3.1: FORMAS DE PAGAMENTO               */}
+      {/* ========================================== */}
+      {activeTab === "PAGAMENTOS" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in">
+          {/* Form */}
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Plus className="w-4 h-4 text-emerald-500" />
+                <span>Nova Forma de Pagamento</span>
+              </h3>
+            </div>
+
+            <form onSubmit={handleCreatePaymentMethod} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Nome da Forma / Meio
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Pix, Boleto, Cartão XP, Dinheiro..."
+                  value={pmName}
+                  onChange={(e) => setPmName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-emerald-500 text-zinc-900 dark:text-zinc-100"
+                />
+                <p className="text-[11px] text-zinc-400 mt-1">
+                  Meio utilizado para pagar ou receber (separado da instituição bancária).
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={creatingPm}
+                className="w-full py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-1.5"
+              >
+                {creatingPm ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Cadastrando...</span>
+                  </>
+                ) : (
+                  <span>Cadastrar Forma de Pagamento</span>
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Listagem de Formas de Pagamento (Ordenada A a Z) */}
+          <div className="lg:col-span-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Formas de Pagamento Cadastradas
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  {sortedPaymentMethods.length} formas em ordem alfabética (A a Z) • {profile}
+                </p>
+              </div>
+
+              {/* Filtros e Busca */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2" />
+                  <input
+                    type="text"
+                    placeholder="Buscar forma..."
+                    value={pmSearch}
+                    onChange={(e) => setPmSearch(e.target.value)}
+                    className="pl-8 pr-2.5 py-1 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-zinc-700 dark:text-zinc-300 w-36 sm:w-48 focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {sortedPaymentMethods.length === 0 ? (
+              <div className="p-8 text-center text-xs text-zinc-500">
+                Nenhuma forma de pagamento cadastrada.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-1">
+                {sortedPaymentMethods
+                  .filter((pm) => {
+                    if (pmSearch.trim()) {
+                      return pm.name.toLowerCase().includes(pmSearch.toLowerCase());
+                    }
+                    return true;
+                  })
+                  .map((pm) => {
+                    const PmIcon = getPaymentMethodIcon(pm.name);
+                    return (
+                      <div
+                        key={pm.id}
+                        className="p-3.5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-sm transition-all flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-800/60 shrink-0">
+                            <PmIcon className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <h4 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate" title={pm.name}>
+                              {pm.name}
+                            </h4>
+                            <span className="text-[11px] text-zinc-400 block truncate">
+                              Forma de Pagamento
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => openEditPaymentMethod(pm)}
+                            className="p-1.5 text-zinc-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-lg transition-all"
+                            title="Editar Forma de Pagamento"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteItem("payment-methods", pm.id)}
+                            className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-all"
+                            title="Excluir Forma de Pagamento"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -3507,6 +3730,76 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                   className="px-5 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-sky-600/20 transition-all flex items-center gap-1.5"
                 >
                   {editAccSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  <span>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3.1 Modal de Edição de Forma de Pagamento */}
+      {editModalPm && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between p-5 border-b border-zinc-100 dark:border-zinc-800 bg-gradient-to-r from-sky-50/50 via-white to-white dark:from-sky-950/20 dark:via-zinc-900 dark:to-zinc-900">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-sky-100 dark:bg-sky-950/80 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800/60 shadow-sm">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                    Editar Forma de Pagamento
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Perfil {profile} • Atualize o nome da forma de pagamento
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeEditPaymentMethod}
+                className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditPaymentMethod} className="p-5 space-y-4">
+              {editPmError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{editPmError}</span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Nome da Forma de Pagamento
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editPmName}
+                  onChange={(e) => setEditPmName(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:border-sky-500 text-zinc-900 dark:text-zinc-100"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={closeEditPaymentMethod}
+                  className="px-4 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={editPmSaving}
+                  className="px-5 py-2 text-xs font-bold bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-lg shadow-md shadow-sky-600/20 transition-all flex items-center gap-1.5"
+                >
+                  {editPmSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                   <span>Salvar Alterações</span>
                 </button>
               </div>

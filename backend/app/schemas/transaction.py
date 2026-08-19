@@ -14,6 +14,7 @@ class TransactionBase(BaseModel):
     item_id: Optional[str] = None
     contact_id: Optional[str] = None
     debt_id: Optional[str] = None
+    payment_method_id: Optional[str] = None
     description: str = Field(..., min_length=1, max_length=255)
     amount_cents: int = Field(..., gt=0, description="Valor em centavos")
     due_date: str = Field(..., description="Data prevista / vencimento (YYYY-MM-DD)")
@@ -32,6 +33,7 @@ class TransactionUpdate(BaseModel):
     item_id: Optional[str] = None
     contact_id: Optional[str] = None
     debt_id: Optional[str] = None
+    payment_method_id: Optional[str] = None
     description: Optional[str] = Field(None, min_length=1, max_length=255)
     amount_cents: Optional[int] = Field(None, gt=0)
     due_date: Optional[str] = None

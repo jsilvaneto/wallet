@@ -490,6 +490,250 @@
         }
       }
     },
+    "/api/v1/payment-methods": {
+      "get": {
+        "tags": [
+          "Formas de Pagamento"
+        ],
+        "summary": "List Payment Methods",
+        "operationId": "list_payment_methods_api_v1_payment_methods_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar por PESSOAL ou EMPRESA",
+              "title": "Profile"
+            },
+            "description": "Filtrar por PESSOAL ou EMPRESA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentMethodResponse"
+                  },
+                  "title": "Response List Payment Methods Api V1 Payment Methods Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Formas de Pagamento"
+        ],
+        "summary": "Create Payment Method",
+        "operationId": "create_payment_method_api_v1_payment_methods_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentMethodCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentMethodResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/payment-methods/{pm_id}": {
+      "get": {
+        "tags": [
+          "Formas de Pagamento"
+        ],
+        "summary": "Get Payment Method",
+        "operationId": "get_payment_method_api_v1_payment_methods__pm_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pm Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentMethodResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Formas de Pagamento"
+        ],
+        "summary": "Update Payment Method",
+        "operationId": "update_payment_method_api_v1_payment_methods__pm_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pm Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentMethodUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentMethodResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Formas de Pagamento"
+        ],
+        "summary": "Delete Payment Method",
+        "operationId": "delete_payment_method_api_v1_payment_methods__pm_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "pm_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pm Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/categories": {
       "get": {
         "tags": [
@@ -1837,6 +2081,24 @@
               "title": "Account Id"
             },
             "description": "Filtrar por Conta Bancária / Carteira"
+          },
+          {
+            "name": "payment_method_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filtrar por Forma de Pagamento",
+              "title": "Payment Method Id"
+            },
+            "description": "Filtrar por Forma de Pagamento"
           },
           {
             "name": "contact_id",
@@ -5541,6 +5803,87 @@
         "type": "object",
         "title": "ItemUpdate"
       },
+      "PaymentMethodCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Nome da forma de pagamento (Ex: Pix, Boleto, Cartão de Crédito)"
+          },
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile",
+            "description": "Perfil do cadastro (PESSOAL ou EMPRESA)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "profile"
+        ],
+        "title": "PaymentMethodCreate"
+      },
+      "PaymentMethodResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name",
+            "description": "Nome da forma de pagamento (Ex: Pix, Boleto, Cartão de Crédito)"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "created_at": {
+            "type": "string",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "profile",
+          "created_at"
+        ],
+        "title": "PaymentMethodResponse"
+      },
+      "PaymentMethodUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name",
+            "description": "Nome da forma de pagamento"
+          }
+        },
+        "type": "object",
+        "title": "PaymentMethodUpdate"
+      },
       "ScheduleCreate": {
         "properties": {
           "type": {
@@ -5589,6 +5932,17 @@
               }
             ],
             "title": "Debt Id"
+          },
+          "payment_method_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Id"
           },
           "description": {
             "type": "string",
@@ -5719,6 +6073,17 @@
               }
             ],
             "title": "Debt Id"
+          },
+          "payment_method_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Id"
           },
           "description": {
             "type": "string",
@@ -6471,6 +6836,17 @@
             ],
             "title": "Debt Id"
           },
+          "payment_method_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Id"
+          },
           "description": {
             "type": "string",
             "maxLength": 255,
@@ -6616,6 +6992,17 @@
               }
             ],
             "title": "Debt Id"
+          },
+          "payment_method_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Id"
           },
           "description": {
             "type": "string",
@@ -6827,6 +7214,17 @@
               }
             ],
             "title": "Debt Id"
+          },
+          "payment_method_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Id"
           },
           "description": {
             "anyOf": [

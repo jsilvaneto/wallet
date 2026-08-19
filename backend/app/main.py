@@ -4,12 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, func, text
 from app.database import engine, Base, AsyncSessionLocal
 import app.models
-from app.models import User, Category, Account
+from app.models import User, Category, Account, PaymentMethod
 from app.core.security import get_password_hash
 from app.api.v1 import api_router
 
 async def migrate_database_schema():
-    """Garante que colunas novas como 'nature' e 'attachment_type' existam no banco SQLite."""
+    """Garante que colunas novas como 'nature', 'attachment_type' e 'payment_method_id' existam no banco SQLite."""
     async with engine.begin() as conn:
         try:
             # 1. Verifica colunas da tabela categories
@@ -23,6 +23,18 @@ async def migrate_database_schema():
             att_columns = [row[1] for row in res_att.fetchall()]
             if att_columns and "attachment_type" not in att_columns:
                 await conn.execute(text("ALTER TABLE attachments ADD COLUMN attachment_type VARCHAR(30) DEFAULT 'COMPROVANTE' NOT NULL"))
+
+            # 3. Verifica colunas da tabela transactions
+            res_trans = await conn.execute(text("PRAGMA table_info(transactions)"))
+            trans_columns = [row[1] for row in res_trans.fetchall()]
+            if trans_columns and "payment_method_id" not in trans_columns:
+                await conn.execute(text("ALTER TABLE transactions ADD COLUMN payment_method_id VARCHAR(36) REFERENCES payment_methods(id) ON DELETE SET NULL"))
+
+            # 4. Verifica colunas da tabela schedules
+            res_sched = await conn.execute(text("PRAGMA table_info(schedules)"))
+            sched_columns = [row[1] for row in res_sched.fetchall()]
+            if sched_columns and "payment_method_id" not in sched_columns:
+                await conn.execute(text("ALTER TABLE schedules ADD COLUMN payment_method_id VARCHAR(36) REFERENCES payment_methods(id) ON DELETE SET NULL"))
         except Exception as e:
             print("Aviso na migração SQLite:", e)
 
@@ -77,6 +89,24 @@ async def seed_initial_data():
                 Account(profile="EMPRESA", name="Conta PJ", type="CORRENTE"),
             ]
             session.add_all(default_accounts)
+
+        # 4. Cria formas de pagamento padrão se não houver formas cadastradas
+        pm_count = await session.scalar(select(func.count(PaymentMethod.id)))
+        if pm_count == 0:
+            standard_methods = [
+                "Pix",
+                "Boleto",
+                "Cartão de Crédito",
+                "Cartão de Débito",
+                "Dinheiro Físico",
+                "Transferência Bancária",
+                "Débito Automático"
+            ]
+            default_pms = []
+            for prof in ["PESSOAL", "EMPRESA"]:
+                for name in standard_methods:
+                    default_pms.append(PaymentMethod(profile=prof, name=name))
+            session.add_all(default_pms)
 
         await session.commit()
 

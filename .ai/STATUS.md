@@ -20,9 +20,9 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
 - [x] **Arquitetura Base e Persistência**:
   - [x] Backend assíncrono em FastAPI (Python 3.10+) com documentação Swagger/OpenAPI.
   - [x] Banco de dados SQLite local com `PRAGMA journal_mode = WAL` e suporte a concorrência assíncrona via `aiosqlite`.
-  - [x] Modelos de dados completos: `User`, `Account`, `Category`, `Item`, `Contact`, `Goal`, `Debt`, `Budget`, `Transaction`, `Schedule`, `SystemConfig`, `SyncLog`.
+  - [x] Modelos de dados completos: `User`, `Account`, `PaymentMethod`, `Category`, `Item`, `Contact`, `Goal`, `Debt`, `Budget`, `Transaction`, `Schedule`, `SystemConfig`, `SyncLog`.
   - [x] Valores monetários representados estritamente em centavos inteiros (`amount_cents: int`).
-  - [x] Migrações dinâmicas de inicialização e seeds automáticos de categorias e credenciais padrão.
+  - [x] Migrações dinâmicas de inicialização e seeds automáticos de categorias, contas, formas de pagamento e credenciais padrão.
 
 - [x] **Autenticação & Gestão de Usuários**:
   - [x] Autenticação via JWT (OAuth2 Password Bearer) e hash seguro com bcrypt/passlib.
@@ -32,10 +32,11 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
 
 - [x] **Navegação & Painel de Configurações Unificado**:
   - [x] Barra superior com 3 seções principais: **Dashboard**, **Lançamentos** e **Configurações**.
-  - [x] Painel de **Configurações & Cadastros** com 10 abas integradas:
+  - [x] Painel de **Configurações & Cadastros** com 11 abas integradas:
     - `Categorias` (Gestão de categorias planas com classificação de essencialidade/natureza)
     - `Itens` (Cadastro de itens rápidos com valores sugeridos para lançamentos)
     - `Contas & Carteiras` (Contas correntes, poupanças, investimentos e caixas)
+    - `Formas de Pagamento` (Gestão de instrumentos de pagamento: Pix, Boleto, Cartões, Dinheiro, Transferência e Débito Automático)
     - `Contatos` (Clientes, fornecedores, colaboradores e favorecidos com CPF/CNPJ e anotações)
     - `Dívidas & Passivos` (Controle de passivos com barra de amortização progressiva)
     - `Orçamentos & Metas` (Tetos mensais por categoria com alertas de consumo normal, atenção e estourado)
@@ -43,18 +44,18 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
     - `Comprovantes & Anexos` (Gestão de diretório físico local/rede, migração e métricas de armazenamento)
     - `Gestão de Usuários` (Cadastro seguro de novos usuários e controle de acesso)
     - `Aparência & Temas` (Alternância de tema claro/escuro global e tema da tela de login)
-  - [x] **Ordenação Alfabética Obrigatória (A a Z)** aplicada a todas as listagens e menus suspensos (Categorias, Itens, Contas, Contatos, Dívidas, Orçamentos e Usuários).
+  - [x] **Ordenação Alfabética Obrigatória (A a Z)** aplicada a todas as listagens e menus suspensos (Categorias, Itens, Contas, Formas de Pagamento, Contatos, Dívidas, Orçamentos e Usuários).
 
 - [x] **Gestão Financeira & Lançamentos**:
   - [x] Dashboard com KPIs de Realizado, A Vencer, Projeção Final do Mês e maiores despesas por categoria.
   - [x] Tela de Lançamentos com **Sistema Dinâmico de Períodos** (Presets: Mês, Hoje, Esta Semana, Próx. 7/30 Dias, Ano Todo, Todas as Datas, Personalizado) e navegador de meses (`<` e `>`).
   - [x] **Atalhos Inteligentes & Alerta de Contas Atrasadas**: Banner dinâmico com valor pendente e filtro em 1 clique para todas as contas vencidas na história.
-  - [x] **Busca Textual Global Instantânea**: Filtragem live por descrição, categoria, conta bancária, contato, valor e anotações.
-  - [x] **Filtros Multi-Critério**: Status (`Todos`, `Abertas`, `Liquidadas`, `Atrasadas`), Tipo (`Despesas`, `Receitas`), Conta/Carteira e Categoria com ordenação A-Z e botão para limpar filtros.
+  - [x] **Busca Textual Global Instantânea**: Filtragem live por descrição, categoria, conta bancária, forma de pagamento, contato, valor e anotações.
+  - [x] **Filtros Multi-Critério**: Status (`Todos`, `Abertas`, `Liquidadas`, `Atrasadas`), Tipo (`Despesas`, `Receitas`), Conta/Carteira, Forma de Pagamento e Categoria com ordenação A-Z e botão para limpar filtros.
   - [x] **Entrada e Exibição de Datas em Formato Brasileiro (`DD/MM/AAAA`)**:
     - [x] Input de vencimento no modal de lançamentos com máscara progressiva `dd/mm/aaaa`, validação estrita de calendário e seletor nativo de calendário integrado.
     - [x] Exibição formatada em `DD/MM/AAAA` na tabela de lançamentos.
-  - [x] Lançamentos Únicos, Parcelados (em N vezes com badges `1/12`) e Recorrentes mensais.
+  - [x] Lançamentos Únicos, Parcelados (em N vezes com badges `1/12`) e Recorrentes mensais com suporte a Forma de Pagamento opcional.
   - [x] **Edição Completa de Lançamentos Cadastrados**:
     - [x] Botão de edição (`Pencil`) na coluna de ações da tabela de lançamentos.
     - [x] Modal unificado [TransactionModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/TransactionModal.tsx) com detecção de modo criação vs. edição, pré-carregamento total de campos, alteração de status (Pendente / Liquidado com data de quitação) e gestão em tempo real de comprovantes.

@@ -19,6 +19,13 @@ export interface Account {
   created_at: string;
 }
 
+export interface PaymentMethod {
+  id: string;
+  profile: ProfileType;
+  name: string;
+  created_at: string;
+}
+
 export interface Category {
   id: string;
   profile: ProfileType;
@@ -81,6 +88,7 @@ export interface Transaction {
   profile: ProfileType;
   type: TransactionType;
   account_id?: string;
+  payment_method_id?: string;
   category_id: string;
   item_id?: string;
   contact_id?: string;

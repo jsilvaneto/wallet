@@ -63,6 +63,7 @@ async def create_schedule_with_transactions(db: AsyncSession, schedule_in: Sched
             item_id=schedule_in.item_id,
             contact_id=schedule_in.contact_id,
             debt_id=schedule_in.debt_id,
+            payment_method_id=schedule_in.payment_method_id,
             schedule_id=new_schedule.id,
             installment_number=inst_number,
             total_installments=total_inst,

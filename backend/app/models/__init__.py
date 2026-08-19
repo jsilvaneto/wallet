@@ -34,6 +34,19 @@ class Account(Base):
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_account_profile"),
     )
 
+# 2.1 Formas de Pagamento (Meio utilizado para pagar/receber: Pix, Boleto, Cartão, Dinheiro, etc.)
+class PaymentMethod(Base):
+    __tablename__ = "payment_methods"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    profile: Mapped[str] = mapped_column(String(10), nullable=False) # 'PESSOAL' ou 'EMPRESA'
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_payment_method_profile"),
+    )
+
 # 3. Categorias
 class Category(Base):
     __tablename__ = "categories"
@@ -117,6 +130,7 @@ class Schedule(Base):
     item_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("items.id", ondelete="SET NULL"), nullable=True)
     contact_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
     debt_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("debts.id", ondelete="SET NULL"), nullable=True)
+    payment_method_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("payment_methods.id", ondelete="SET NULL"), nullable=True)
     description: Mapped[str] = mapped_column(String(255), nullable=False)
     
     schedule_type: Mapped[str] = mapped_column(String(30), nullable=False) # RECORRENTE_CONTINUA, PARCELADA
@@ -132,6 +146,7 @@ class Schedule(Base):
     item: Mapped[Optional["Item"]] = relationship("Item")
     contact: Mapped[Optional["Contact"]] = relationship("Contact")
     debt: Mapped[Optional["Debt"]] = relationship("Debt")
+    payment_method: Mapped[Optional["PaymentMethod"]] = relationship("PaymentMethod")
 
     __table_args__ = (
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_schedule_profile"),
@@ -154,6 +169,7 @@ class Transaction(Base):
     contact_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
     debt_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("debts.id", ondelete="SET NULL"), nullable=True)
     schedule_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("schedules.id", ondelete="CASCADE"), nullable=True)
+    payment_method_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("payment_methods.id", ondelete="SET NULL"), nullable=True)
     
     installment_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     total_installments: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -173,6 +189,7 @@ class Transaction(Base):
     contact: Mapped[Optional["Contact"]] = relationship("Contact")
     debt: Mapped[Optional["Debt"]] = relationship("Debt")
     schedule: Mapped[Optional["Schedule"]] = relationship("Schedule")
+    payment_method: Mapped[Optional["PaymentMethod"]] = relationship("PaymentMethod")
     attachments: Mapped[List["Attachment"]] = relationship("Attachment", back_populates="transaction", cascade="all, delete-orphan")
 
     __table_args__ = (
