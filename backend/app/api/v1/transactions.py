@@ -62,7 +62,12 @@ async def list_transactions(
     if isinstance(category_id, str) and category_id:
         query = query.where(Transaction.category_id == category_id)
     if isinstance(account_id, str) and account_id:
-        query = query.where(Transaction.account_id == account_id)
+        query = query.where(
+            or_(
+                Transaction.account_id == account_id,
+                Transaction.destination_account_id == account_id
+            )
+        )
     if isinstance(payment_method_id, str) and payment_method_id:
         query = query.where(Transaction.payment_method_id == payment_method_id)
     if isinstance(credit_card_id, str) and credit_card_id:
@@ -90,6 +95,36 @@ async def create_transaction(
 ):
     trans_data = trans_in.model_dump()
     attachment_ids = trans_data.pop("attachment_ids", None)
+
+    # Validações para Transferência Interna
+    if trans_data.get("type") == "TRANSFERENCIA":
+        if not trans_data.get("account_id") or not trans_data.get("destination_account_id"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Transferências exigem a conta de origem (account_id) e a conta de destino (destination_account_id)."
+            )
+        if trans_data.get("account_id") == trans_data.get("destination_account_id"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A conta de origem e a conta de destino não podem ser iguais."
+            )
+        if not trans_data.get("category_id"):
+            cat_query = select(Category).where(
+                Category.profile == trans_data["profile"],
+                Category.name == "Transferência Interna"
+            )
+            cat_res = await db.execute(cat_query)
+            transfer_cat = cat_res.scalar_one_or_none()
+            if not transfer_cat:
+                transfer_cat = Category(
+                    profile=trans_data["profile"],
+                    type="DESPESA",
+                    nature="NENHUM",
+                    name="Transferência Interna"
+                )
+                db.add(transfer_cat)
+                await db.flush()
+            trans_data["category_id"] = transfer_cat.id
 
     # Se estiver vinculado a cartão de crédito e não tiver competência informada, calcula automaticamente
     if trans_data.get("credit_card_id") and not (trans_data.get("invoice_month") and trans_data.get("invoice_year")):
@@ -257,6 +292,22 @@ async def update_transaction(
     
     update_data = trans_in.model_dump(exclude_unset=True)
     attachment_ids = update_data.pop("attachment_ids", None)
+
+    # Validação de Transferência
+    target_type = update_data.get("type", trans.type)
+    if target_type == "TRANSFERENCIA":
+        src_acc = update_data.get("account_id", trans.account_id)
+        dst_acc = update_data.get("destination_account_id", trans.destination_account_id)
+        if not src_acc or not dst_acc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Transferências exigem conta de origem e conta de destino."
+            )
+        if src_acc == dst_acc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A conta de origem e a conta de destino não podem ser iguais."
+            )
 
     old_status = trans.status
     for field, value in update_data.items():

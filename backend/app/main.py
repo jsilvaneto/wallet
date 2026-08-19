@@ -24,7 +24,7 @@ async def migrate_database_schema():
             if att_columns and "attachment_type" not in att_columns:
                 await conn.execute(text("ALTER TABLE attachments ADD COLUMN attachment_type VARCHAR(30) DEFAULT 'COMPROVANTE' NOT NULL"))
 
-            # 3. Verifica colunas da tabela transactions
+            # 3. Verifica colunas e restrições da tabela transactions
             res_trans = await conn.execute(text("PRAGMA table_info(transactions)"))
             trans_columns = [row[1] for row in res_trans.fetchall()]
             if trans_columns:
@@ -32,12 +32,74 @@ async def migrate_database_schema():
                     await conn.execute(text("ALTER TABLE transactions ADD COLUMN payment_method_id VARCHAR(36) REFERENCES payment_methods(id) ON DELETE SET NULL"))
                 if "credit_card_id" not in trans_columns:
                     await conn.execute(text("ALTER TABLE transactions ADD COLUMN credit_card_id VARCHAR(36) REFERENCES credit_cards(id) ON DELETE SET NULL"))
+                if "destination_account_id" not in trans_columns:
+                    await conn.execute(text("ALTER TABLE transactions ADD COLUMN destination_account_id VARCHAR(36) REFERENCES accounts(id) ON DELETE SET NULL"))
                 if "invoice_month" not in trans_columns:
                     await conn.execute(text("ALTER TABLE transactions ADD COLUMN invoice_month INTEGER"))
                 if "invoice_year" not in trans_columns:
                     await conn.execute(text("ALTER TABLE transactions ADD COLUMN invoice_year INTEGER"))
                 if "is_invoice_payment" not in trans_columns:
                     await conn.execute(text("ALTER TABLE transactions ADD COLUMN is_invoice_payment INTEGER DEFAULT 0 NOT NULL"))
+
+                # 3.1 Verifica se o CHECK constraint da tabela transactions suporta TRANSFERENCIA
+                res_sql = await conn.execute(text("SELECT sql FROM sqlite_master WHERE type='table' AND name='transactions'"))
+                tbl_sql_row = res_sql.fetchone()
+                if tbl_sql_row and tbl_sql_row[0] and "TRANSFERENCIA" not in tbl_sql_row[0]:
+                    await conn.execute(text("PRAGMA foreign_keys = OFF"))
+                    await conn.execute(text("""
+                        CREATE TABLE transactions_new (
+                            id VARCHAR(36) PRIMARY KEY,
+                            profile VARCHAR(10) NOT NULL,
+                            type VARCHAR(15) NOT NULL,
+                            account_id VARCHAR(36) REFERENCES accounts(id) ON DELETE SET NULL,
+                            destination_account_id VARCHAR(36) REFERENCES accounts(id) ON DELETE SET NULL,
+                            credit_card_id VARCHAR(36) REFERENCES credit_cards(id) ON DELETE SET NULL,
+                            category_id VARCHAR(36) REFERENCES categories(id) ON DELETE RESTRICT,
+                            item_id VARCHAR(36) REFERENCES items(id) ON DELETE SET NULL,
+                            contact_id VARCHAR(36) REFERENCES contacts(id) ON DELETE SET NULL,
+                            debt_id VARCHAR(36) REFERENCES debts(id) ON DELETE SET NULL,
+                            schedule_id VARCHAR(36) REFERENCES schedules(id) ON DELETE CASCADE,
+                            payment_method_id VARCHAR(36) REFERENCES payment_methods(id) ON DELETE SET NULL,
+                            invoice_month INTEGER,
+                            invoice_year INTEGER,
+                            is_invoice_payment INTEGER DEFAULT 0 NOT NULL,
+                            installment_number INTEGER,
+                            total_installments INTEGER,
+                            description VARCHAR(255) NOT NULL,
+                            amount_cents INTEGER NOT NULL,
+                            due_date VARCHAR(10) NOT NULL,
+                            payment_date VARCHAR(10),
+                            status VARCHAR(20) DEFAULT 'PENDENTE' NOT NULL,
+                            sync_status VARCHAR(20) DEFAULT 'PENDENTE' NOT NULL,
+                            notes TEXT,
+                            created_at VARCHAR(30) NOT NULL,
+                            updated_at VARCHAR(30) NOT NULL,
+                            CONSTRAINT chk_trans_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')),
+                            CONSTRAINT chk_trans_type CHECK (type IN ('RECEITA', 'DESPESA', 'TRANSFERENCIA')),
+                            CONSTRAINT chk_trans_status CHECK (status IN ('PENDENTE', 'CONCLUIDO', 'CANCELADO')),
+                            CONSTRAINT chk_trans_sync CHECK (sync_status IN ('PENDENTE', 'SINCRONIZADO'))
+                        )
+                    """))
+
+                    # Atualiza lista de colunas após as alterações acima
+                    res_trans_updated = await conn.execute(text("PRAGMA table_info(transactions)"))
+                    current_trans_cols = [row[1] for row in res_trans_updated.fetchall()]
+                    valid_cols = [
+                        "id", "profile", "type", "account_id", "destination_account_id", "credit_card_id",
+                        "category_id", "item_id", "contact_id", "debt_id", "schedule_id", "payment_method_id",
+                        "invoice_month", "invoice_year", "is_invoice_payment", "installment_number", "total_installments",
+                        "description", "amount_cents", "due_date", "payment_date", "status", "sync_status", "notes",
+                        "created_at", "updated_at"
+                    ]
+                    cols_to_copy = [c for c in current_trans_cols if c in valid_cols]
+                    cols_str = ", ".join(cols_to_copy)
+                    await conn.execute(text(f"INSERT INTO transactions_new ({cols_str}) SELECT {cols_str} FROM transactions"))
+                    await conn.execute(text("DROP TABLE transactions"))
+                    await conn.execute(text("ALTER TABLE transactions_new RENAME TO transactions"))
+                    await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_trans_profile_due ON transactions(profile, due_date)"))
+                    await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_trans_status ON transactions(status)"))
+                    await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_trans_sync ON transactions(sync_status)"))
+                    await conn.execute(text("PRAGMA foreign_keys = ON"))
 
             # 4. Verifica colunas da tabela schedules
             res_sched = await conn.execute(text("PRAGMA table_info(schedules)"))
@@ -85,7 +147,7 @@ async def seed_initial_data():
                 Category(profile="PESSOAL", type="DESPESA", nature="OBRIGATORIO", name="Saúde & Farmácia"),
                 Category(profile="PESSOAL", type="DESPESA", nature="NECESSARIO", name="Educação"),
                 Category(profile="PESSOAL", type="DESPESA", nature="DESEJO", name="Lazer & Entretenimento"),
-                Category(profile="PESSOAL", type="DESPESA", nature="NENHUM", name="Outras Despesas"),
+                Category(profile="PESSOAL", type="DESPESA", nature="NENHUM", name="Transferência Interna"),
                 # Empresa - Receitas
                 Category(profile="EMPRESA", type="RECEITA", nature="NENHUM", name="Prestação de Serviços"),
                 Category(profile="EMPRESA", type="RECEITA", nature="NENHUM", name="Venda de Produtos"),
@@ -98,8 +160,17 @@ async def seed_initial_data():
                 Category(profile="EMPRESA", type="DESPESA", nature="NECESSARIO", name="Software & Infraestrutura"),
                 Category(profile="EMPRESA", type="DESPESA", nature="NECESSARIO", name="Marketing & Comercial"),
                 Category(profile="EMPRESA", type="DESPESA", nature="NENHUM", name="Outras Despesas PJ"),
+                Category(profile="EMPRESA", type="DESPESA", nature="NENHUM", name="Transferência Interna"),
             ]
             session.add_all(default_categories)
+        else:
+            # Garante que a categoria Transferência Interna exista mesmo em bancos já existentes
+            for prof in ["PESSOAL", "EMPRESA"]:
+                t_cat = await session.scalar(
+                    select(Category.id).where(Category.profile == prof, Category.name == "Transferência Interna")
+                )
+                if not t_cat:
+                    session.add(Category(profile=prof, type="DESPESA", nature="NENHUM", name="Transferência Interna"))
 
         # 3. Cria contas padrão se não houver contas
         acc_count = await session.scalar(select(func.count(Account.id)))

@@ -3,15 +3,16 @@ from typing import Literal, Optional, List
 from app.schemas.attachment import AttachmentResponse
 
 ProfileType = Literal["PESSOAL", "EMPRESA"]
-TransactionType = Literal["RECEITA", "DESPESA"]
+TransactionType = Literal["RECEITA", "DESPESA", "TRANSFERENCIA"]
 TransactionStatus = Literal["PENDENTE", "CONCLUIDO", "CANCELADO"]
 SyncStatus = Literal["PENDENTE", "SINCRONIZADO"]
 
 class TransactionBase(BaseModel):
-    type: TransactionType = Field(..., description="RECEITA ou DESPESA")
-    account_id: Optional[str] = None
+    type: TransactionType = Field(..., description="RECEITA, DESPESA ou TRANSFERENCIA")
+    account_id: Optional[str] = Field(None, description="Conta bancária / carteira (Origem em transferências)")
+    destination_account_id: Optional[str] = Field(None, description="Conta bancária / carteira de Destino em transferências")
     credit_card_id: Optional[str] = None
-    category_id: str = Field(..., description="ID da categoria")
+    category_id: Optional[str] = Field(None, description="ID da categoria (opcional para transferências)")
     item_id: Optional[str] = None
     contact_id: Optional[str] = None
     debt_id: Optional[str] = None
@@ -33,6 +34,7 @@ class TransactionCreate(TransactionBase):
 class TransactionUpdate(BaseModel):
     type: Optional[TransactionType] = None
     account_id: Optional[str] = None
+    destination_account_id: Optional[str] = None
     credit_card_id: Optional[str] = None
     category_id: Optional[str] = None
     item_id: Optional[str] = None

@@ -149,7 +149,7 @@ export const ContactStatementModal: React.FC<ContactStatementModalProps> = ({
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const descMatch = t.description.toLowerCase().includes(q);
-        const catMatch = categories[t.category_id]?.name.toLowerCase().includes(q);
+        const catMatch = t.category_id ? categories[t.category_id]?.name.toLowerCase().includes(q) : false;
         const notesMatch = t.notes && t.notes.toLowerCase().includes(q);
         const amountMatch = (t.amount_cents / 100).toString().includes(q);
         return descMatch || catMatch || notesMatch || amountMatch;
@@ -436,7 +436,7 @@ export const ContactStatementModal: React.FC<ContactStatementModalProps> = ({
                   <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden divide-y divide-zinc-100 dark:divide-zinc-800">
                     {filteredTransactions.map((t) => {
                       const isCompleted = t.status === "CONCLUIDO";
-                      const cat = categories[t.category_id];
+                      const cat = t.category_id ? categories[t.category_id] : null;
                       const acc = t.account_id ? accounts[t.account_id] : null;
                       const pm = t.payment_method_id ? paymentMethods[t.payment_method_id] : null;
                       const card = t.credit_card_id ? creditCards[t.credit_card_id] : null;

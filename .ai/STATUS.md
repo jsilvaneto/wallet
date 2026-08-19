@@ -149,6 +149,14 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Botão **Extrato** na aba **Configurações > Contatos & Favorecidos** e links clicáveis na coluna de contatos da tabela de lançamentos.
   - [x] Registrado no [ADR 006](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/006-extrato-conta-corrente-por-contato.md).
 
+- [x] **Transferências Entre Contas Próprias (Movimentação Patrimonial)**:
+  - [x] Suporte ao tipo `TRANSFERENCIA` e coluna `destination_account_id` no modelo `Transaction`.
+  - [x] Migração automática SQLite preservando integridade de dados e restrições `CHECK`.
+  - [x] **Isolamento de Dashboards & Relatórios Operacionais**: Transferências não inflam receitas nem despesas operacionais nos resumos mensais e KPIs.
+  - [x] **Seção Dedicada no Modal de Lançamentos**: Seleção intuitiva de Conta de Origem (Saída) e Conta de Destino (Entrada), validação contra contas idênticas e sugestão inteligente de descrição.
+  - [x] **Visualização e Filtros Avançados**: Aba `Transferências` no filtro rápido de tipos, badge `⇄ Transferência Interna`, rota de movimentação `[Origem] → [Destino]` e formatação neutra de valor em tom índigo (`⇄ R$`).
+  - [x] Registrado no [ADR 007](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/007-transferencias-entre-contas.md).
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 

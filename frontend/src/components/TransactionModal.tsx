@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
-import { Category, Contact, Item, Account, PaymentMethod, CreditCard as CreditCardType, Attachment, Transaction, AttachmentType, ATTACHMENT_TYPES } from "../types";
+import { Category, Contact, Item, Account, PaymentMethod, CreditCard as CreditCardType, Attachment, Transaction, TransactionType, AttachmentType, ATTACHMENT_TYPES } from "../types";
 import { formatCurrency, getTodayBR, maskDateBR, parseDateBRToISO, formatDateToBR } from "../utils/format";
 import { 
   X, Calendar, DollarSign, Tag, User as ContactIcon, FileText, 
   Package, Landmark, Paperclip, Upload, Image as ImageIcon, 
-  CheckCircle2, Loader2, Pencil, Clock, Check, ChevronDown, CreditCard, Sparkles
+  CheckCircle2, Loader2, Pencil, Clock, Check, ChevronDown, CreditCard, Sparkles,
+  ArrowRightLeft, ArrowRight
 } from "lucide-react";
 
 interface TransactionModalProps {
@@ -32,13 +33,14 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const attachmentInputRef = useRef<HTMLInputElement>(null);
 
   const [mode, setMode] = useState<Mode>("UNICO");
-  const [type, setType] = useState<"DESPESA" | "RECEITA">("DESPESA");
+  const [type, setType] = useState<TransactionType>("DESPESA");
   const [status, setStatus] = useState<"PENDENTE" | "CONCLUIDO">("PENDENTE");
   const [itemId, setItemId] = useState("");
   const [description, setDescription] = useState("");
   const [amountStr, setAmountStr] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [accountId, setAccountId] = useState("");
+  const [destinationAccountId, setDestinationAccountId] = useState("");
   const [paymentMethodId, setPaymentMethodId] = useState("");
   const [creditCardId, setCreditCardId] = useState("");
   const [contactId, setContactId] = useState("");
@@ -83,10 +85,12 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
 
     const loadDependencies = async () => {
       try {
+        const catParams = type === "TRANSFERENCIA" ? { profile } : { profile, type };
+        const itemParams = type === "TRANSFERENCIA" ? { profile } : { profile, type };
         const [catRes, conRes, itemRes, accRes, pmRes, cardsRes] = await Promise.all([
-          api.get("/categories", { params: { profile, type } }),
+          api.get("/categories", { params: catParams }),
           api.get("/contacts", { params: { profile } }),
-          api.get("/items", { params: { profile, type } }),
+          api.get("/items", { params: itemParams }),
           api.get("/accounts", { params: { profile } }),
           api.get("/payment-methods", { params: { profile } }),
           api.get("/credit-cards", { params: { profile } }),
@@ -120,6 +124,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setCategoryId(transactionToEdit.category_id || "");
       setItemId(transactionToEdit.item_id || "");
       setAccountId(transactionToEdit.account_id || "");
+      setDestinationAccountId(transactionToEdit.destination_account_id || "");
       setPaymentMethodId(transactionToEdit.payment_method_id || "");
       setCreditCardId(transactionToEdit.credit_card_id || "");
       setContactId(transactionToEdit.contact_id || "");
@@ -138,6 +143,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setAmountStr("");
       setItemId("");
       setAccountId("");
+      setDestinationAccountId("");
       setPaymentMethodId("");
       setCreditCardId("");
       setContactId("");
@@ -301,6 +307,19 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       ? (paymentDateStr ? parseDateBRToISO(paymentDateStr) : isoDueDate) 
       : null;
 
+    if (type === "TRANSFERENCIA") {
+      if (!accountId || !destinationAccountId) {
+        setError("Selecione a conta de origem e a conta de destino para a transferência.");
+        setLoading(false);
+        return;
+      }
+      if (accountId === destinationAccountId) {
+        setError("A conta de origem e a conta de destino não podem ser iguais.");
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       if (isEditing && transactionToEdit) {
         // Modo Edição: Executa PUT
@@ -308,12 +327,13 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           type,
           description,
           amount_cents: amountCents,
-          category_id: categoryId,
-          item_id: itemId || null,
+          category_id: type === "TRANSFERENCIA" ? null : categoryId,
+          item_id: type === "TRANSFERENCIA" ? null : (itemId || null),
           account_id: accountId || null,
+          destination_account_id: type === "TRANSFERENCIA" ? destinationAccountId : null,
           payment_method_id: paymentMethodId || null,
-          credit_card_id: creditCardId || null,
-          contact_id: contactId || null,
+          credit_card_id: type === "TRANSFERENCIA" ? null : (creditCardId || null),
+          contact_id: type === "TRANSFERENCIA" ? null : (contactId || null),
           due_date: isoDueDate,
           status,
           payment_date: isoPaymentDate,
@@ -322,21 +342,23 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
         });
       } else {
         // Modo Criação: Executa POST
-        if (mode === "UNICO") {
+        if (mode === "UNICO" || type === "TRANSFERENCIA") {
           await api.post("/transactions", {
             profile,
             type,
             description,
             amount_cents: amountCents,
-            category_id: categoryId,
-            item_id: itemId || null,
+            category_id: type === "TRANSFERENCIA" ? null : categoryId,
+            item_id: type === "TRANSFERENCIA" ? null : (itemId || null),
             account_id: accountId || null,
+            destination_account_id: type === "TRANSFERENCIA" ? destinationAccountId : null,
             payment_method_id: paymentMethodId || null,
-            credit_card_id: creditCardId || null,
-            contact_id: contactId || null,
+            credit_card_id: type === "TRANSFERENCIA" ? null : (creditCardId || null),
+            contact_id: type === "TRANSFERENCIA" ? null : (contactId || null),
             due_date: isoDueDate,
             notes: notes || null,
-            status: "PENDENTE",
+            status,
+            payment_date: isoPaymentDate,
             attachment_ids: uploadedAttachments.map((a) => a.id),
           });
         } else {
@@ -404,8 +426,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           )}
 
-          {/* Type Selector (Despesa vs Receita) */}
-          <div className="grid grid-cols-2 gap-2 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-xl border border-zinc-200/80 dark:border-zinc-700/60">
+          {/* Type Selector (Despesa vs Receita vs Transferência) */}
+          <div className="grid grid-cols-3 gap-2 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-xl border border-zinc-200/80 dark:border-zinc-700/60">
             <button
               type="button"
               onClick={() => setType("DESPESA")}
@@ -427,6 +449,22 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               }`}
             >
               Receita (A Receber)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setType("TRANSFERENCIA");
+                setMode("UNICO");
+                if (status === "PENDENTE") setStatus("CONCLUIDO");
+              }}
+              className={`py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                type === "TRANSFERENCIA"
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+              }`}
+            >
+              <ArrowRightLeft className="w-3.5 h-3.5" />
+              <span>Transferência</span>
             </button>
           </div>
 
@@ -468,8 +506,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           )}
 
-          {/* Mode Selector (Apenas em Modo de Criação) */}
-          {!isEditing && (
+          {/* Mode Selector (Apenas em Modo de Criação e para Receitas/Despesas) */}
+          {!isEditing && type !== "TRANSFERENCIA" && (
             <div className="grid grid-cols-3 gap-2">
               {(["UNICO", "PARCELADO", "RECORRENTE"] as Mode[]).map((m) => (
                 <button
@@ -488,8 +526,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           )}
 
-          {/* Item Selector (Preenchimento Rápido) */}
-          {items.length > 0 && (
+          {/* Item Selector (Apenas para Receitas e Despesas) */}
+          {type !== "TRANSFERENCIA" && items.length > 0 && (
             <div className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/70 dark:border-emerald-900/50 rounded-xl space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
@@ -719,65 +757,90 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           )}
 
-          {/* Category, Account & Contact */}
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <Tag className="w-3.5 h-3.5" />
-                <span>Categoria</span>
-              </label>
-              <select
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
-              >
-                {categories.length === 0 && <option value="">Nenhuma categoria encontrada</option>}
-                {[...categories]
-                  .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
-                  .map((cat) => {
-                    const natLabel = cat.nature && cat.nature !== "NENHUM" ? ` • ${cat.nature.charAt(0) + cat.nature.slice(1).toLowerCase()}` : "";
-                    return (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name} ({cat.type}){natLabel}
-                      </option>
-                    );
-                  })}
-              </select>
-            </div>
+          {/* Category, Account & Contact OR Dedicated Transfer Section */}
+          {type === "TRANSFERENCIA" ? (
+            <div className="space-y-3 p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/70 dark:border-indigo-900/50 animate-fade-in">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                <ArrowRightLeft className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Transferência Interna de Saldo entre Contas Próprias</span>
+              </div>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                Debita a conta de origem e credita a de destino sem inflar as receitas e despesas operacionais.
+              </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                  <Landmark className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>Conta / Carteira</span>
-                </label>
-                <select
-                  value={accountId}
-                  onChange={(e) => setAccountId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
-                >
-                  <option value="">Nenhuma (Opcional)</option>
-                  {[...accounts]
-                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
-                    .map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.name} ({acc.type === "CORRENTE" ? "Corrente" : acc.type === "POUPANCA" ? "Poupança" : acc.type === "INVESTIMENTO" ? "Investimento" : acc.type === "CAIXA" ? "Caixa" : "Outro"})
-                      </option>
-                    ))}
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                    <Landmark className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Conta de Origem (Saída / Débito) *</span>
+                  </label>
+                  <select
+                    required
+                    value={accountId}
+                    onChange={(e) => {
+                      const newSrc = e.target.value;
+                      setAccountId(newSrc);
+                      const srcObj = accounts.find((a) => a.id === newSrc);
+                      const dstObj = accounts.find((a) => a.id === destinationAccountId);
+                      if (srcObj && dstObj && (!description || description.startsWith("Transferência:"))) {
+                        setDescription(`Transferência: ${srcObj.name} → ${dstObj.name}`);
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-zinc-900 dark:text-zinc-100 font-medium"
+                  >
+                    <option value="">Selecione a conta de saída...</option>
+                    {[...accounts]
+                      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                      .map((acc) => (
+                        <option key={acc.id} value={acc.id} disabled={acc.id === destinationAccountId}>
+                          {acc.name} ({acc.type === "CORRENTE" ? "Corrente" : acc.type === "POUPANCA" ? "Poupança" : acc.type === "INVESTIMENTO" ? "Investimento" : acc.type === "CAIXA" ? "Caixa" : "Outro"})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                    <Landmark className="w-3.5 h-3.5 text-emerald-500" />
+                    <span>Conta de Destino (Entrada / Crédito) *</span>
+                  </label>
+                  <select
+                    required
+                    value={destinationAccountId}
+                    onChange={(e) => {
+                      const newDst = e.target.value;
+                      setDestinationAccountId(newDst);
+                      const srcObj = accounts.find((a) => a.id === accountId);
+                      const dstObj = accounts.find((a) => a.id === newDst);
+                      if (srcObj && dstObj && (!description || description.startsWith("Transferência:"))) {
+                        setDescription(`Transferência: ${srcObj.name} → ${dstObj.name}`);
+                      }
+                    }}
+                    className="w-full px-3 py-2 text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-zinc-900 dark:text-zinc-100 font-medium"
+                  >
+                    <option value="">Selecione a conta de entrada...</option>
+                    {[...accounts]
+                      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                      .map((acc) => (
+                        <option key={acc.id} value={acc.id} disabled={acc.id === accountId}>
+                          {acc.name} ({acc.type === "CORRENTE" ? "Corrente" : acc.type === "POUPANCA" ? "Poupança" : acc.type === "INVESTIMENTO" ? "Investimento" : acc.type === "CAIXA" ? "Caixa" : "Outro"})
+                        </option>
+                      ))}
+                  </select>
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
                   <CreditCard className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>Forma de Pagto</span>
+                  <span>Meio / Instrumento Utilizado (Opcional)</span>
                 </label>
                 <select
                   value={paymentMethodId}
                   onChange={(e) => setPaymentMethodId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                  className="w-full px-3 py-2 text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-zinc-900 dark:text-zinc-100"
                 >
-                  <option value="">Nenhuma (Opcional)</option>
+                  <option value="">Nenhum (Transferência Bancária Direta)</option>
                   {[...paymentMethods]
                     .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
                     .map((pm) => (
@@ -787,58 +850,128 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     ))}
                 </select>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                  <CreditCard className="w-3.5 h-3.5 text-purple-500" />
-                  <span>Cartão de Crédito</span>
-                </label>
-                <select
-                  value={creditCardId}
-                  onChange={(e) => handleCardChange(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-zinc-900 dark:text-zinc-100 font-medium"
-                >
-                  <option value="">Nenhum (Lançamento Comum)</option>
-                  {[...creditCards]
-                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
-                    .map((card) => (
-                      <option key={card.id} value={card.id}>
-                        {card.name} (Disp: R$ {(card.available_limit_cents / 100).toFixed(0)})
-                      </option>
-                    ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                  <ContactIcon className="w-3.5 h-3.5 text-zinc-400" />
-                  <span>Contato / Favorecido</span>
-                </label>
-                <select
-                  value={contactId}
-                  onChange={(e) => setContactId(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
-                >
-                  <option value="">Nenhum (Opcional)</option>
-                  {[...contacts]
-                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
-                    .map((ct) => (
-                      <option key={ct.id} value={ct.id}>
-                        {ct.name} ({ct.type})
-                      </option>
-                    ))}
-                </select>
-              </div>
             </div>
-
-            {/* Card Smart Hint */}
-            {cardHint && (
-              <div className="p-2.5 rounded-xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200/80 dark:border-purple-800/80 text-purple-700 dark:text-purple-300 text-xs flex items-center gap-2 font-medium animate-fade-in">
-                <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
-                <span>{cardHint}</span>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5" />
+                  <span>Categoria</span>
+                </label>
+                <select
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="w-full px-3.5 py-2 text-sm bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                >
+                  {categories.length === 0 && <option value="">Nenhuma categoria encontrada</option>}
+                  {[...categories]
+                    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                    .map((cat) => {
+                      const natLabel = cat.nature && cat.nature !== "NENHUM" ? ` • ${cat.nature.charAt(0) + cat.nature.slice(1).toLowerCase()}` : "";
+                      return (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name} ({cat.type}){natLabel}
+                        </option>
+                      );
+                    })}
+                </select>
               </div>
-            )}
-          </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                    <Landmark className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Conta / Carteira</span>
+                  </label>
+                  <select
+                    value={accountId}
+                    onChange={(e) => setAccountId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="">Nenhuma (Opcional)</option>
+                    {[...accounts]
+                      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                      .map((acc) => (
+                        <option key={acc.id} value={acc.id}>
+                          {acc.name} ({acc.type === "CORRENTE" ? "Corrente" : acc.type === "POUPANCA" ? "Poupança" : acc.type === "INVESTIMENTO" ? "Investimento" : acc.type === "CAIXA" ? "Caixa" : "Outro"})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Forma de Pagto</span>
+                  </label>
+                  <select
+                    value={paymentMethodId}
+                    onChange={(e) => setPaymentMethodId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="">Nenhuma (Opcional)</option>
+                    {[...paymentMethods]
+                      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                      .map((pm) => (
+                        <option key={pm.id} value={pm.id}>
+                          {pm.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                    <CreditCard className="w-3.5 h-3.5 text-purple-500" />
+                    <span>Cartão de Crédito</span>
+                  </label>
+                  <select
+                    value={creditCardId}
+                    onChange={(e) => handleCardChange(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-zinc-900 dark:text-zinc-100 font-medium"
+                  >
+                    <option value="">Nenhum (Lançamento Comum)</option>
+                    {[...creditCards]
+                      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                      .map((card) => (
+                        <option key={card.id} value={card.id}>
+                          {card.name} (Disp: R$ {(card.available_limit_cents / 100).toFixed(0)})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                    <ContactIcon className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Contato / Favorecido</span>
+                  </label>
+                  <select
+                    value={contactId}
+                    onChange={(e) => setContactId(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="">Nenhum (Opcional)</option>
+                    {[...contacts]
+                      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR", { sensitivity: "base" }))
+                      .map((ct) => (
+                        <option key={ct.id} value={ct.id}>
+                          {ct.name} ({ct.type})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Card Smart Hint */}
+              {cardHint && (
+                <div className="p-2.5 rounded-xl bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200/80 dark:border-purple-800/80 text-purple-700 dark:text-purple-300 text-xs flex items-center gap-2 font-medium animate-fade-in">
+                  <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                  <span>{cardHint}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Notes */}
           <div>

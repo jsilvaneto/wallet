@@ -8157,10 +8157,11 @@
             "type": "string",
             "enum": [
               "RECEITA",
-              "DESPESA"
+              "DESPESA",
+              "TRANSFERENCIA"
             ],
             "title": "Type",
-            "description": "RECEITA ou DESPESA"
+            "description": "RECEITA, DESPESA ou TRANSFERENCIA"
           },
           "account_id": {
             "anyOf": [
@@ -8171,7 +8172,20 @@
                 "type": "null"
               }
             ],
-            "title": "Account Id"
+            "title": "Account Id",
+            "description": "Conta bancária / carteira (Origem em transferências)"
+          },
+          "destination_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Account Id",
+            "description": "Conta bancária / carteira de Destino em transferências"
           },
           "credit_card_id": {
             "anyOf": [
@@ -8185,9 +8199,16 @@
             "title": "Credit Card Id"
           },
           "category_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Category Id",
-            "description": "ID da categoria"
+            "description": "ID da categoria (opcional para transferências)"
           },
           "item_id": {
             "anyOf": [
@@ -8338,7 +8359,6 @@
         "type": "object",
         "required": [
           "type",
-          "category_id",
           "description",
           "amount_cents",
           "due_date",
@@ -8352,10 +8372,11 @@
             "type": "string",
             "enum": [
               "RECEITA",
-              "DESPESA"
+              "DESPESA",
+              "TRANSFERENCIA"
             ],
             "title": "Type",
-            "description": "RECEITA ou DESPESA"
+            "description": "RECEITA, DESPESA ou TRANSFERENCIA"
           },
           "account_id": {
             "anyOf": [
@@ -8366,7 +8387,20 @@
                 "type": "null"
               }
             ],
-            "title": "Account Id"
+            "title": "Account Id",
+            "description": "Conta bancária / carteira (Origem em transferências)"
+          },
+          "destination_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Account Id",
+            "description": "Conta bancária / carteira de Destino em transferências"
           },
           "credit_card_id": {
             "anyOf": [
@@ -8380,9 +8414,16 @@
             "title": "Credit Card Id"
           },
           "category_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Category Id",
-            "description": "ID da categoria"
+            "description": "ID da categoria (opcional para transferências)"
           },
           "item_id": {
             "anyOf": [
@@ -8582,7 +8623,6 @@
         "type": "object",
         "required": [
           "type",
-          "category_id",
           "description",
           "amount_cents",
           "due_date",
@@ -8602,7 +8642,8 @@
                 "type": "string",
                 "enum": [
                   "RECEITA",
-                  "DESPESA"
+                  "DESPESA",
+                  "TRANSFERENCIA"
                 ]
               },
               {
@@ -8621,6 +8662,17 @@
               }
             ],
             "title": "Account Id"
+          },
+          "destination_account_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Account Id"
           },
           "credit_card_id": {
             "anyOf": [

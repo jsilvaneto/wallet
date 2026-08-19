@@ -11,7 +11,8 @@ import {
   Filter, AlertCircle, Search, X, Calendar, 
   ChevronLeft, ChevronRight, Clock, DollarSign, 
   Landmark, Tag, Users, CheckCircle2, RotateCcw, AlertTriangle, 
-  Layers, Wallet, PiggyBank, CircleDollarSign, CreditCard, Paperclip, FileText, Pencil, Sparkles
+  Layers, Wallet, PiggyBank, CircleDollarSign, CreditCard, Paperclip, FileText, Pencil, Sparkles,
+  ArrowRightLeft, ArrowRight
 } from "lucide-react";
 
 type PeriodPreset = 
@@ -25,7 +26,7 @@ type PeriodPreset =
   | "CUSTOM";
 
 type StatusFilterOption = "TODOS" | "PENDENTE" | "CONCLUIDO" | "ATRASADAS";
-type TypeFilterOption = "TODOS" | "DESPESA" | "RECEITA";
+type TypeFilterOption = "TODOS" | "DESPESA" | "RECEITA" | "TRANSFERENCIA";
 
 export const Transactions: React.FC = () => {
   const { profile, hideValues, refreshSyncStatus } = useApp();
@@ -274,9 +275,10 @@ export const Transactions: React.FC = () => {
     const q = searchQuery.toLowerCase();
     return transactions.filter((t) => {
       const descMatch = t.description.toLowerCase().includes(q);
-      const catMatch = categories[t.category_id]?.name.toLowerCase().includes(q);
+      const catMatch = t.category_id ? categories[t.category_id]?.name.toLowerCase().includes(q) : (t.type === "TRANSFERENCIA" && "transferência interna".includes(q));
       const contactMatch = t.contact_id && contacts[t.contact_id]?.name.toLowerCase().includes(q);
-      const accMatch = t.account_id && accounts[t.account_id]?.name.toLowerCase().includes(q);
+      const accMatch = (t.account_id && accounts[t.account_id]?.name.toLowerCase().includes(q)) ||
+                       (t.destination_account_id && accounts[t.destination_account_id]?.name.toLowerCase().includes(q));
       const pmMatch = t.payment_method_id && paymentMethods[t.payment_method_id]?.name.toLowerCase().includes(q);
       const cardMatch = t.credit_card_id && creditCards[t.credit_card_id]?.name.toLowerCase().includes(q);
       const notesMatch = t.notes && t.notes.toLowerCase().includes(q);
@@ -314,7 +316,7 @@ export const Transactions: React.FC = () => {
     filteredTransactions.forEach((t) => {
       if (t.type === "RECEITA") {
         incomeCents += t.amount_cents;
-      } else {
+      } else if (t.type === "DESPESA") {
         expenseCents += t.amount_cents;
       }
     });
@@ -644,6 +646,7 @@ export const Transactions: React.FC = () => {
               { id: "TODOS", label: "Todos" },
               { id: "DESPESA", label: "Despesas" },
               { id: "RECEITA", label: "Receitas" },
+              { id: "TRANSFERENCIA", label: "Transferências" },
             ].map((tp) => (
               <button
                 key={tp.id}
@@ -654,6 +657,8 @@ export const Transactions: React.FC = () => {
                       ? "bg-rose-600 text-white shadow-sm"
                       : tp.id === "RECEITA"
                       ? "bg-emerald-600 text-white shadow-sm"
+                      : tp.id === "TRANSFERENCIA"
+                      ? "bg-indigo-600 text-white shadow-sm"
                       : "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm"
                     : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
                 }`}
@@ -813,8 +818,8 @@ export const Transactions: React.FC = () => {
                           onClick={() => handleToggleStatus(t)}
                           title={
                             isCompleted
-                              ? `${t.type === "RECEITA" ? "Recebido" : "Pago"} em ${t.payment_date ? formatDateToBR(t.payment_date) : formatDateToBR(t.due_date)} • Clique para desmarcar e reabrir`
-                              : `Pendente • Clique para marcar como ${t.type === "RECEITA" ? "Recebido" : "Pago"}`
+                              ? `${t.type === "RECEITA" ? "Recebido" : t.type === "TRANSFERENCIA" ? "Transferido" : "Pago"} em ${t.payment_date ? formatDateToBR(t.payment_date) : formatDateToBR(t.due_date)} • Clique para desmarcar e reabrir`
+                              : `Pendente • Clique para marcar como ${t.type === "RECEITA" ? "Recebido" : t.type === "TRANSFERENCIA" ? "Concluído" : "Pago"}`
                           }
                           className={`p-1.5 rounded-lg border transition-all cursor-pointer group ${
                             isCompleted
@@ -841,7 +846,7 @@ export const Transactions: React.FC = () => {
                           <div>
                             <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
                               <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                              <span>{t.type === "RECEITA" ? "Recebido:" : "Pago:"} {t.payment_date ? formatDateToBR(t.payment_date) : formatDateToBR(t.due_date)}</span>
+                              <span>{t.type === "RECEITA" ? "Recebido:" : t.type === "TRANSFERENCIA" ? "Efetivado:" : "Pago:"} {t.payment_date ? formatDateToBR(t.payment_date) : formatDateToBR(t.due_date)}</span>
                             </div>
                             <span className="text-[10px] text-zinc-400 font-mono mt-0.5 block">
                               Venc: {formatDateToBR(t.due_date)}
@@ -872,10 +877,14 @@ export const Transactions: React.FC = () => {
                           <span className={`p-1 rounded-md shrink-0 ${
                             t.type === "RECEITA"
                               ? "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400"
+                              : t.type === "TRANSFERENCIA"
+                              ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400"
                               : "bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400"
                           }`}>
                             {t.type === "RECEITA" ? (
                               <ArrowUpRight className="w-3.5 h-3.5" />
+                            ) : t.type === "TRANSFERENCIA" ? (
+                              <ArrowRightLeft className="w-3.5 h-3.5" />
                             ) : (
                               <ArrowDownRight className="w-3.5 h-3.5" />
                             )}
@@ -932,12 +941,40 @@ export const Transactions: React.FC = () => {
 
                       {/* Category */}
                       <td className="py-3.5 px-4 xl:px-6 text-zinc-600 dark:text-zinc-300 font-medium whitespace-nowrap">
-                        {categories[t.category_id]?.name || "-"}
+                        {t.type === "TRANSFERENCIA" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-[11px] font-bold border border-indigo-200 dark:border-indigo-800">
+                            <ArrowRightLeft className="w-3 h-3 text-indigo-500" />
+                            <span>Transferência Interna</span>
+                          </span>
+                        ) : (
+                          (t.category_id && categories[t.category_id]?.name) || "-"
+                        )}
                       </td>
 
                       {/* Account / Carteira & Forma de Pagamento / Cartão */}
                       <td className="py-3.5 px-4 xl:px-6 whitespace-nowrap">
                         {(() => {
+                          if (t.type === "TRANSFERENCIA") {
+                            const srcAcc = t.account_id ? accounts[t.account_id] : null;
+                            const dstAcc = t.destination_account_id ? accounts[t.destination_account_id] : null;
+                            const pm = t.payment_method_id ? paymentMethods[t.payment_method_id] : null;
+                            return (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                                  <span className="text-rose-600 dark:text-rose-400">{srcAcc?.name || "Origem"}</span>
+                                  <ArrowRight className="w-3 h-3 text-zinc-400 shrink-0" />
+                                  <span className="text-emerald-600 dark:text-emerald-400">{dstAcc?.name || "Destino"}</span>
+                                </div>
+                                {pm && (
+                                  <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-normal">
+                                    <CreditCard className="w-3 h-3 text-zinc-400 shrink-0" />
+                                    <span>Via {pm.name}</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }
+
                           const pm = t.payment_method_id ? paymentMethods[t.payment_method_id] : null;
                           const card = t.credit_card_id ? creditCards[t.credit_card_id] : null;
                           const isInvoicePay = t.is_invoice_payment === 1;
@@ -1009,9 +1046,11 @@ export const Transactions: React.FC = () => {
                         <span className={`font-mono font-bold text-sm ${
                           t.type === "DESPESA"
                             ? "text-rose-600 dark:text-rose-400"
-                            : "text-emerald-600 dark:text-emerald-400"
+                            : t.type === "RECEITA"
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-indigo-600 dark:text-indigo-400"
                         }`}>
-                          {t.type === "DESPESA" ? "-" : "+"} {formatCurrency(t.amount_cents, hideValues)}
+                          {t.type === "DESPESA" ? "-" : t.type === "RECEITA" ? "+" : "⇄"} {formatCurrency(t.amount_cents, hideValues)}
                         </span>
                       </td>
 

@@ -1,5 +1,5 @@
 export type ProfileType = "PESSOAL" | "EMPRESA";
-export type TransactionType = "RECEITA" | "DESPESA";
+export type TransactionType = "RECEITA" | "DESPESA" | "TRANSFERENCIA";
 export type TransactionStatus = "PENDENTE" | "CONCLUIDO" | "CANCELADO";
 export type CategoryNature = "NENHUM" | "OBRIGATORIO" | "NECESSARIO" | "DESEJO";
 
@@ -98,10 +98,12 @@ export interface CreditCardInvoiceSettleResponse {
   message: string;
 }
 
+export type CategoryType = "RECEITA" | "DESPESA";
+
 export interface Category {
   id: string;
   profile: ProfileType;
-  type: TransactionType;
+  type: CategoryType;
   name: string;
   nature: CategoryNature;
   created_at: string;
@@ -113,6 +115,7 @@ export interface Item {
   category_id: string;
   name: string;
   default_amount_cents?: number | null;
+  type: CategoryType;
   category_name?: string | null;
   category_type?: TransactionType | null;
   category_nature?: CategoryNature | null;
@@ -180,12 +183,13 @@ export interface Transaction {
   profile: ProfileType;
   type: TransactionType;
   account_id?: string | null;
+  destination_account_id?: string | null;
   payment_method_id?: string | null;
   credit_card_id?: string | null;
   invoice_month?: number | null;
   invoice_year?: number | null;
   is_invoice_payment?: number;
-  category_id: string;
+  category_id?: string | null;
   item_id?: string | null;
   contact_id?: string | null;
   debt_id?: string | null;

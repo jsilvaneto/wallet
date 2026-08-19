@@ -179,16 +179,17 @@ class Schedule(Base):
         CheckConstraint("due_day BETWEEN 1 AND 31", name="chk_schedule_day"),
     )
 
-# 8. Transações e Contas a Pagar/Receber
+# 8. Transações e Contas a Pagar/Receber / Transferências
 class Transaction(Base):
     __tablename__ = "transactions"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     profile: Mapped[str] = mapped_column(String(10), nullable=False)
-    type: Mapped[str] = mapped_column(String(10), nullable=False) # RECEITA, DESPESA
+    type: Mapped[str] = mapped_column(String(15), nullable=False) # RECEITA, DESPESA, TRANSFERENCIA
     account_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
+    destination_account_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True) # Conta de destino (para transferências internas)
     credit_card_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("credit_cards.id", ondelete="SET NULL"), nullable=True)
-    category_id: Mapped[str] = mapped_column(String(36), ForeignKey("categories.id", ondelete="RESTRICT"), nullable=False)
+    category_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("categories.id", ondelete="RESTRICT"), nullable=True)
     item_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("items.id", ondelete="SET NULL"), nullable=True)
     contact_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
     debt_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("debts.id", ondelete="SET NULL"), nullable=True)
@@ -211,9 +212,10 @@ class Transaction(Base):
     created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
     updated_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, onupdate=now_utc_iso, nullable=False)
 
-    account: Mapped[Optional["Account"]] = relationship("Account")
+    account: Mapped[Optional["Account"]] = relationship("Account", foreign_keys=[account_id])
+    destination_account: Mapped[Optional["Account"]] = relationship("Account", foreign_keys=[destination_account_id])
     credit_card: Mapped[Optional["CreditCard"]] = relationship("CreditCard")
-    category: Mapped["Category"] = relationship("Category")
+    category: Mapped[Optional["Category"]] = relationship("Category")
     item: Mapped[Optional["Item"]] = relationship("Item")
     contact: Mapped[Optional["Contact"]] = relationship("Contact")
     debt: Mapped[Optional["Debt"]] = relationship("Debt")
@@ -223,7 +225,7 @@ class Transaction(Base):
 
     __table_args__ = (
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_trans_profile"),
-        CheckConstraint("type IN ('RECEITA', 'DESPESA')", name="chk_trans_type"),
+        CheckConstraint("type IN ('RECEITA', 'DESPESA', 'TRANSFERENCIA')", name="chk_trans_type"),
         CheckConstraint("status IN ('PENDENTE', 'CONCLUIDO', 'CANCELADO')", name="chk_trans_status"),
         CheckConstraint("sync_status IN ('PENDENTE', 'SINCRONIZADO')", name="chk_trans_sync"),
         Index("idx_trans_profile_due", "profile", "due_date"),
