@@ -49,6 +49,13 @@ async def migrate_database_schema():
                     await conn.execute(text("ALTER TABLE schedules ADD COLUMN payment_method_id VARCHAR(36) REFERENCES payment_methods(id) ON DELETE SET NULL"))
                 if "credit_card_id" not in sched_columns:
                     await conn.execute(text("ALTER TABLE schedules ADD COLUMN credit_card_id VARCHAR(36) REFERENCES credit_cards(id) ON DELETE SET NULL"))
+
+            # 5. Verifica colunas da tabela debts
+            res_debts = await conn.execute(text("PRAGMA table_info(debts)"))
+            debt_columns = [row[1] for row in res_debts.fetchall()]
+            if debt_columns:
+                if "contact_id" not in debt_columns:
+                    await conn.execute(text("ALTER TABLE debts ADD COLUMN contact_id VARCHAR(36) REFERENCES contacts(id) ON DELETE SET NULL"))
         except Exception as e:
             print("Aviso na migração SQLite:", e)
 

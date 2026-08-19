@@ -5,6 +5,7 @@ import { Transaction, Category, Contact, Account, PaymentMethod, CreditCard as C
 import { formatCurrency, formatDateToBR } from "../utils/format";
 import { TransactionModal } from "../components/TransactionModal";
 import { AttachmentViewerModal } from "../components/AttachmentViewerModal";
+import { ContactStatementModal } from "../components/ContactStatementModal";
 import { 
   Plus, Check, Trash2, ArrowUpRight, ArrowDownRight, 
   Filter, AlertCircle, Search, X, Calendar, 
@@ -44,6 +45,9 @@ export const Transactions: React.FC = () => {
   // Estados de Anexos / Comprovantes
   const [selectedTransactionForAttachments, setSelectedTransactionForAttachments] = useState<Transaction | null>(null);
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
+
+  // Estado de Extrato de Contato
+  const [selectedContactForStatement, setSelectedContactForStatement] = useState<Contact | null>(null);
 
   // Estados de Filtros
   const [periodPreset, setPeriodPreset] = useState<PeriodPreset>("MES_ATUAL");
@@ -983,7 +987,21 @@ export const Transactions: React.FC = () => {
 
                       {/* Contact */}
                       <td className="py-3.5 px-4 xl:px-6 text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
-                        {t.contact_id ? contacts[t.contact_id]?.name || "-" : "-"}
+                        {(() => {
+                          const con = t.contact_id ? contacts[t.contact_id] : null;
+                          if (!con) return <span className="text-zinc-400">-</span>;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedContactForStatement(con)}
+                              className="inline-flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 font-medium group transition-all text-left"
+                              title="Abrir Extrato / Conta-Corrente deste Contato"
+                            >
+                              <span>{con.name}</span>
+                              <FileText className="w-3 h-3 text-zinc-400 group-hover:text-indigo-500 transition-colors" />
+                            </button>
+                          );
+                        })()}
                       </td>
 
                       {/* Amount */}
@@ -1077,6 +1095,16 @@ export const Transactions: React.FC = () => {
           refreshSyncStatus(false);
         }}
       />
+
+      {/* Extrato / Conta-Corrente do Contato */}
+      {selectedContactForStatement && (
+        <ContactStatementModal
+          isOpen={true}
+          onClose={() => setSelectedContactForStatement(null)}
+          contact={selectedContactForStatement}
+          onContactUpdated={fetchData}
+        />
+      )}
     </div>
   );
 };

@@ -9,6 +9,7 @@ import {
 import { formatCurrency } from "../utils/format";
 import { SyncSetupGuideModal } from "../components/SyncSetupGuideModal";
 import { CreditCardInvoicesModal } from "../components/CreditCardInvoicesModal";
+import { ContactStatementModal } from "../components/ContactStatementModal";
 import { 
   Settings as SettingsIcon, Palette, Users, Cloud, 
   Sun, Moon, Eye, EyeOff, UserPlus, Trash2, ShieldCheck, 
@@ -167,6 +168,9 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
   const [editConNotes, setEditConNotes] = useState("");
   const [editConSaving, setEditConSaving] = useState(false);
   const [editConError, setEditConError] = useState<string | null>(null);
+
+  // Modal de Extrato / Conta-Corrente do Contato
+  const [statementModalContact, setStatementModalContact] = useState<Contact | null>(null);
 
   // ==========================================
   // 5. ESTADOS DE DÍVIDAS
@@ -2615,6 +2619,16 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           type="button"
+                          onClick={() => setStatementModalContact(con)}
+                          className="px-2.5 py-1 text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/80 rounded-xl transition-all flex items-center gap-1"
+                          title="Abrir Extrato / Conta-Corrente do Contato"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Extrato</span>
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => openEditContact(con)}
                           className="p-1.5 text-zinc-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/40 rounded-lg transition-all"
                           title="Editar Contato"
@@ -4444,6 +4458,16 @@ export const Settings: React.FC<SettingsProps> = ({ initialTab = "CATEGORIAS" })
           onClose={() => setInvoicesModalCard(null)}
           card={invoicesModalCard}
           onInvoiceUpdated={loadData}
+        />
+      )}
+
+      {/* Modal de Extrato / Conta-Corrente do Contato */}
+      {statementModalContact && (
+        <ContactStatementModal
+          isOpen={true}
+          onClose={() => setStatementModalContact(null)}
+          contact={statementModalContact}
+          onContactUpdated={loadData}
         />
       )}
 

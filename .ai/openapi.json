@@ -1767,6 +1767,54 @@
         }
       }
     },
+    "/api/v1/contacts/{contact_id}/statement": {
+      "get": {
+        "tags": [
+          "Contatos"
+        ],
+        "summary": "Get Statement Endpoint",
+        "description": "Retorna o extrato e histórico completo da conta-corrente do contato.",
+        "operationId": "get_statement_endpoint_api_v1_contacts__contact_id__statement_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "contact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Contact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactStatementResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/items": {
       "get": {
         "tags": [
@@ -5563,6 +5611,104 @@
           "created_at"
         ],
         "title": "ContactResponse"
+      },
+      "ContactStatementResponse": {
+        "properties": {
+          "contact": {
+            "$ref": "#/components/schemas/ContactResponse"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ContactSummary"
+          },
+          "transactions": {
+            "items": {
+              "$ref": "#/components/schemas/TransactionResponse"
+            },
+            "type": "array",
+            "title": "Transactions",
+            "default": []
+          },
+          "debts": {
+            "items": {
+              "$ref": "#/components/schemas/DebtResponse"
+            },
+            "type": "array",
+            "title": "Debts",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "contact",
+          "summary"
+        ],
+        "title": "ContactStatementResponse"
+      },
+      "ContactSummary": {
+        "properties": {
+          "total_paid_cents": {
+            "type": "integer",
+            "title": "Total Paid Cents",
+            "description": "Total pago ao contato (despesas concluídas)",
+            "default": 0
+          },
+          "total_received_cents": {
+            "type": "integer",
+            "title": "Total Received Cents",
+            "description": "Total recebido do contato (receitas concluídas)",
+            "default": 0
+          },
+          "total_pending_pay_cents": {
+            "type": "integer",
+            "title": "Total Pending Pay Cents",
+            "description": "Total pendente a pagar (despesas pendentes)",
+            "default": 0
+          },
+          "total_pending_receive_cents": {
+            "type": "integer",
+            "title": "Total Pending Receive Cents",
+            "description": "Total pendente a receber (receitas pendentes)",
+            "default": 0
+          },
+          "net_realized_cents": {
+            "type": "integer",
+            "title": "Net Realized Cents",
+            "description": "Saldo líquido realizado (recebido - pago)",
+            "default": 0
+          },
+          "net_pending_cents": {
+            "type": "integer",
+            "title": "Net Pending Cents",
+            "description": "Saldo líquido pendente (a receber - a pagar)",
+            "default": 0
+          },
+          "total_debts_cents": {
+            "type": "integer",
+            "title": "Total Debts Cents",
+            "description": "Valor original total de dívidas ativas",
+            "default": 0
+          },
+          "remaining_debts_cents": {
+            "type": "integer",
+            "title": "Remaining Debts Cents",
+            "description": "Saldo devedor restante em dívidas ativas",
+            "default": 0
+          },
+          "transactions_count": {
+            "type": "integer",
+            "title": "Transactions Count",
+            "description": "Total de lançamentos vinculados",
+            "default": 0
+          },
+          "debts_count": {
+            "type": "integer",
+            "title": "Debts Count",
+            "description": "Total de dívidas ativas vinculadas",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "title": "ContactSummary"
       },
       "ContactUpdate": {
         "properties": {

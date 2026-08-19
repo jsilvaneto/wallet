@@ -141,6 +141,14 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Filtro por Cartão de Crédito na tabela de lançamentos e badge visual na listagem.
   - [x] Registrado no [ADR 005](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/005-gestao-cartoes-credito-faturas.md).
 
+- [x] **Extrato e Histórico de Movimentações por Contato (Conta-Corrente Individual)**:
+  - [x] Endpoint `GET /api/v1/contacts/{contact_id}/statement` e serviço assíncrono consolidado [contact_service.py](file:///home/jsilvaneto/projetos/wallet/backend/app/services/contact_service.py).
+  - [x] Resumo de KPIs financeiros em tempo real: Total Liquidado (pago/recebido), Total Pendente (a pagar/receber), Saldo Líquido Realizado e Saldo Devedor em Dívidas.
+  - [x] Componente modal executivo [ContactStatementModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/ContactStatementModal.tsx) com timeline de movimentações, filtros locais (busca, tipo, status) e atalho de novo lançamento para o contato.
+  - [x] Ações rápidas no extrato: Toggle de status (baixa/reabrir) em 1 clique e edição de transação integrada ao `TransactionModal`.
+  - [x] Botão **Extrato** na aba **Configurações > Contatos & Favorecidos** e links clicáveis na coluna de contatos da tabela de lançamentos.
+  - [x] Registrado no [ADR 006](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/006-extrato-conta-corrente-por-contato.md).
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 

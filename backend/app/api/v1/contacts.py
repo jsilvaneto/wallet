@@ -5,7 +5,8 @@ from typing import List, Optional
 
 from app.database import get_db
 from app.models import Contact, User
-from app.schemas.contact import ContactCreate, ContactUpdate, ContactResponse
+from app.schemas.contact import ContactCreate, ContactUpdate, ContactResponse, ContactStatementResponse
+from app.services.contact_service import get_contact_statement
 from app.api.v1.deps import get_current_user
 
 router = APIRouter(prefix="/contacts", tags=["Contatos"])
@@ -50,6 +51,15 @@ async def get_contact(
     if not contact:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Contato não encontrado")
     return contact
+
+@router.get("/{contact_id}/statement", response_model=ContactStatementResponse)
+async def get_statement_endpoint(
+    contact_id: str,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Retorna o extrato e histórico completo da conta-corrente do contato."""
+    return await get_contact_statement(db, contact_id)
 
 @router.put("/{contact_id}", response_model=ContactResponse)
 async def update_contact(

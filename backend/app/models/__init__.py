@@ -126,18 +126,17 @@ class Debt(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
     profile: Mapped[str] = mapped_column(String(10), nullable=False)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    contact_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("contacts.id", ondelete="SET NULL"), nullable=True)
+    title: Mapped[str] = mapped_column(String(150), nullable=False)
     total_amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
     remaining_amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
-    interest_rate: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     due_date: Mapped[Optional[str]] = mapped_column(String(10), nullable=True) # YYYY-MM-DD
-    status: Mapped[str] = mapped_column(String(20), default="EM_ANDAMENTO", nullable=False) # EM_ANDAMENTO, QUITADA, RENEGOCIADA
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="ATIVA", nullable=False) # ATIVA, QUITADA, CANCELADA
     created_at: Mapped[str] = mapped_column(String(30), default=now_utc_iso, nullable=False)
 
     __table_args__ = (
         CheckConstraint("profile IN ('PESSOAL', 'EMPRESA')", name="chk_debt_profile"),
-        CheckConstraint("status IN ('EM_ANDAMENTO', 'QUITADA', 'RENEGOCIADA')", name="chk_debt_status"),
+        CheckConstraint("status IN ('ATIVA', 'QUITADA', 'CANCELADA')", name="chk_debt_status"),
     )
 
 # 7. Planos Mestres de Pagamentos (Recorrentes ou Parcelados)

@@ -41,22 +41,6 @@ CREATE TABLE contacts (
 	CONSTRAINT chk_contact_profile CHECK (profile IN ('PESSOAL', 'EMPRESA'))
 );
 
-CREATE TABLE debts (
-	id VARCHAR(36) NOT NULL, 
-	profile VARCHAR(10) NOT NULL, 
-	name VARCHAR(100) NOT NULL, 
-	total_amount_cents INTEGER NOT NULL, 
-	remaining_amount_cents INTEGER NOT NULL, 
-	interest_rate VARCHAR(20), 
-	due_date VARCHAR(10), 
-	status VARCHAR(20) NOT NULL, 
-	notes TEXT, 
-	created_at VARCHAR(30) NOT NULL, 
-	PRIMARY KEY (id), 
-	CONSTRAINT chk_debt_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
-	CONSTRAINT chk_debt_status CHECK (status IN ('EM_ANDAMENTO', 'QUITADA', 'RENEGOCIADA'))
-);
-
 CREATE TABLE goals (
 	id VARCHAR(36) NOT NULL, 
 	profile VARCHAR(10) NOT NULL, 
@@ -137,6 +121,22 @@ CREATE TABLE credit_cards (
 	CONSTRAINT chk_credit_card_closing_day CHECK (closing_day BETWEEN 1 AND 31), 
 	CONSTRAINT chk_credit_card_due_day CHECK (due_day BETWEEN 1 AND 31), 
 	FOREIGN KEY(account_id) REFERENCES accounts (id) ON DELETE SET NULL
+);
+
+CREATE TABLE debts (
+	id VARCHAR(36) NOT NULL, 
+	profile VARCHAR(10) NOT NULL, 
+	contact_id VARCHAR(36), 
+	title VARCHAR(150) NOT NULL, 
+	total_amount_cents INTEGER NOT NULL, 
+	remaining_amount_cents INTEGER NOT NULL, 
+	due_date VARCHAR(10), 
+	status VARCHAR(20) NOT NULL, 
+	created_at VARCHAR(30) NOT NULL, 
+	PRIMARY KEY (id), 
+	CONSTRAINT chk_debt_profile CHECK (profile IN ('PESSOAL', 'EMPRESA')), 
+	CONSTRAINT chk_debt_status CHECK (status IN ('ATIVA', 'QUITADA', 'CANCELADA')), 
+	FOREIGN KEY(contact_id) REFERENCES contacts (id) ON DELETE SET NULL
 );
 
 CREATE TABLE items (
@@ -252,16 +252,16 @@ CREATE TABLE attachments (
 
 CREATE UNIQUE INDEX ix_users_username ON users (username);
 
-CREATE INDEX idx_trans_status ON transactions (status);
-
 CREATE INDEX idx_trans_profile_due ON transactions (profile, due_date);
 
 CREATE INDEX idx_trans_sync ON transactions (sync_status);
+
+CREATE INDEX idx_trans_status ON transactions (status);
+
+CREATE INDEX idx_attachment_sync ON attachments (sync_status);
 
 CREATE INDEX idx_attachment_profile ON attachments (profile);
 
 CREATE INDEX idx_attachment_type ON attachments (attachment_type);
 
 CREATE INDEX idx_attachment_transaction ON attachments (transaction_id);
-
-CREATE INDEX idx_attachment_sync ON attachments (sync_status);

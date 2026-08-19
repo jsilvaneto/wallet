@@ -129,6 +129,26 @@ export interface Contact {
   created_at: string;
 }
 
+export interface ContactSummary {
+  total_paid_cents: number;
+  total_received_cents: number;
+  total_pending_pay_cents: number;
+  total_pending_receive_cents: number;
+  net_realized_cents: number;
+  net_pending_cents: number;
+  total_debts_cents: number;
+  remaining_debts_cents: number;
+  transactions_count: number;
+  debts_count: number;
+}
+
+export interface ContactStatement {
+  contact: Contact;
+  summary: ContactSummary;
+  transactions: Transaction[];
+  debts: Debt[];
+}
+
 export interface Debt {
   id: string;
   profile: ProfileType;
