@@ -65,3 +65,25 @@ class TransactionResponse(TransactionBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+class TransactionBatchAction(BaseModel):
+    transaction_ids: List[str] = Field(..., min_length=1, description="IDs das transações a processar")
+
+class TransactionBatchComplete(BaseModel):
+    transaction_ids: List[str] = Field(..., min_length=1)
+    payment_date: Optional[str] = Field(None, description="Data de quitação (YYYY-MM-DD), padrão hoje")
+
+class TransactionBatchUpdate(BaseModel):
+    transaction_ids: List[str] = Field(..., min_length=1)
+    category_id: Optional[str] = None
+    account_id: Optional[str] = None
+    payment_method_id: Optional[str] = None
+    contact_id: Optional[str] = None
+    due_date: Optional[str] = None
+    payment_date: Optional[str] = None
+    status: Optional[TransactionStatus] = None
+    notes: Optional[str] = None
+
+class TransactionBatchResponse(BaseModel):
+    affected_count: int
+    message: str
+

@@ -6,13 +6,15 @@ import { formatCurrency, formatDateToBR } from "../utils/format";
 import { TransactionModal } from "../components/TransactionModal";
 import { AttachmentViewerModal } from "../components/AttachmentViewerModal";
 import { ContactStatementModal } from "../components/ContactStatementModal";
+import { FinancialReportModal } from "../components/FinancialReportModal";
+import { BatchEditModal } from "../components/BatchEditModal";
 import { 
   Plus, Check, Trash2, ArrowUpRight, ArrowDownRight, 
   Filter, AlertCircle, Search, X, Calendar, 
   ChevronLeft, ChevronRight, Clock, DollarSign, 
   Landmark, Tag, Users, CheckCircle2, RotateCcw, AlertTriangle, 
   Layers, Wallet, PiggyBank, CircleDollarSign, CreditCard, Paperclip, FileText, Pencil, Sparkles,
-  ArrowRightLeft, ArrowRight
+  ArrowRightLeft, ArrowRight, Printer, SlidersHorizontal, FileDown
 } from "lucide-react";
 
 type PeriodPreset = 
@@ -64,6 +66,12 @@ export const Transactions: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+
+  // Estados de Ações em Lote e Relatório
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBatchEditOpen, setIsBatchEditOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isBatchOperating, setIsBatchOperating] = useState(false);
 
   // Helper de formatação de data ISO local YYYY-MM-DD
   const formatISO = (d: Date): string => {
@@ -254,6 +262,61 @@ export const Transactions: React.FC = () => {
     setCreditCardFilter("TODOS");
     setCategoryFilter("TODAS");
     setSearchQuery("");
+    setSelectedIds(new Set());
+  };
+
+  // Handlers de Ações em Lote
+  const handleBatchComplete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBatchOperating(true);
+    try {
+      await api.post("/transactions/batch/complete", {
+        transaction_ids: Array.from(selectedIds),
+        payment_date: todayStr
+      });
+      setSelectedIds(new Set());
+      fetchData();
+      refreshSyncStatus(false);
+    } catch (err) {
+      console.error("Erro ao liquidar em lote:", err);
+    } finally {
+      setIsBatchOperating(false);
+    }
+  };
+
+  const handleBatchUncomplete = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBatchOperating(true);
+    try {
+      await api.post("/transactions/batch/uncomplete", {
+        transaction_ids: Array.from(selectedIds)
+      });
+      setSelectedIds(new Set());
+      fetchData();
+      refreshSyncStatus(false);
+    } catch (err) {
+      console.error("Erro ao reabrir em lote:", err);
+    } finally {
+      setIsBatchOperating(false);
+    }
+  };
+
+  const handleBatchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Deseja realmente excluir os ${selectedIds.size} lançamento(s) selecionado(s)?`)) return;
+    setIsBatchOperating(true);
+    try {
+      await api.post("/transactions/batch/delete", {
+        transaction_ids: Array.from(selectedIds)
+      });
+      setSelectedIds(new Set());
+      fetchData();
+      refreshSyncStatus(false);
+    } catch (err) {
+      console.error("Erro ao excluir em lote:", err);
+    } finally {
+      setIsBatchOperating(false);
+    }
   };
 
   const isFiltered = useMemo(() => {
@@ -287,6 +350,28 @@ export const Transactions: React.FC = () => {
       return descMatch || catMatch || contactMatch || accMatch || pmMatch || cardMatch || notesMatch || amountMatch;
     });
   }, [transactions, searchQuery, categories, contacts, accounts, paymentMethods, creditCards]);
+
+  // Controle de Seleção Múltipla
+  const isAllSelected = filteredTransactions.length > 0 && filteredTransactions.every((t) => selectedIds.has(t.id));
+  const isSomeSelected = filteredTransactions.some((t) => selectedIds.has(t.id)) && !isAllSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredTransactions.map((t) => t.id)));
+    }
+  };
+
+  const handleToggleSelectOne = (id: string) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
 
   // Métricas calculadas
   const metrics = useMemo(() => {
@@ -365,16 +450,27 @@ export const Transactions: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            setEditingTransaction(null);
-            setIsModalOpen(true);
-          }}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md shadow-emerald-600/20 transition-all active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Novo Lançamento</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs font-bold bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
+            title="Exportar Relatório Consolidado em PDF ou CSV"
+          >
+            <Printer className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Relatório / PDF</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setEditingTransaction(null);
+              setIsModalOpen(true);
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Novo Lançamento</span>
+          </button>
+        </div>
       </div>
 
       {/* BANNER DE ALERTA: CONTAS ATRASADAS (Se existirem) */}
@@ -778,6 +874,16 @@ export const Transactions: React.FC = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/50 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  <th className="py-3.5 px-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={(el) => { if (el) el.indeterminate = isSomeSelected; }}
+                      onChange={handleToggleSelectAll}
+                      title="Selecionar / Desmarcar todos os lançamentos filtrados"
+                      className="w-4 h-4 rounded text-emerald-600 border-zinc-300 dark:border-zinc-700 focus:ring-emerald-500 cursor-pointer"
+                    />
+                  </th>
                   <th className="py-3.5 px-3 xl:px-4 w-12 text-center">Status</th>
                   <th className="py-3.5 px-4 xl:px-6">Vencimento / Liquidação</th>
                   <th className="py-3.5 px-4 xl:px-6">Descrição</th>
@@ -808,9 +914,23 @@ export const Transactions: React.FC = () => {
                     <tr
                       key={t.id}
                       className={`hover:bg-zinc-50/70 dark:hover:bg-zinc-800/30 transition-colors ${
-                        isOverdue ? "bg-rose-50/30 dark:bg-rose-950/10" : ""
+                        selectedIds.has(t.id) 
+                          ? "bg-indigo-50/40 dark:bg-indigo-950/20" 
+                          : isOverdue 
+                          ? "bg-rose-50/30 dark:bg-rose-950/10" 
+                          : ""
                       }`}
                     >
+                      {/* Checkbox de Seleção Individual */}
+                      <td className="py-3.5 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(t.id)}
+                          onChange={() => handleToggleSelectOne(t.id)}
+                          className="w-4 h-4 rounded text-emerald-600 border-zinc-300 dark:border-zinc-700 focus:ring-emerald-500 cursor-pointer"
+                        />
+                      </td>
+
                       {/* Status / Checkbox com Alternância e Desmarcação */}
                       <td className="py-3.5 px-3 xl:px-4 text-center">
                         <button
@@ -1116,6 +1236,114 @@ export const Transactions: React.FC = () => {
           fetchData();
           refreshSyncStatus(false);
         }}
+      />
+
+      {/* BARRA FLUTUANTE DE AÇÕES EM LOTE */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-zinc-900/95 dark:bg-zinc-800/95 text-white backdrop-blur-md px-4 py-3 rounded-2xl shadow-2xl border border-zinc-700/80 flex items-center gap-3 animate-fade-in max-w-[95vw] overflow-x-auto">
+          <div className="flex items-center gap-2 pr-3 border-r border-zinc-700 shrink-0">
+            <span className="text-xs font-bold bg-emerald-500 text-zinc-900 px-2 py-0.5 rounded-full font-mono">
+              {selectedIds.size}
+            </span>
+            <span className="text-xs font-semibold text-zinc-200">
+              {selectedIds.size === 1 ? "selecionado" : "selecionados"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleBatchComplete}
+              disabled={isBatchOperating}
+              className="px-3 py-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              title="Liquidar todos os selecionados"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Liquidar</span>
+            </button>
+
+            <button
+              onClick={handleBatchUncomplete}
+              disabled={isBatchOperating}
+              className="px-3 py-1.5 text-xs font-bold bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              title="Reabrir todos os selecionados para pendente"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reabrir</span>
+            </button>
+
+            <button
+              onClick={() => setIsBatchEditOpen(true)}
+              disabled={isBatchOperating}
+              className="px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              title="Alterar categoria, conta, forma de pagamento, contato ou data em lote"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Editar Campos</span>
+            </button>
+
+            <button
+              onClick={handleBatchDelete}
+              disabled={isBatchOperating}
+              className="px-3 py-1.5 text-xs font-bold bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white rounded-xl flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              title="Excluir selecionados"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Excluir</span>
+            </button>
+
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-all ml-1 cursor-pointer"
+              title="Desmarcar todos"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Lançamentos */}
+      <TransactionModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingTransaction(null);
+        }}
+        onSuccess={() => {
+          fetchData();
+          refreshSyncStatus(false);
+        }}
+        transactionToEdit={editingTransaction}
+      />
+
+      {/* Modal de Edição em Lote */}
+      <BatchEditModal
+        isOpen={isBatchEditOpen}
+        onClose={() => setIsBatchEditOpen(false)}
+        onSuccess={() => {
+          setSelectedIds(new Set());
+          fetchData();
+          refreshSyncStatus(false);
+        }}
+        selectedCount={selectedIds.size}
+        selectedIds={Array.from(selectedIds)}
+        categories={categoriesList}
+        accounts={accountsList}
+        paymentMethods={paymentMethodsList}
+        contacts={contactsList}
+      />
+
+      {/* Modal de Relatório Financeiro Executivo / PDF */}
+      <FinancialReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        profile={profile}
+        periodTitle={formattedMonthTitle}
+        transactions={filteredTransactions}
+        categories={categories}
+        accounts={accounts}
+        paymentMethods={paymentMethods}
+        contacts={contacts}
       />
 
       {/* Visualizador de Comprovantes & Lightbox */}

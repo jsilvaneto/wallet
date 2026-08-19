@@ -7,7 +7,10 @@ from typing import List, Optional
 
 from app.database import get_db
 from app.models import Transaction, Debt, User, Attachment, CreditCard
-from app.schemas.transaction import TransactionCreate, TransactionUpdate, TransactionResponse
+from app.schemas.transaction import (
+    TransactionCreate, TransactionUpdate, TransactionResponse,
+    TransactionBatchAction, TransactionBatchComplete, TransactionBatchUpdate, TransactionBatchResponse
+)
 from app.services.attachment_service import enrich_attachment_schema
 from app.services.credit_card_service import calculate_invoice_period_and_due_date
 from app.api.v1.deps import get_current_user
@@ -360,3 +363,154 @@ async def delete_transaction(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transação não encontrada")
     await db.delete(trans)
     await db.commit()
+
+# --- ENDPOINTS DE AÇÕES EM LOTE (BATCH ACTIONS) ---
+
+@router.post("/batch/complete", response_model=TransactionBatchResponse)
+async def batch_complete_transactions(
+    payload: TransactionBatchComplete,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Liquida múltiplos lançamentos selecionados de uma só vez."""
+    query = select(Transaction).where(Transaction.id.in_(payload.transaction_ids))
+    result = await db.execute(query)
+    transactions = result.scalars().all()
+    
+    pay_date = payload.payment_date if payload.payment_date and payload.payment_date.strip() else datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    count = 0
+    
+    for trans in transactions:
+        if trans.status != "CONCLUIDO":
+            trans.status = "CONCLUIDO"
+            trans.payment_date = pay_date
+            trans.sync_status = "PENDENTE"
+            trans.updated_at = datetime.now(timezone.utc).isoformat()
+            count += 1
+            
+            # Abatimento em dívida se houver
+            if trans.debt_id:
+                debt_query = select(Debt).where(Debt.id == trans.debt_id)
+                debt_res = await db.execute(debt_query)
+                debt = debt_res.scalar_one_or_none()
+                if debt:
+                    debt.remaining_amount_cents = max(0, debt.remaining_amount_cents - trans.amount_cents)
+                    if debt.remaining_amount_cents == 0:
+                        debt.status = "QUITADA"
+
+    await db.commit()
+    return TransactionBatchResponse(
+        affected_count=count,
+        message=f"{count} lançamento(s) liquidado(s) com sucesso."
+    )
+
+@router.post("/batch/uncomplete", response_model=TransactionBatchResponse)
+async def batch_uncomplete_transactions(
+    payload: TransactionBatchAction,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Reabre múltiplos lançamentos liquidados, retornando para PENDENTE."""
+    query = select(Transaction).where(Transaction.id.in_(payload.transaction_ids))
+    result = await db.execute(query)
+    transactions = result.scalars().all()
+    count = 0
+
+    for trans in transactions:
+        if trans.status == "CONCLUIDO":
+            trans.status = "PENDENTE"
+            trans.payment_date = None
+            trans.sync_status = "PENDENTE"
+            trans.updated_at = datetime.now(timezone.utc).isoformat()
+            count += 1
+
+            # Restaura saldo de dívida se houver
+            if trans.debt_id:
+                debt_query = select(Debt).where(Debt.id == trans.debt_id)
+                debt_res = await db.execute(debt_query)
+                debt = debt_res.scalar_one_or_none()
+                if debt:
+                    debt.remaining_amount_cents = min(debt.total_amount_cents, debt.remaining_amount_cents + trans.amount_cents)
+                    if debt.status == "QUITADA" and debt.remaining_amount_cents > 0:
+                        debt.status = "ATIVA"
+
+    await db.commit()
+    return TransactionBatchResponse(
+        affected_count=count,
+        message=f"{count} lançamento(s) reaberto(s) para pendente."
+    )
+
+@router.post("/batch/update", response_model=TransactionBatchResponse)
+async def batch_update_transactions(
+    payload: TransactionBatchUpdate,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Atualiza campos em lote (Categoria, Conta, Forma de Pagamento, Contato, Vencimento, etc.) para múltiplos lançamentos."""
+    query = select(Transaction).where(Transaction.id.in_(payload.transaction_ids))
+    result = await db.execute(query)
+    transactions = result.scalars().all()
+    
+    update_fields = {}
+    if payload.category_id is not None:
+        update_fields["category_id"] = payload.category_id
+    if payload.account_id is not None:
+        update_fields["account_id"] = payload.account_id or None
+    if payload.payment_method_id is not None:
+        update_fields["payment_method_id"] = payload.payment_method_id or None
+    if payload.contact_id is not None:
+        update_fields["contact_id"] = payload.contact_id or None
+    if payload.due_date is not None:
+        update_fields["due_date"] = payload.due_date
+    if payload.payment_date is not None:
+        update_fields["payment_date"] = payload.payment_date or None
+    if payload.notes is not None:
+        update_fields["notes"] = payload.notes or None
+    if payload.status is not None:
+        update_fields["status"] = payload.status
+
+    if not update_fields:
+        return TransactionBatchResponse(affected_count=0, message="Nenhum campo informado para atualização.")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for trans in transactions:
+        for f, val in update_fields.items():
+            setattr(trans, f, val)
+        trans.sync_status = "PENDENTE"
+        trans.updated_at = now_iso
+
+    await db.commit()
+    return TransactionBatchResponse(
+        affected_count=len(transactions),
+        message=f"{len(transactions)} lançamento(s) atualizado(s) com sucesso."
+    )
+
+@router.post("/batch/delete", response_model=TransactionBatchResponse)
+async def batch_delete_transactions(
+    payload: TransactionBatchAction,
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user)
+):
+    """Exclui múltiplos lançamentos selecionados de uma só vez."""
+    query = select(Transaction).where(Transaction.id.in_(payload.transaction_ids))
+    result = await db.execute(query)
+    transactions = result.scalars().all()
+    count = len(transactions)
+
+    for trans in transactions:
+        # Se foi concluída e tinha dívida vinculada, restaura saldo de dívida
+        if trans.status == "CONCLUIDO" and trans.debt_id:
+            debt_query = select(Debt).where(Debt.id == trans.debt_id)
+            debt_res = await db.execute(debt_query)
+            debt = debt_res.scalar_one_or_none()
+            if debt:
+                debt.remaining_amount_cents = min(debt.total_amount_cents, debt.remaining_amount_cents + trans.amount_cents)
+                if debt.status == "QUITADA" and debt.remaining_amount_cents > 0:
+                    debt.status = "ATIVA"
+        await db.delete(trans)
+
+    await db.commit()
+    return TransactionBatchResponse(
+        affected_count=count,
+        message=f"{count} lançamento(s) excluído(s) com sucesso."
+    )

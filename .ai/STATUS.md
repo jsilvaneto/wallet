@@ -157,6 +157,15 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] **Visualização e Filtros Avançados**: Aba `Transferências` no filtro rápido de tipos, badge `⇄ Transferência Interna`, rota de movimentação `[Origem] → [Destino]` e formatação neutra de valor em tom índigo (`⇄ R$`).
   - [x] Registrado no [ADR 007](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/007-transferencias-entre-contas.md).
 
+- [x] **Ações em Lote e Exportação de Relatórios (PDF / CSV)**:
+  - [x] Endpoints dedicados em `transactions.py`: `POST /batch/complete`, `POST /batch/uncomplete`, `POST /batch/update` e `POST /batch/delete`.
+  - [x] Seleção múltipla na tabela com checkbox mestre no cabeçalho e individuais nas linhas.
+  - [x] Barra flutuante de ações em lote com contagem de itens selecionados e atalhos rápidos (**Liquidar**, **Reabrir**, **Editar Campos** e **Excluir**).
+  - [x] Modal executivo [BatchEditModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/BatchEditModal.tsx) para atualização seletiva em massa de múltiplos campos (Categoria, Conta/Carteira, Meio de Pagamento, Contato, Data de Vencimento e Observações).
+  - [x] Modal de emissão de relatórios [FinancialReportModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/FinancialReportModal.tsx) com layout formal, resumo de KPIs, distribuição analítica por categoria e tabela consolidada.
+  - [x] Exportação de **PDF / Impressão** via `@media print` otimizada para folha A4 e download de planilha **CSV** compatível com Excel.
+  - [x] Registrado no [ADR 008](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/008-acoes-em-lote-e-exportacao-relatorios.md).
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 
