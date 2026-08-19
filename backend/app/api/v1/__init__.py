@@ -14,6 +14,7 @@ from app.api.v1.goals import router as goals_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.sync import router as sync_router
 from app.api.v1.attachments import router as attachments_router
+from app.api.v1.conciliation import router as conciliation_router
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
@@ -31,4 +32,6 @@ api_router.include_router(goals_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(sync_router)
 api_router.include_router(attachments_router)
+api_router.include_router(conciliation_router)
+
 

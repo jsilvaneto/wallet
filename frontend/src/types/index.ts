@@ -601,3 +601,58 @@ export interface StorageDirectoryConfigResponse {
   message: string;
 }
 
+export type ConciliationMatchStatus = "NOVO" | "DUPLICADO" | "POSSIVEL_CONCILIACAO";
+
+export interface ConciliationParsedItem {
+  id: string;
+  fitid?: string | null;
+  date: string;
+  description: string;
+  original_description: string;
+  amount_cents: number;
+  type: TransactionType;
+  match_status: ConciliationMatchStatus;
+  matched_transaction_id?: string | null;
+  matched_transaction_description?: string | null;
+  suggested_category_id?: string | null;
+  suggested_category_name?: string | null;
+  suggested_contact_id?: string | null;
+  suggested_contact_name?: string | null;
+  suggested_payment_method_id?: string | null;
+  selected: boolean;
+  custom_category_id?: string;
+  custom_contact_id?: string;
+  custom_payment_method_id?: string;
+  custom_description?: string;
+}
+
+export interface ConciliationParseResponse {
+  account_id: string;
+  account_name?: string | null;
+  total_parsed: number;
+  total_income_cents: number;
+  total_expense_cents: number;
+  new_count: number;
+  duplicate_count: number;
+  items: ConciliationParsedItem[];
+}
+
+export interface ConciliationImportItem {
+  date: string;
+  description: string;
+  amount_cents: number;
+  type: TransactionType;
+  category_id?: string | null;
+  contact_id?: string | null;
+  payment_method_id?: string | null;
+  notes?: string | null;
+  status: "CONCLUIDO" | "PENDENTE";
+}
+
+export interface ConciliationImportResponse {
+  imported_count: number;
+  total_amount_cents: number;
+  created_transaction_ids: string[];
+}
+
+

@@ -191,6 +191,15 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Aba executiva em **Configurações > Assinaturas & Recorrências** com cards informativos, KPIs de custo fixo mensal e receita recorrente, filtros e modal de reajuste.
   - [x] Registrado no [ADR 011](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/011-central-de-assinaturas-e-recorrencias.md).
 
+- [x] **Importador & Conciliação Bancária OFX / CSV (Exclusivo Perfil EMPRESA)**:
+  - [x] Parser nativo para extratos `.ofx` (SGML/XML) e `.csv` de bancos brasileiros em `conciliation_service.py`.
+  - [x] Endpoint `POST /api/v1/conciliation/parse` com detecção inteligente de duplicidades contra lançamentos existentes e auto-sugestão de categorias e contatos baseada no histórico.
+  - [x] Endpoint `POST /api/v1/conciliation/import` para gravação transacional em lote.
+  - [x] Regra de segurança: bloqueio de acesso ao recurso para o perfil `PESSOAL` (`HTTP 400`).
+  - [x] Modal executivo [ConciliationModal.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/components/ConciliationModal.tsx) com KPIs de extrato, tabela de conferência prévia, checkboxes de seleção e edição de campos antes da importação.
+  - [x] Botão **Conciliação OFX/CSV** renderizado condicionalmente na barra de ações de [Transactions.tsx](file:///home/jsilvaneto/projetos/wallet/frontend/src/pages/Transactions.tsx) exclusivamente para `EMPRESA`.
+  - [x] Registrado no [ADR 012](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/012-importador-conciliacao-bancaria-pj.md).
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 

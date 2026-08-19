@@ -8,13 +8,14 @@ import { AttachmentViewerModal } from "../components/AttachmentViewerModal";
 import { ContactStatementModal } from "../components/ContactStatementModal";
 import { FinancialReportModal } from "../components/FinancialReportModal";
 import { BatchEditModal } from "../components/BatchEditModal";
+import { ConciliationModal } from "../components/ConciliationModal";
 import { 
   Plus, Check, Trash2, ArrowUpRight, ArrowDownRight, 
   Filter, AlertCircle, Search, X, Calendar, 
   ChevronLeft, ChevronRight, Clock, DollarSign, 
   Landmark, Tag, Users, CheckCircle2, RotateCcw, AlertTriangle, 
   Layers, Wallet, PiggyBank, CircleDollarSign, CreditCard, Paperclip, FileText, Pencil, Sparkles,
-  ArrowRightLeft, ArrowRight, Printer, SlidersHorizontal, FileDown
+  ArrowRightLeft, ArrowRight, Printer, SlidersHorizontal, FileDown, FileSpreadsheet
 } from "lucide-react";
 
 type PeriodPreset = 
@@ -48,6 +49,7 @@ export const Transactions: React.FC = () => {
   // Estados de Anexos / Comprovantes
   const [selectedTransactionForAttachments, setSelectedTransactionForAttachments] = useState<Transaction | null>(null);
   const [isAttachmentModalOpen, setIsAttachmentModalOpen] = useState(false);
+  const [isConciliationModalOpen, setIsConciliationModalOpen] = useState(false);
 
   // Estado de Extrato de Contato
   const [selectedContactForStatement, setSelectedContactForStatement] = useState<Contact | null>(null);
@@ -451,6 +453,17 @@ export const Transactions: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2.5">
+          {profile === "EMPRESA" && (
+            <button
+              onClick={() => setIsConciliationModalOpen(true)}
+              className="flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs font-bold bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
+              title="Importar extrato bancário OFX ou CSV e conciliar"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <span>Conciliação OFX/CSV</span>
+            </button>
+          )}
+
           <button
             onClick={() => setIsReportModalOpen(true)}
             className="flex items-center justify-center gap-2 px-3.5 py-2.5 text-xs font-bold bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-sm transition-all active:scale-95 cursor-pointer"
@@ -1372,6 +1385,20 @@ export const Transactions: React.FC = () => {
           onContactUpdated={fetchData}
         />
       )}
+
+      {/* Modal de Conciliação Bancária (Exclusivo EMPRESA) */}
+      <ConciliationModal
+        isOpen={isConciliationModalOpen}
+        onClose={() => setIsConciliationModalOpen(false)}
+        onSuccess={() => {
+          fetchData();
+          refreshSyncStatus(false);
+        }}
+        accounts={accountsList}
+        categories={categoriesList}
+        contacts={contactsList}
+        paymentMethods={paymentMethodsList}
+      />
     </div>
   );
 };

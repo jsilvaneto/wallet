@@ -4990,6 +4990,100 @@
         }
       }
     },
+    "/api/v1/conciliation/parse": {
+      "post": {
+        "tags": [
+          "Conciliação Bancária PJ"
+        ],
+        "summary": "Parse Statement File",
+        "description": "Processa arquivos de extrato bancário (.ofx / .csv), realiza deduplicação\ninteligente contra transações existentes e sugere categorias por histórico.\nRecurso exclusivo para o perfil EMPRESA.",
+        "operationId": "parse_statement_file_api_v1_conciliation_parse_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_parse_statement_file_api_v1_conciliation_parse_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConciliationParseResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/conciliation/import": {
+      "post": {
+        "tags": [
+          "Conciliação Bancária PJ"
+        ],
+        "summary": "Import Conciliated Transactions",
+        "description": "Grava os lançamentos conciliados e aprovados pelo usuário no banco de dados.\nRecurso exclusivo para o perfil EMPRESA.",
+        "operationId": "import_conciliated_transactions_api_v1_conciliation_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConciliationImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConciliationImportResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -5507,6 +5601,33 @@
         ],
         "title": "Body_login_api_v1_auth_login_post"
       },
+      "Body_parse_statement_file_api_v1_conciliation_parse_post": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id",
+            "description": "Conta bancária de destino"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "description": "Perfil (Restrito a EMPRESA)"
+          },
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "description": "Arquivo .ofx ou .csv"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "profile",
+          "file"
+        ],
+        "title": "Body_parse_statement_file_api_v1_conciliation_parse_post"
+      },
       "Body_upload_attachment_api_v1_attachments_upload_post": {
         "properties": {
           "file": {
@@ -5932,6 +6053,352 @@
         },
         "type": "object",
         "title": "CategoryUpdate"
+      },
+      "ConciliationImportItem": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "title": "Date",
+            "description": "YYYY-MM-DD"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Description"
+          },
+          "amount_cents": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Amount Cents"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "RECEITA",
+              "DESPESA"
+            ],
+            "title": "Type"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "payment_method_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method Id"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CONCLUIDO",
+              "PENDENTE"
+            ],
+            "title": "Status",
+            "default": "CONCLUIDO"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "description",
+          "amount_cents",
+          "type"
+        ],
+        "title": "ConciliationImportItem"
+      },
+      "ConciliationImportRequest": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "profile": {
+            "type": "string",
+            "const": "EMPRESA",
+            "title": "Profile",
+            "default": "EMPRESA"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConciliationImportItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "items"
+        ],
+        "title": "ConciliationImportRequest"
+      },
+      "ConciliationImportResponse": {
+        "properties": {
+          "imported_count": {
+            "type": "integer",
+            "title": "Imported Count"
+          },
+          "total_amount_cents": {
+            "type": "integer",
+            "title": "Total Amount Cents"
+          },
+          "created_transaction_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Created Transaction Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "imported_count",
+          "total_amount_cents",
+          "created_transaction_ids"
+        ],
+        "title": "ConciliationImportResponse"
+      },
+      "ConciliationParseResponse": {
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "title": "Account Id"
+          },
+          "account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Name"
+          },
+          "total_parsed": {
+            "type": "integer",
+            "title": "Total Parsed"
+          },
+          "total_income_cents": {
+            "type": "integer",
+            "title": "Total Income Cents"
+          },
+          "total_expense_cents": {
+            "type": "integer",
+            "title": "Total Expense Cents"
+          },
+          "new_count": {
+            "type": "integer",
+            "title": "New Count"
+          },
+          "duplicate_count": {
+            "type": "integer",
+            "title": "Duplicate Count"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConciliationParsedItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_id",
+          "total_parsed",
+          "total_income_cents",
+          "total_expense_cents",
+          "new_count",
+          "duplicate_count",
+          "items"
+        ],
+        "title": "ConciliationParseResponse"
+      },
+      "ConciliationParsedItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "ID temporário da linha de conciliação"
+          },
+          "fitid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fitid"
+          },
+          "date": {
+            "type": "string",
+            "title": "Date",
+            "description": "Data da transação (YYYY-MM-DD)"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "original_description": {
+            "type": "string",
+            "title": "Original Description"
+          },
+          "amount_cents": {
+            "type": "integer",
+            "title": "Amount Cents"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "RECEITA",
+              "DESPESA"
+            ],
+            "title": "Type"
+          },
+          "match_status": {
+            "type": "string",
+            "enum": [
+              "NOVO",
+              "DUPLICADO",
+              "POSSIVEL_CONCILIACAO"
+            ],
+            "title": "Match Status"
+          },
+          "matched_transaction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Transaction Id"
+          },
+          "matched_transaction_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Matched Transaction Description"
+          },
+          "suggested_category_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Category Id"
+          },
+          "suggested_category_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Category Name"
+          },
+          "suggested_contact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Contact Id"
+          },
+          "suggested_contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Contact Name"
+          },
+          "suggested_payment_method_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Payment Method Id"
+          },
+          "selected": {
+            "type": "boolean",
+            "title": "Selected",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "date",
+          "description",
+          "original_description",
+          "amount_cents",
+          "type",
+          "match_status"
+        ],
+        "title": "ConciliationParsedItem"
       },
       "ContactCreate": {
         "properties": {
