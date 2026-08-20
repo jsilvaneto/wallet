@@ -9,10 +9,14 @@ import {
   TrendingUp, TrendingDown, CheckCircle2, ChevronLeft, ChevronRight,
   PieChart as PieChartIcon, Landmark, CreditCard, Wallet, PiggyBank,
   Sparkles, Target, Calendar, Check, ShieldCheck, AlertTriangle,
-  ArrowRightLeft, Plus, ChevronDown, RefreshCw, BarChart3, Layers
+  ArrowRightLeft, Plus, ChevronDown, RefreshCw, BarChart3, Layers, ArrowRight
 } from "lucide-react";
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onNavigateToPlanning?: () => void;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onNavigateToPlanning }) => {
   const { profile, hideValues, refreshSyncStatus } = useApp();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -600,6 +604,33 @@ export const Dashboard: React.FC = () => {
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Banner de Atalho para Planejamento & Futuro */}
+          {onNavigateToPlanning && (
+            <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-indigo-500/10 border border-emerald-200 dark:border-emerald-900/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="p-3 rounded-2xl bg-emerald-500 text-white shadow-md shadow-emerald-500/20 shrink-0">
+                  <Sparkles className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <span>Planejamento & Projeções Futuras (12 a 24 Meses)</span>
+                    <span className="px-2 py-0.5 text-[10px] font-black rounded-md bg-emerald-600 text-white uppercase tracking-wider">Novo</span>
+                  </h4>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                    Projete seu fluxo de caixa futuro, simule cenários "What-If", calcule seu runway/fôlego financeiro e acompanhe suas metas.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onNavigateToPlanning}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-md shadow-emerald-600/20 transition-all self-start sm:self-auto shrink-0 cursor-pointer active:scale-95"
+              >
+                <span>Abrir Planejamento</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           )}
 

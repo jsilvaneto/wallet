@@ -206,7 +206,7 @@ const MainLayout: React.FC = () => {
 
       {/* Page Main Content */}
       <main className="flex-1 w-full max-w-[1780px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6">
-        {activeTab === "dashboard" && <Dashboard />}
+        {activeTab === "dashboard" && <Dashboard onNavigateToPlanning={() => setActiveTab("planning")} />}
         {activeTab === "transactions" && <Transactions />}
         {activeTab === "planning" && <Planning />}
         {activeTab === "settings" && <Settings />}
