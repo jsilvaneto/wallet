@@ -63,6 +63,11 @@ backend/
 | **Transações**| `GET` / `POST` | `/api/v1/transactions` | Lançamentos de despesas e receitas. |
 | **Schedules** | `GET` / `POST` | `/api/v1/schedules` | Agendamentos recorrentes e parcelamentos em N vezes. |
 | **Dashboard** | `GET` | `/api/v1/dashboard/summary`| Métricas consolidadas, KPIs, projeções e alertas. |
+| **Planejamento** | `GET` | `/api/v1/planning/projection` | Fluxo de caixa projetado de 1 a 24 meses. |
+| **Planejamento** | `POST` | `/api/v1/planning/simulate` | Simulador de cenários What-If em tempo real. |
+| **Planejamento** | `GET` | `/api/v1/planning/runway` | Fôlego de caixa, reserva de emergência e burn rate. |
+| **Planejamento** | `GET` | `/api/v1/planning/goals-projection` | Metas com projeção temporal e juros compostos. |
+| **Planejamento** | `GET` | `/api/v1/planning/committed-income` | Mapa de comprometimento de renda futura. |
 | **Sync** | `GET` / `POST` | `/api/v1/sync/config` | Leitura e atualização das credenciais e ID da planilha. |
 | **Sync** | `POST` | `/api/v1/sync/test` | Teste de autenticação com a API do Google Sheets. |
 | **Sync** | `POST` | `/api/v1/sync/export` | Exportação de transações do SQLite para a aba `Transacoes`. |
@@ -111,10 +116,10 @@ frontend/
 │   ├── context/
 │   │   └── AppContext.tsx       # Contexto global (perfil, dark mode, login theme, hide values)
 │   ├── pages/
-│   │   ├── Dashboard.tsx        # KPIs, alertas e maiores despesas por categoria
+│   │   ├── Dashboard.tsx        # KPIs, alertas, maiores despesas e atalho para planejamento
 │   │   ├── Transactions.tsx     # Tabela de lançamentos, filtros e ações
-│   │   ├── Management.tsx       # Cadastros (Categorias, Itens, Contatos, Dívidas, Orçamentos)
-│   │   └── Settings.tsx         # Configurações (Aparência & Login, Gestão de Usuários, Sincronização)
+│   │   ├── Planning.tsx         # Projeções 12-24M, cenários What-If, runway e metas
+│   │   └── Settings.tsx         # Configurações & Cadastros mestres
 │   ├── types/
 │   │   └── index.ts             # Definições de interfaces e tipos TypeScript
 │   ├── utils/
