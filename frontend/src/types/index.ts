@@ -673,5 +673,124 @@ export interface SystemStatsResponse {
   version: string;
 }
 
+// ==========================================
+// PLANEJAMENTO FINANCEIRO, PROJEÇÃO & FUTURO
+// ==========================================
+
+export interface CashflowProjectionItem {
+  month: string;
+  month_name: string;
+  starting_balance_cents: number;
+  projected_income_cents: number;
+  projected_expense_cents: number;
+  expense_mandatory_cents: number;
+  expense_necessary_cents: number;
+  expense_discretionary_cents: number;
+  expense_other_cents: number;
+  credit_card_invoices_cents: number;
+  net_balance_cents: number;
+  accumulated_balance_cents: number;
+  is_negative_alert: boolean;
+}
+
+export interface CashflowProjectionResponse {
+  profile: ProfileType;
+  horizon_months: number;
+  current_balance_cents: number;
+  lowest_balance_cents: number;
+  negative_months_count: number;
+  total_projected_income_cents: number;
+  total_projected_expense_cents: number;
+  projected_net_cents: number;
+  items: CashflowProjectionItem[];
+}
+
+export interface ScenarioSimulationRequest {
+  profile: ProfileType;
+  months: number;
+  income_variation_percent: number;
+  discretionary_cut_percent: number;
+  necessary_cut_percent: number;
+  mandatory_cut_percent: number;
+  additional_monthly_expense_cents: number;
+  additional_monthly_income_cents: number;
+}
+
+export interface ScenarioSimulationItem {
+  month: string;
+  month_name: string;
+  base_accumulated_cents: number;
+  simulated_accumulated_cents: number;
+  delta_cents: number;
+}
+
+export interface ScenarioSimulationResponse {
+  profile: ProfileType;
+  months: number;
+  base_final_balance_cents: number;
+  simulated_final_balance_cents: number;
+  total_delta_cents: number;
+  total_savings_generated_cents: number;
+  items: ScenarioSimulationItem[];
+}
+
+export interface RunwayResponse {
+  profile: ProfileType;
+  current_liquid_balance_cents: number;
+  essential_monthly_cost_cents: number;
+  discretionary_monthly_cost_cents: number;
+  total_monthly_cost_cents: number;
+  runway_months: number;
+  health_status: "CRITICO" | "MODERADO" | "BOM" | "EXCELENTE";
+  recommended_reserve_cents: number;
+  reserve_gap_cents: number;
+  fire_number_cents?: number | null;
+  burn_rate_cents?: number | null;
+}
+
+export interface GoalProjectionItem {
+  id: string;
+  title: string;
+  target_amount_cents: number;
+  current_amount_cents: number;
+  remaining_amount_cents: number;
+  target_date?: string | null;
+  status: string;
+  progress_percentage: number;
+  monthly_contribution_avg_cents: number;
+  estimated_completion_date?: string | null;
+  estimated_months_to_complete?: number | null;
+  required_monthly_deposit_cents?: number | null;
+  compound_interest_gain_cents?: number | null;
+}
+
+export interface GoalProjectionResponse {
+  profile: ProfileType;
+  total_target_cents: number;
+  total_current_cents: number;
+  total_remaining_cents: number;
+  goals: GoalProjectionItem[];
+}
+
+export interface CommittedIncomeItem {
+  month: string;
+  month_name: string;
+  projected_income_cents: number;
+  schedules_amount_cents: number;
+  debts_amount_cents: number;
+  credit_card_amount_cents: number;
+  total_committed_cents: number;
+  committed_percentage: number;
+  free_income_cents: number;
+  free_income_percentage: number;
+}
+
+export interface CommittedIncomeResponse {
+  profile: ProfileType;
+  average_committed_percentage: number;
+  items: CommittedIncomeItem[];
+}
+
+
 
 

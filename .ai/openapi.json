@@ -5136,6 +5136,276 @@
         ]
       }
     },
+    "/api/v1/planning/projection": {
+      "get": {
+        "tags": [
+          "Planejamento & Futuro"
+        ],
+        "summary": "Get Cashflow Projection",
+        "operationId": "get_cashflow_projection_api_v1_planning_projection_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "PESSOAL ou EMPRESA",
+              "title": "Profile"
+            },
+            "description": "PESSOAL ou EMPRESA"
+          },
+          {
+            "name": "months",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 24,
+              "minimum": 1,
+              "description": "Horizonte de projeção em meses",
+              "default": 12,
+              "title": "Months"
+            },
+            "description": "Horizonte de projeção em meses"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CashflowProjectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/planning/simulate": {
+      "post": {
+        "tags": [
+          "Planejamento & Futuro"
+        ],
+        "summary": "Simulate Scenario",
+        "operationId": "simulate_scenario_api_v1_planning_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioSimulationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioSimulationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/runway": {
+      "get": {
+        "tags": [
+          "Planejamento & Futuro"
+        ],
+        "summary": "Get Runway Metrics",
+        "operationId": "get_runway_metrics_api_v1_planning_runway_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "PESSOAL ou EMPRESA",
+              "title": "Profile"
+            },
+            "description": "PESSOAL ou EMPRESA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunwayResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/planning/goals-projection": {
+      "get": {
+        "tags": [
+          "Planejamento & Futuro"
+        ],
+        "summary": "Get Goals Projection",
+        "operationId": "get_goals_projection_api_v1_planning_goals_projection_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "PESSOAL ou EMPRESA",
+              "title": "Profile"
+            },
+            "description": "PESSOAL ou EMPRESA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalProjectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/planning/committed-income": {
+      "get": {
+        "tags": [
+          "Planejamento & Futuro"
+        ],
+        "summary": "Get Committed Income Map",
+        "operationId": "get_committed_income_map_api_v1_planning_committed_income_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "profile",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "PESSOAL ou EMPRESA",
+              "title": "Profile"
+            },
+            "description": "PESSOAL ou EMPRESA"
+          },
+          {
+            "name": "months",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 12,
+              "minimum": 1,
+              "description": "Meses a analisar",
+              "default": 6,
+              "title": "Months"
+            },
+            "description": "Meses a analisar"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommittedIncomeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "tags": [
@@ -5922,6 +6192,152 @@
         "type": "object",
         "title": "BudgetUpdate"
       },
+      "CashflowProjectionItem": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month",
+            "description": "Mês de competência formato YYYY-MM"
+          },
+          "month_name": {
+            "type": "string",
+            "title": "Month Name",
+            "description": "Nome amigável ex: Set/26"
+          },
+          "starting_balance_cents": {
+            "type": "integer",
+            "title": "Starting Balance Cents",
+            "description": "Saldo de abertura do mês em centavos"
+          },
+          "projected_income_cents": {
+            "type": "integer",
+            "title": "Projected Income Cents",
+            "description": "Receitas totais previstas no mês"
+          },
+          "projected_expense_cents": {
+            "type": "integer",
+            "title": "Projected Expense Cents",
+            "description": "Despesas totais previstas no mês"
+          },
+          "expense_mandatory_cents": {
+            "type": "integer",
+            "title": "Expense Mandatory Cents",
+            "description": "Despesas OBRIGATÓRIAS",
+            "default": 0
+          },
+          "expense_necessary_cents": {
+            "type": "integer",
+            "title": "Expense Necessary Cents",
+            "description": "Despesas NECESSÁRIAS",
+            "default": 0
+          },
+          "expense_discretionary_cents": {
+            "type": "integer",
+            "title": "Expense Discretionary Cents",
+            "description": "Despesas DESEJOS / DISCRICIONÁRIAS",
+            "default": 0
+          },
+          "expense_other_cents": {
+            "type": "integer",
+            "title": "Expense Other Cents",
+            "description": "Despesas sem classificação ou gerais",
+            "default": 0
+          },
+          "credit_card_invoices_cents": {
+            "type": "integer",
+            "title": "Credit Card Invoices Cents",
+            "description": "Faturas de cartão de crédito no mês",
+            "default": 0
+          },
+          "net_balance_cents": {
+            "type": "integer",
+            "title": "Net Balance Cents",
+            "description": "Resultado do mês (Receitas - Despesas)"
+          },
+          "accumulated_balance_cents": {
+            "type": "integer",
+            "title": "Accumulated Balance Cents",
+            "description": "Saldo final acumulado ao término do mês"
+          },
+          "is_negative_alert": {
+            "type": "boolean",
+            "title": "Is Negative Alert",
+            "description": "True se o saldo acumulado for negativo",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "month_name",
+          "starting_balance_cents",
+          "projected_income_cents",
+          "projected_expense_cents",
+          "net_balance_cents",
+          "accumulated_balance_cents"
+        ],
+        "title": "CashflowProjectionItem"
+      },
+      "CashflowProjectionResponse": {
+        "properties": {
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "horizon_months": {
+            "type": "integer",
+            "title": "Horizon Months"
+          },
+          "current_balance_cents": {
+            "type": "integer",
+            "title": "Current Balance Cents"
+          },
+          "lowest_balance_cents": {
+            "type": "integer",
+            "title": "Lowest Balance Cents"
+          },
+          "negative_months_count": {
+            "type": "integer",
+            "title": "Negative Months Count"
+          },
+          "total_projected_income_cents": {
+            "type": "integer",
+            "title": "Total Projected Income Cents"
+          },
+          "total_projected_expense_cents": {
+            "type": "integer",
+            "title": "Total Projected Expense Cents"
+          },
+          "projected_net_cents": {
+            "type": "integer",
+            "title": "Projected Net Cents"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CashflowProjectionItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile",
+          "horizon_months",
+          "current_balance_cents",
+          "lowest_balance_cents",
+          "negative_months_count",
+          "total_projected_income_cents",
+          "total_projected_expense_cents",
+          "projected_net_cents",
+          "items"
+        ],
+        "title": "CashflowProjectionResponse"
+      },
       "CategoryBreakdown": {
         "properties": {
           "category_id": {
@@ -6105,6 +6521,94 @@
         },
         "type": "object",
         "title": "CategoryUpdate"
+      },
+      "CommittedIncomeItem": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "month_name": {
+            "type": "string",
+            "title": "Month Name"
+          },
+          "projected_income_cents": {
+            "type": "integer",
+            "title": "Projected Income Cents"
+          },
+          "schedules_amount_cents": {
+            "type": "integer",
+            "title": "Schedules Amount Cents"
+          },
+          "debts_amount_cents": {
+            "type": "integer",
+            "title": "Debts Amount Cents"
+          },
+          "credit_card_amount_cents": {
+            "type": "integer",
+            "title": "Credit Card Amount Cents"
+          },
+          "total_committed_cents": {
+            "type": "integer",
+            "title": "Total Committed Cents"
+          },
+          "committed_percentage": {
+            "type": "number",
+            "title": "Committed Percentage"
+          },
+          "free_income_cents": {
+            "type": "integer",
+            "title": "Free Income Cents"
+          },
+          "free_income_percentage": {
+            "type": "number",
+            "title": "Free Income Percentage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "month_name",
+          "projected_income_cents",
+          "schedules_amount_cents",
+          "debts_amount_cents",
+          "credit_card_amount_cents",
+          "total_committed_cents",
+          "committed_percentage",
+          "free_income_cents",
+          "free_income_percentage"
+        ],
+        "title": "CommittedIncomeItem"
+      },
+      "CommittedIncomeResponse": {
+        "properties": {
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "average_committed_percentage": {
+            "type": "number",
+            "title": "Average Committed Percentage"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CommittedIncomeItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile",
+          "average_committed_percentage",
+          "items"
+        ],
+        "title": "CommittedIncomeResponse"
       },
       "ConciliationImportItem": {
         "properties": {
@@ -7884,6 +8388,149 @@
         ],
         "title": "GoalCreate"
       },
+      "GoalProjectionItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "target_amount_cents": {
+            "type": "integer",
+            "title": "Target Amount Cents"
+          },
+          "current_amount_cents": {
+            "type": "integer",
+            "title": "Current Amount Cents"
+          },
+          "remaining_amount_cents": {
+            "type": "integer",
+            "title": "Remaining Amount Cents"
+          },
+          "target_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Date"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress_percentage": {
+            "type": "number",
+            "title": "Progress Percentage"
+          },
+          "monthly_contribution_avg_cents": {
+            "type": "integer",
+            "title": "Monthly Contribution Avg Cents"
+          },
+          "estimated_completion_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Completion Date"
+          },
+          "estimated_months_to_complete": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Estimated Months To Complete"
+          },
+          "required_monthly_deposit_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Monthly Deposit Cents"
+          },
+          "compound_interest_gain_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compound Interest Gain Cents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "target_amount_cents",
+          "current_amount_cents",
+          "remaining_amount_cents",
+          "status",
+          "progress_percentage",
+          "monthly_contribution_avg_cents"
+        ],
+        "title": "GoalProjectionItem"
+      },
+      "GoalProjectionResponse": {
+        "properties": {
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "total_target_cents": {
+            "type": "integer",
+            "title": "Total Target Cents"
+          },
+          "total_current_cents": {
+            "type": "integer",
+            "title": "Total Current Cents"
+          },
+          "total_remaining_cents": {
+            "type": "integer",
+            "title": "Total Remaining Cents"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/GoalProjectionItem"
+            },
+            "type": "array",
+            "title": "Goals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile",
+          "total_target_cents",
+          "total_current_cents",
+          "total_remaining_cents",
+          "goals"
+        ],
+        "title": "GoalProjectionResponse"
+      },
       "GoalResponse": {
         "properties": {
           "title": {
@@ -8464,6 +9111,243 @@
         },
         "type": "object",
         "title": "PaymentMethodUpdate"
+      },
+      "RunwayResponse": {
+        "properties": {
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "current_liquid_balance_cents": {
+            "type": "integer",
+            "title": "Current Liquid Balance Cents",
+            "description": "Saldo consolidado em contas"
+          },
+          "essential_monthly_cost_cents": {
+            "type": "integer",
+            "title": "Essential Monthly Cost Cents",
+            "description": "Custo mensal essencial médio (Obrigatório + Necessário)"
+          },
+          "discretionary_monthly_cost_cents": {
+            "type": "integer",
+            "title": "Discretionary Monthly Cost Cents",
+            "description": "Custo mensal discricionário médio (Desejos)"
+          },
+          "total_monthly_cost_cents": {
+            "type": "integer",
+            "title": "Total Monthly Cost Cents",
+            "description": "Gasto médio mensal total"
+          },
+          "runway_months": {
+            "type": "number",
+            "title": "Runway Months",
+            "description": "Meses de fôlego financeiro (saldo / custo essencial)"
+          },
+          "health_status": {
+            "type": "string",
+            "enum": [
+              "CRITICO",
+              "MODERADO",
+              "BOM",
+              "EXCELENTE"
+            ],
+            "title": "Health Status"
+          },
+          "recommended_reserve_cents": {
+            "type": "integer",
+            "title": "Recommended Reserve Cents",
+            "description": "Meta recomendada de reserva (ex: 6 meses PF ou 3 meses PJ)"
+          },
+          "reserve_gap_cents": {
+            "type": "integer",
+            "title": "Reserve Gap Cents",
+            "description": "Valor restante para atingir a reserva ideal"
+          },
+          "fire_number_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fire Number Cents",
+            "description": "Patrimônio para Independência Financeira (25x Custo Anual)"
+          },
+          "burn_rate_cents": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Burn Rate Cents",
+            "description": "Taxa de queima mensal (para EMPRESA)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile",
+          "current_liquid_balance_cents",
+          "essential_monthly_cost_cents",
+          "discretionary_monthly_cost_cents",
+          "total_monthly_cost_cents",
+          "runway_months",
+          "health_status",
+          "recommended_reserve_cents",
+          "reserve_gap_cents"
+        ],
+        "title": "RunwayResponse"
+      },
+      "ScenarioSimulationItem": {
+        "properties": {
+          "month": {
+            "type": "string",
+            "title": "Month"
+          },
+          "month_name": {
+            "type": "string",
+            "title": "Month Name"
+          },
+          "base_accumulated_cents": {
+            "type": "integer",
+            "title": "Base Accumulated Cents"
+          },
+          "simulated_accumulated_cents": {
+            "type": "integer",
+            "title": "Simulated Accumulated Cents"
+          },
+          "delta_cents": {
+            "type": "integer",
+            "title": "Delta Cents"
+          }
+        },
+        "type": "object",
+        "required": [
+          "month",
+          "month_name",
+          "base_accumulated_cents",
+          "simulated_accumulated_cents",
+          "delta_cents"
+        ],
+        "title": "ScenarioSimulationItem"
+      },
+      "ScenarioSimulationRequest": {
+        "properties": {
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "months": {
+            "type": "integer",
+            "maximum": 24.0,
+            "minimum": 1.0,
+            "title": "Months",
+            "default": 12
+          },
+          "income_variation_percent": {
+            "type": "number",
+            "title": "Income Variation Percent",
+            "description": "Variação % nas receitas (ex: +10% ou -15%)",
+            "default": 0.0
+          },
+          "discretionary_cut_percent": {
+            "type": "number",
+            "title": "Discretionary Cut Percent",
+            "description": "Corte % em gastos de Desejo (0 a 100)",
+            "default": 0.0
+          },
+          "necessary_cut_percent": {
+            "type": "number",
+            "title": "Necessary Cut Percent",
+            "description": "Corte % em gastos Necessários (0 a 100)",
+            "default": 0.0
+          },
+          "mandatory_cut_percent": {
+            "type": "number",
+            "title": "Mandatory Cut Percent",
+            "description": "Corte % em gastos Obrigatórios (0 a 100)",
+            "default": 0.0
+          },
+          "additional_monthly_expense_cents": {
+            "type": "integer",
+            "title": "Additional Monthly Expense Cents",
+            "description": "Nova despesa fixa mensal simulada em centavos",
+            "default": 0
+          },
+          "additional_monthly_income_cents": {
+            "type": "integer",
+            "title": "Additional Monthly Income Cents",
+            "description": "Nova receita fixa mensal simulada em centavos",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile"
+        ],
+        "title": "ScenarioSimulationRequest"
+      },
+      "ScenarioSimulationResponse": {
+        "properties": {
+          "profile": {
+            "type": "string",
+            "enum": [
+              "PESSOAL",
+              "EMPRESA"
+            ],
+            "title": "Profile"
+          },
+          "months": {
+            "type": "integer",
+            "title": "Months"
+          },
+          "base_final_balance_cents": {
+            "type": "integer",
+            "title": "Base Final Balance Cents"
+          },
+          "simulated_final_balance_cents": {
+            "type": "integer",
+            "title": "Simulated Final Balance Cents"
+          },
+          "total_delta_cents": {
+            "type": "integer",
+            "title": "Total Delta Cents"
+          },
+          "total_savings_generated_cents": {
+            "type": "integer",
+            "title": "Total Savings Generated Cents"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScenarioSimulationItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile",
+          "months",
+          "base_final_balance_cents",
+          "simulated_final_balance_cents",
+          "total_delta_cents",
+          "total_savings_generated_cents",
+          "items"
+        ],
+        "title": "ScenarioSimulationResponse"
       },
       "ScheduleAction": {
         "properties": {

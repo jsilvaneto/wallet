@@ -207,6 +207,16 @@ Este documento registra o progresso consolidado de desenvolvimento do **Wallet**
   - [x] Card executivo na aba **Configurações > Comprovantes & Backups** com estatísticas de disco em tempo real e data do último backup.
   - [x] Registrado no [ADR 013](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/013-backup-consolidado-em-1-clique.md).
 
+- [x] **Módulo de Planejamento Financeiro, Projeções & Simulador de Cenários**:
+  - [x] Novo menu principal **Planejamento & Futuro** integrado na barra de navegação superior.
+  - [x] Endpoints dedicados em `planning.py`: `/projection`, `/simulate`, `/runway`, `/goals-projection` e `/committed-income`.
+  - [x] **Fluxo de Caixa Projetado (12M a 24M)**: Saldo acumulado mês a mês com curva patrimonial SVG, alertas de déficit de liquidez e tabela analítica por natureza de despesa.
+  - [x] **Simulador de Cenários ("What-If")**: Sliders em tempo real com sensibilidade de receita ($-50\%$ a $+50\%$), corte de gastos de desejos/lazer, gastos necessários e novas obrigações fixas.
+  - [x] **Runway & Reserva de Emergência**: Termômetro visual de fôlego de caixa, meta de reserva familiar, regra dos 4% (FIRE) para `PESSOAL` e Burn Rate / Capital de Giro para `EMPRESA`.
+  - [x] **Metas com Projeção Temporal**: Cálculo de data de conclusão pelo ritmo médio, aporte mensal necessário e simulação com juros compostos (100% CDI).
+  - [x] **Mapa de Comprometimento de Renda**: Análise de renda presa por contratos, dívidas e cartões vs. índice de liberdade financeira.
+  - [x] Registrado no [ADR 014](file:///home/jsilvaneto/projetos/wallet/.ai/DECISIONS/014-modulo-de-planejamento-financeiro-e-futuro.md).
+
 - [x] **Ambiente WSL & Scripts**:
   - [x] Script [start.sh](file:///home/jsilvaneto/projetos/wallet/start.sh) automatizado para validação de ambiente e execução paralela com encerramento limpo.
 
